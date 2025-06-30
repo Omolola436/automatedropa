@@ -97,6 +97,14 @@ The system is designed for flexible deployment:
 ## Changelog
 
 - June 30, 2025. Initial setup
+- June 30, 2025. Completed Replit migration:
+  - Migrated from legacy Flask structure to modern Flask-SQLAlchemy
+  - Removed all hardcoded demo accounts - users must register
+  - Implemented proper role-based access with Flask-Login
+  - Fixed approval workflow: Privacy Champions save drafts/submit for review → Privacy Officers approve
+  - Added downloadable templates and bulk upload functionality
+  - Maintained audit logging and security features
+  - Fresh SQLite database with no pre-existing accounts
 
 ## User Preferences
 

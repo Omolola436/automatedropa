@@ -16,7 +16,7 @@ class User(UserMixin, db.Model):
     last_login = db.Column(DateTime)
     
     # Relationship
-    ropa_records = db.relationship('ROPARecord', backref='creator', lazy=True)
+    ropa_records = db.relationship('ROPARecord', foreign_keys='ROPARecord.created_by', backref='creator', lazy=True)
 
 
 class ROPARecord(db.Model):
