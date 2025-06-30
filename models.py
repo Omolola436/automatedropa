@@ -89,3 +89,16 @@ class AuditLog(db.Model):
     description = db.Column(Text)
     additional_data = db.Column(Text)
     timestamp = db.Column(DateTime, default=datetime.utcnow)
+
+
+class CustomTab(db.Model):
+    __tablename__ = 'custom_tabs'
+    
+    id = db.Column(Integer, primary_key=True)
+    tab_name = db.Column(String(100), nullable=False)
+    tab_description = db.Column(Text)
+    processes = db.Column(Text)  # JSON string of processes
+    created_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    ropa_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

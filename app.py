@@ -216,10 +216,17 @@ def add_activity():
             created_by=current_user.id
         )
         
-        # Check if saving as draft or submitting for review
-        if 'save_draft' in request.form:
+        # Check the action type from the form
+        action = request.form.get('action', 'submit')
+        if action == 'draft':
             record.status = 'Draft'
             message = 'ROPA record saved as draft'
+        elif action == 'submit':
+            record.status = 'Under Review'
+            message = 'ROPA record submitted for review'
+        elif action == 'approve' and current_user.role == 'Privacy Officer':
+            record.status = 'Approved'
+            message = 'ROPA record created and approved'
         else:
             record.status = 'Under Review'
             message = 'ROPA record submitted for review'

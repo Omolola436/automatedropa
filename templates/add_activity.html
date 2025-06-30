@@ -8,7 +8,7 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h2><i class="fas fa-plus-circle me-2"></i>Add New Processing Activity</h2>
-                <a href="{{ url_for('privacy_champion_dashboard' if session.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+                <a href="{{ url_for('privacy_champion_dashboard' if current_user.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
                 </a>
             </div>
@@ -74,6 +74,11 @@
                             <li class="nav-item" role="presentation">
                                 <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab">
                                     <i class="fas fa-lock me-1"></i>Security
+                                </button>
+                            </li>
+                            <li class="nav-item" role="presentation">
+                                <button class="nav-link" id="custom-tabs-tab" data-bs-toggle="tab" data-bs-target="#custom-tabs" type="button" role="tab">
+                                    <i class="fas fa-plus-circle me-1"></i>Custom Tabs
                                 </button>
                             </li>
                         </ul>
@@ -379,6 +384,26 @@
                                     <textarea class="form-control" id="additional_info" name="additional_info" rows="3" placeholder="Any other relevant information..."></textarea>
                                 </div>
                             </div>
+                            
+                            <!-- Custom Tabs -->
+                            <div class="tab-pane fade" id="custom-tabs" role="tabpanel">
+                                <h5 class="mb-3"><i class="fas fa-plus-circle me-2"></i>Custom Process Tabs</h5>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    Create custom tabs to organize specific processes unique to your organization.
+                                </div>
+                                
+                                <div id="customTabsContainer">
+                                    <!-- Dynamic custom tabs will be added here -->
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-outline-primary" onclick="addCustomTab()">
+                                        <i class="fas fa-plus me-1"></i>Add Custom Tab
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -390,7 +415,7 @@
                             <div class="col-md-6">
                                 <h6>Form Actions</h6>
                                 <p class="text-muted small">
-                                    {% if session.role == 'Privacy Champion' %}
+                                    {% if current_user.role == 'Privacy Champion' %}
                                     Save as draft to continue later, or submit for Privacy Officer review.
                                     {% else %}
                                     Save as draft or create approved record directly.
@@ -403,9 +428,9 @@
                                         <i class="fas fa-save me-1"></i>Save as Draft
                                     </button>
                                     
-                                    {% if session.role == 'Privacy Champion' %}
+                                    {% if current_user.role == 'Privacy Champion' %}
                                     <button type="submit" name="action" value="submit" class="btn btn-success">
-                                        <i class="fas fa-paper-plane me-1"></i>Submit for Review
+                                        <i class="fas fa-paper-plane me-1"></i>Create and Submit for Review
                                     </button>
                                     {% else %}
                                     <button type="submit" name="action" value="approve" class="btn btn-success">
@@ -471,5 +496,57 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+let customTabCounter = 0;
+
+function addCustomTab() {
+    customTabCounter++;
+    const container = document.getElementById('customTabsContainer');
+    
+    const tabHTML = `
+        <div class="card mb-3" id="customTab${customTabCounter}">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">Custom Tab ${customTabCounter}</h6>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeCustomTab(${customTabCounter})">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="custom_tab_name_${customTabCounter}" class="form-label">Tab Name *</label>
+                            <input type="text" class="form-control" id="custom_tab_name_${customTabCounter}" 
+                                   name="custom_tab_name_${customTabCounter}" placeholder="e.g., Compliance Review, Quality Check" required>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="custom_tab_description_${customTabCounter}" class="form-label">Description</label>
+                            <input type="text" class="form-control" id="custom_tab_description_${customTabCounter}" 
+                                   name="custom_tab_description_${customTabCounter}" placeholder="Brief description of this tab's purpose">
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="custom_tab_processes_${customTabCounter}" class="form-label">Processes *</label>
+                    <textarea class="form-control" id="custom_tab_processes_${customTabCounter}" 
+                              name="custom_tab_processes_${customTabCounter}" rows="4" 
+                              placeholder="List the specific processes that should be performed for this tab:&#10;- Process 1: Description&#10;- Process 2: Description&#10;- Process 3: Description" required></textarea>
+                    <div class="form-text">Define the specific steps or processes that need to be completed for this custom tab.</div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', tabHTML);
+}
+
+function removeCustomTab(tabId) {
+    const tab = document.getElementById(`customTab${tabId}`);
+    if (tab) {
+        tab.remove();
+    }
+}
 </script>
 {% endblock %}
