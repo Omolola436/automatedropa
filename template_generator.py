@@ -199,9 +199,16 @@ def generate_ropa_template():
             
             for row_num in range(1, ws_name.max_row + 1):
                 cell = ws_name.cell(row=row_num, column=col_num)
-                # Skip merged cells
-                if hasattr(cell, 'coordinate') and cell.coordinate in ws_name.merged_cells:
+                # Skip merged cells by checking if it's part of a merged range
+                skip_cell = False
+                for merged_range in ws_name.merged_cells.ranges:
+                    if cell.coordinate in merged_range:
+                        skip_cell = True
+                        break
+                
+                if skip_cell:
                     continue
+                    
                 try:
                     if cell.value and len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))

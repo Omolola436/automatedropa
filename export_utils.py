@@ -2,7 +2,6 @@ import pandas as pd
 import io
 import os
 from datetime import datetime
-from database import get_db_connection
 from audit_logger import log_audit_event
 import tempfile
 
@@ -33,34 +32,61 @@ def generate_export(user_email, user_role, export_format, include_drafts=False, 
 def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_rejected=False):
     """Get filtered ROPA data based on export criteria"""
     
-    conn = get_db_connection()
+    from app import db
+    from models import ROPARecord, User
     
-    # Build query based on user role
-    if user_role == "Privacy Champion":
-        # Privacy Champions see only their own records
-        base_query = "SELECT * FROM ropa_records WHERE created_by = ?"
-        params = [user_email]
+    # Base query - Privacy Champions see only their records
+    if user_role == 'Privacy Champion':
+        # Get the user ID for the email
+        user = User.query.filter_by(email=user_email).first()
+        if not user:
+            return pd.DataFrame()  # Return empty dataframe if user not found
+        query = ROPARecord.query.filter_by(created_by=user.id)
     else:
-        # Privacy Officers and Admins see all records
-        base_query = "SELECT * FROM ropa_records WHERE 1=1"
-        params = []
+        # Privacy Officers see all records
+        query = ROPARecord.query
     
-    # Status filtering - include all statuses if no specific filters
-    status_filters = []
+    # Status filtering 
+    status_filters = ['Approved', 'Under Review']  # Always include these
     if include_drafts:
-        status_filters.append("'Draft'")
+        status_filters.append('Draft')
     if include_rejected:
-        status_filters.append("'Rejected'")
+        status_filters.append('Rejected')
     
-    # Always include approved records and pending review for export
-    status_filters.extend(["'Approved'", "'Pending Review'"])
+    query = query.filter(ROPARecord.status.in_(status_filters))
+    query = query.order_by(ROPARecord.created_at.desc())
     
-    status_clause = " AND status IN (" + ", ".join(status_filters) + ")"
-    query = base_query + status_clause + " ORDER BY created_at DESC"
+    # Get all records and convert to DataFrame
+    records = query.all()
     
-    df = pd.read_sql_query(query, conn, params=params)
-    conn.close()
+    if not records:
+        return pd.DataFrame()
     
+    # Convert to dictionary list for DataFrame
+    data = []
+    for record in records:
+        data.append({
+            'id': record.id,
+            'processing_activity_name': record.processing_activity_name,
+            'category': record.category,
+            'description': record.description,
+            'department_function': record.department_function,
+            'controller_name': record.controller_name,
+            'controller_contact': record.controller_contact,
+            'controller_address': record.controller_address,
+            'processing_purpose': record.processing_purpose,
+            'legal_basis': record.legal_basis,
+            'data_categories': record.data_categories,
+            'data_subjects': record.data_subjects,
+            'retention_period': record.retention_period,
+            'security_measures': record.security_measures,
+            'status': record.status,
+            'created_by': record.created_by,
+            'created_at': record.created_at,
+            'updated_at': record.updated_at
+        })
+    
+    df = pd.DataFrame(data)
     return df
 
 def generate_excel_export(df):
