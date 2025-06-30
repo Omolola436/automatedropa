@@ -1,0 +1,410 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Activity - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-edit me-2"></i>Edit ROPA Activity</h1>
+    <div>
+        <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-eye me-2"></i>View Record
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Record Info Alert -->
+<div class="alert alert-info">
+    <div class="row">
+        <div class="col-md-6">
+            <strong>Record ID:</strong> {{ record.id }}<br>
+            <strong>Status:</strong> 
+            {% if record.status == 'Approved' %}
+                <span class="badge bg-success">{{ record.status }}</span>
+            {% elif record.status == 'Pending Review' %}
+                <span class="badge bg-warning">{{ record.status }}</span>
+            {% elif record.status == 'Rejected' %}
+                <span class="badge bg-danger">{{ record.status }}</span>
+            {% else %}
+                <span class="badge bg-secondary">{{ record.status }}</span>
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <strong>Created:</strong> {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else 'N/A' }}<br>
+            <strong>Created by:</strong> {{ record.created_by }}
+        </div>
+    </div>
+</div>
+
+<form method="POST" id="ropaEditForm">
+    <!-- Progress Indicator -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar" role="progressbar" style="width: 0%" id="formProgress"></div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">Form Completion: <span id="progressText">0%</span></small>
+                <small class="text-muted">Required fields marked with *</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Basic Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="processing_activity_name" class="form-label">Processing Activity Name *</label>
+                    <input type="text" class="form-control" id="processing_activity_name" name="processing_activity_name" 
+                           value="{{ record.processing_activity_name or '' }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="category" class="form-label">Category *</label>
+                    <select class="form-select" id="category" name="category" required>
+                        <option value="">Select Category</option>
+                        {% for cat in predefined_options.categories %}
+                        <option value="{{ cat }}" {% if record.category == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description *</label>
+                <textarea class="form-control" id="description" name="description" rows="3" required>{{ record.description or '' }}</textarea>
+            </div>
+            <div class="mb-3">
+                <label for="department_function" class="form-label">Department/Function</label>
+                <select class="form-select" id="department_function" name="department_function">
+                    <option value="">Select Department</option>
+                    {% for dept in predefined_options.departments %}
+                    <option value="{{ dept }}" {% if record.department_function == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controller Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-building me-2"></i>Controller Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="controller_name" class="form-label">Controller Name *</label>
+                    <input type="text" class="form-control" id="controller_name" name="controller_name" 
+                           value="{{ record.controller_name or '' }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="controller_contact" class="form-label">Controller Contact *</label>
+                    <input type="text" class="form-control" id="controller_contact" name="controller_contact" 
+                           value="{{ record.controller_contact or '' }}" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="controller_address" class="form-label">Controller Address *</label>
+                <textarea class="form-control" id="controller_address" name="controller_address" rows="2" required>{{ record.controller_address or '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- DPO Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Data Protection Officer Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dpo_name" class="form-label">DPO Name</label>
+                    <input type="text" class="form-control" id="dpo_name" name="dpo_name" 
+                           value="{{ record.dpo_name or '' }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="dpo_contact" class="form-label">DPO Contact</label>
+                    <input type="text" class="form-control" id="dpo_contact" name="dpo_contact" 
+                           value="{{ record.dpo_contact or '' }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="dpo_address" class="form-label">DPO Address</label>
+                <textarea class="form-control" id="dpo_address" name="dpo_address" rows="2">{{ record.dpo_address or '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Processing Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="processing_purpose" class="form-label">Purpose of Processing *</label>
+                <textarea class="form-control" id="processing_purpose" name="processing_purpose" rows="3" required>{{ record.processing_purpose or '' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="legal_basis" class="form-label">Legal Basis *</label>
+                    <select class="form-select" id="legal_basis" name="legal_basis" required>
+                        <option value="">Select Legal Basis</option>
+                        {% for basis in predefined_options.legal_basis %}
+                        <option value="{{ basis }}" {% if record.legal_basis == basis %}selected{% endif %}>{{ basis }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="legitimate_interests" class="form-label">Legitimate Interests</label>
+                    <textarea class="form-control" id="legitimate_interests" name="legitimate_interests" rows="2">{{ record.legitimate_interests or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Categories -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-database me-2"></i>Data Categories</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Categories of Personal Data *</label>
+                <div class="row">
+                    {% set selected_data_categories = (record.data_categories or '').split(', ') %}
+                    {% for category in predefined_options.data_categories %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="data_categories" value="{{ category }}" 
+                                   id="data_cat_{{ loop.index }}" {% if category in selected_data_categories %}checked{% endif %}>
+                            <label class="form-check-label" for="data_cat_{{ loop.index }}">
+                                {{ category }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Special Categories of Personal Data</label>
+                <div class="row">
+                    {% set selected_special_categories = (record.special_categories or '').split(', ') %}
+                    {% for category in predefined_options.special_categories %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="special_categories" value="{{ category }}" 
+                                   id="special_cat_{{ loop.index }}" {% if category in selected_special_categories %}checked{% endif %}>
+                            <label class="form-check-label" for="special_cat_{{ loop.index }}">
+                                {{ category }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categories of Data Subjects *</label>
+                <div class="row">
+                    {% set selected_data_subjects = (record.data_subjects or '').split(', ') %}
+                    {% for subject in predefined_options.data_subjects %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="data_subjects" value="{{ subject }}" 
+                                   id="data_subj_{{ loop.index }}" {% if subject in selected_data_subjects %}checked{% endif %}>
+                            <label class="form-check-label" for="data_subj_{{ loop.index }}">
+                                {{ subject }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipients & Transfers -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-share me-2"></i>Recipients & Transfers</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="recipients" class="form-label">Categories of Recipients *</label>
+                <textarea class="form-control" id="recipients" name="recipients" rows="2" required>{{ record.recipients or '' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="third_country_transfers" class="form-label">Third Country Transfers</label>
+                    <textarea class="form-control" id="third_country_transfers" name="third_country_transfers" rows="2">{{ record.third_country_transfers or '' }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="safeguards" class="form-label">Appropriate Safeguards</label>
+                    <textarea class="form-control" id="safeguards" name="safeguards" rows="2">{{ record.safeguards or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retention -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Retention</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="retention_period" class="form-label">Retention Period *</label>
+                    <input type="text" class="form-control" id="retention_period" name="retention_period" 
+                           value="{{ record.retention_period or '' }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="retention_criteria" class="form-label">Retention Criteria</label>
+                    <textarea class="form-control" id="retention_criteria" name="retention_criteria" rows="2">{{ record.retention_criteria or '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="security_measures" class="form-label">Technical and Organisational Security Measures *</label>
+                <textarea class="form-control" id="security_measures" name="security_measures" rows="3" required>{{ record.security_measures or '' }}</textarea>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="breach_likelihood" class="form-label">Data Breach Likelihood</label>
+                    <select class="form-select" id="breach_likelihood" name="breach_likelihood">
+                        <option value="Low" {% if record.breach_likelihood == 'Low' %}selected{% endif %}>Low</option>
+                        <option value="Medium" {% if record.breach_likelihood == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="High" {% if record.breach_likelihood == 'High' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="breach_impact" class="form-label">Data Breach Impact</label>
+                    <select class="form-select" id="breach_impact" name="breach_impact">
+                        <option value="Low" {% if record.breach_impact == 'Low' %}selected{% endif %}>Low</option>
+                        <option value="Medium" {% if record.breach_impact == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="High" {% if record.breach_impact == 'High' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="dpia_required" class="form-label">DPIA Required</label>
+                    <select class="form-select" id="dpia_required" name="dpia_required">
+                        <option value="No" {% if record.dpia_required == 'No' %}selected{% endif %}>No</option>
+                        <option value="Yes" {% if record.dpia_required == 'Yes' %}selected{% endif %}>Yes</option>
+                        <option value="Consider" {% if record.dpia_required == 'Consider' %}selected{% endif %}>Consider</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Additional Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="additional_info" class="form-label">Additional Information</label>
+                <textarea class="form-control" id="additional_info" name="additional_info" rows="3">{{ record.additional_info or '' }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Selection (only if user can change status) -->
+    {% if session.user_role == 'Privacy Officer' or record.status == 'Draft' %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-flag me-2"></i>Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="status" class="form-label">Record Status</label>
+                <select class="form-select" id="status" name="status">
+                    {% if session.user_role == 'Privacy Officer' %}
+                        <option value="Draft" {% if record.status == 'Draft' %}selected{% endif %}>Draft</option>
+                        <option value="Pending Review" {% if record.status == 'Pending Review' %}selected{% endif %}>Pending Review</option>
+                        <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved</option>
+                        <option value="Rejected" {% if record.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                    {% else %}
+                        <option value="Draft" {% if record.status == 'Draft' %}selected{% endif %}>Draft</option>
+                        <option value="Pending Review" {% if record.status == 'Pending Review' %}selected{% endif %}>Submit for Review</option>
+                    {% endif %}
+                </select>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Form Actions -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Update ROPA Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form progress tracking (same as in ropa_form.html)
+function updateProgress() {
+    const requiredFields = document.querySelectorAll('input[required], select[required], textarea[required]');
+    const checkboxGroups = ['data_categories', 'data_subjects'];
+    
+    let filled = 0;
+    let total = requiredFields.length + checkboxGroups.length;
+    
+    requiredFields.forEach(field => {
+        if (field.value.trim() !== '') {
+            filled++;
+        }
+    });
+    
+    checkboxGroups.forEach(groupName => {
+        const checkboxes = document.querySelectorAll(`input[name="${groupName}"]:checked`);
+        if (checkboxes.length > 0) {
+            filled++;
+        }
+    });
+    
+    const percentage = Math.round((filled / total) * 100);
+    document.getElementById('formProgress').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = percentage + '%';
+}
+
+// Update progress on all form changes
+document.querySelectorAll('input, select, textarea').forEach(field => {
+    field.addEventListener('input', updateProgress);
+    field.addEventListener('change', updateProgress);
+});
+
+// Initial progress calculation
+document.addEventListener('DOMContentLoaded', updateProgress);
+</script>
+{% endblock %}

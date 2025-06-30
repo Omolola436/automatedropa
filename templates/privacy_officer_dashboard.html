@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Officer Dashboard - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-tie me-2"></i>Privacy Officer Dashboard</h1>
+    <div>
+        <a href="{{ url_for('download_template') }}" class="btn btn-success me-2">
+            <i class="fas fa-download me-2"></i>Download Template
+        </a>
+        <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Activity
+        </a>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-2 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Records</h6>
+                        <h3 class="mb-0">{{ total_records }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Approved</h6>
+                        <h3 class="mb-0">{{ approved_records }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Pending</h6>
+                        <h3 class="mb-0">{{ pending_records }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card bg-secondary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Drafts</h6>
+                        <h3 class="mb-0">{{ draft_records }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Rejected</h6>
+                        <h3 class="mb-0">{{ rejected_records }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-2 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Compliance</h6>
+                        <h3 class="mb-0">{{ ((approved_records / total_records * 100) if total_records > 0 else 0) | round(0) }}%</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-pie fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Management Actions -->
+<div class="row mb-4">
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-upload me-2"></i>Template Management
+                </h5>
+                <p class="card-text">Download templates for departments to fill out, or upload completed templates.</p>
+                <div class="btn-group d-grid gap-2" role="group">
+                    <a href="{{ url_for('download_template') }}" class="btn btn-outline-success">
+                        <i class="fas fa-download me-1"></i>Download Template
+                    </a>
+                    <a href="{{ url_for('upload_file') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-1"></i>Upload File
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </h5>
+                <p class="card-text">Export ROPA records in various formats for reporting and compliance.</p>
+                <div class="btn-group d-grid gap-2" role="group">
+                    <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-excel me-1"></i>Export Excel
+                    </a>
+                    <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-danger">
+                        <i class="fas fa-file-pdf me-1"></i>Export PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-list me-2"></i>System Monitoring
+                </h5>
+                <p class="card-text">View system audit logs and monitor user activities for security.</p>
+                <div class="btn-group d-grid gap-2" role="group">
+                    <a href="{{ url_for('audit_logs') }}" class="btn btn-outline-info">
+                        <i class="fas fa-eye me-1"></i>View Audit Logs
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Audit Activities -->
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-history me-2"></i>Recent Activities
+                    <a href="{{ url_for('audit_logs') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if audit_logs and audit_logs.logs %}
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Event</th>
+                                    <th>User</th>
+                                    <th>Description</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in audit_logs.logs[:5] %}
+                                <tr>
+                                    <td><small>{{ log.timestamp.strftime('%m-%d %H:%M') if log.timestamp else 'N/A' }}</small></td>
+                                    <td>
+                                        <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% else %}primary{% endif %}">
+                                            {{ log.event_type }}
+                                        </span>
+                                    </td>
+                                    <td><small>{{ log.user_email }}</small></td>
+                                    <td><small>{{ log.description[:80] }}{% if log.description|length > 80 %}...{% endif %}</small></td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center mb-0">No recent activities</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ROPA Records Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>All ROPA Records
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="statusFilter" id="all" value="all" checked>
+                <label class="btn btn-outline-primary" for="all">All</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="pending" value="Pending Review">
+                <label class="btn btn-outline-warning" for="pending">Pending</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="approved" value="Approved">
+                <label class="btn btn-outline-success" for="approved">Approved</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="rejected" value="Rejected">
+                <label class="btn btn-outline-danger" for="rejected">Rejected</label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if records %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="ropaTable">
+                    <thead>
+                        <tr>
+                            <th>Activity Name</th>
+                            <th>Category</th>
+                            <th>Department</th>
+                            <th>Created By</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr data-status="{{ record.status }}">
+                            <td>
+                                <strong>{{ record.processing_activity_name }}</strong>
+                                <br><small class="text-muted">{{ record.description[:60] }}{% if record.description|length > 60 %}...{% endif %}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ record.category or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ record.department_function or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                <small>{{ record.created_by }}</small>
+                            </td>
+                            <td>
+                                {% if record.status == 'Approved' %}
+                                    <span class="badge bg-success">{{ record.status }}</span>
+                                {% elif record.status == 'Pending Review' %}
+                                    <span class="badge bg-warning">{{ record.status }}</span>
+                                {% elif record.status == 'Rejected' %}
+                                    <span class="badge bg-danger">{{ record.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ record.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% if record.status == 'Pending Review' %}
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a href="{{ url_for('update_status', record_id=record.id, status='Approved') }}" 
+                                           class="btn btn-outline-success" title="Approve" 
+                                           onclick="return confirm('Approve this record?')">
+                                            <i class="fas fa-check"></i>
+                                        </a>
+                                        <a href="{{ url_for('update_status', record_id=record.id, status='Rejected') }}" 
+                                           class="btn btn-outline-danger" title="Reject" 
+                                           onclick="return confirm('Reject this record?')">
+                                            <i class="fas fa-times"></i>
+                                        </a>
+                                    </div>
+                                    {% endif %}
+                                    <a href="{{ url_for('delete_activity', record_id=record.id) }}" class="btn btn-outline-danger" title="Delete" 
+                                       onclick="return confirm('Are you sure you want to delete this record?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h5>No ROPA Records Found</h5>
+                <p class="text-muted">Get started by creating your first processing activity record or uploading a template.</p>
+                <div>
+                    <a href="{{ url_for('add_activity') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-plus me-2"></i>Add New Activity
+                    </a>
+                    <a href="{{ url_for('upload_file') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-upload me-2"></i>Upload Template
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Status filtering functionality
+document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const selectedStatus = this.value;
+        const rows = document.querySelectorAll('#ropaTable tbody tr');
+        
+        rows.forEach(row => {
+            if (selectedStatus === 'all' || row.dataset.status === selectedStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+});
+
+// Quick actions for pending records
+document.addEventListener('DOMContentLoaded', function() {
+    // Highlight pending review records
+    const pendingRows = document.querySelectorAll('tr[data-status="Pending Review"]');
+    pendingRows.forEach(row => {
+        row.classList.add('table-warning');
+    });
+});
+</script>
+{% endblock %}

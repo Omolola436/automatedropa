@@ -1,0 +1,507 @@
+{% extends "base.html" %}
+
+{% block title %}Add New Activity - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-plus-circle me-2"></i>Add New ROPA Activity</h1>
+    <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<form method="POST" id="ropaForm">
+    <!-- Progress Indicator -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="progress mb-2" style="height: 8px;">
+                <div class="progress-bar" role="progressbar" style="width: 0%" id="formProgress"></div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <small class="text-muted">Form Completion: <span id="progressText">0%</span></small>
+                <small class="text-muted">Required fields marked with *</small>
+            </div>
+        </div>
+    </div>
+
+    <!-- Basic Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="processing_activity_name" class="form-label">Processing Activity Name *</label>
+                    <input type="text" class="form-control" id="processing_activity_name" name="processing_activity_name" 
+                           value="{{ form_data.get('processing_activity_name', '') }}" required>
+                    <div class="form-text">Provide a clear, descriptive name for this processing activity</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="category" class="form-label">Category *</label>
+                    <select class="form-select" id="category" name="category" required>
+                        <option value="">Select Category</option>
+                        {% for cat in predefined_options.categories %}
+                        <option value="{{ cat }}" {% if form_data.get('category') == cat %}selected{% endif %}>{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description *</label>
+                <textarea class="form-control" id="description" name="description" rows="3" required>{{ form_data.get('description', '') }}</textarea>
+                <div class="form-text">Detailed description of the processing activity</div>
+            </div>
+            <div class="mb-3">
+                <label for="department_function" class="form-label">Department/Function</label>
+                <select class="form-select" id="department_function" name="department_function">
+                    <option value="">Select Department</option>
+                    {% for dept in predefined_options.departments %}
+                    <option value="{{ dept }}" {% if form_data.get('department_function') == dept %}selected{% endif %}>{{ dept }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <!-- Controller Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-building me-2"></i>Controller Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="controller_name" class="form-label">Controller Name *</label>
+                    <input type="text" class="form-control" id="controller_name" name="controller_name" 
+                           value="{{ form_data.get('controller_name', '') }}" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="controller_contact" class="form-label">Controller Contact *</label>
+                    <input type="text" class="form-control" id="controller_contact" name="controller_contact" 
+                           value="{{ form_data.get('controller_contact', '') }}" required>
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="controller_address" class="form-label">Controller Address *</label>
+                <textarea class="form-control" id="controller_address" name="controller_address" rows="2" required>{{ form_data.get('controller_address', '') }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- DPO Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Data Protection Officer Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="dpo_name" class="form-label">DPO Name</label>
+                    <input type="text" class="form-control" id="dpo_name" name="dpo_name" 
+                           value="{{ form_data.get('dpo_name', '') }}">
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="dpo_contact" class="form-label">DPO Contact</label>
+                    <input type="text" class="form-control" id="dpo_contact" name="dpo_contact" 
+                           value="{{ form_data.get('dpo_contact', '') }}">
+                </div>
+            </div>
+            <div class="mb-3">
+                <label for="dpo_address" class="form-label">DPO Address</label>
+                <textarea class="form-control" id="dpo_address" name="dpo_address" rows="2">{{ form_data.get('dpo_address', '') }}</textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Details -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Processing Details</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="processing_purpose" class="form-label">Purpose of Processing *</label>
+                <textarea class="form-control" id="processing_purpose" name="processing_purpose" rows="3" required>{{ form_data.get('processing_purpose', '') }}</textarea>
+                <div class="form-text">Explain why you are processing this personal data</div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="legal_basis" class="form-label">Legal Basis *</label>
+                    <select class="form-select" id="legal_basis" name="legal_basis" required>
+                        <option value="">Select Legal Basis</option>
+                        {% for basis in predefined_options.legal_basis %}
+                        <option value="{{ basis }}" {% if form_data.get('legal_basis') == basis %}selected{% endif %}>{{ basis }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="legitimate_interests" class="form-label">Legitimate Interests</label>
+                    <textarea class="form-control" id="legitimate_interests" name="legitimate_interests" rows="2">{{ form_data.get('legitimate_interests', '') }}</textarea>
+                    <div class="form-text">Required if legal basis is "Legitimate Interests"</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Categories -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-database me-2"></i>Data Categories</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label class="form-label">Categories of Personal Data *</label>
+                <div class="row">
+                    {% for category in predefined_options.data_categories %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="data_categories" value="{{ category }}" id="data_cat_{{ loop.index }}">
+                            <label class="form-check-label" for="data_cat_{{ loop.index }}">
+                                {{ category }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label">Special Categories of Personal Data</label>
+                <div class="row">
+                    {% for category in predefined_options.special_categories %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="special_categories" value="{{ category }}" id="special_cat_{{ loop.index }}">
+                            <label class="form-check-label" for="special_cat_{{ loop.index }}">
+                                {{ category }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Categories of Data Subjects *</label>
+                <div class="row">
+                    {% for subject in predefined_options.data_subjects %}
+                    <div class="col-md-4 mb-2">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="data_subjects" value="{{ subject }}" id="data_subj_{{ loop.index }}">
+                            <label class="form-check-label" for="data_subj_{{ loop.index }}">
+                                {{ subject }}
+                            </label>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recipients & Transfers -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-share me-2"></i>Recipients & Transfers</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="recipients" class="form-label">Categories of Recipients *</label>
+                <textarea class="form-control" id="recipients" name="recipients" rows="2" required>{{ form_data.get('recipients', '') }}</textarea>
+                <div class="form-text">Who will receive or have access to this personal data?</div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="third_country_transfers" class="form-label">Third Country Transfers</label>
+                    <textarea class="form-control" id="third_country_transfers" name="third_country_transfers" rows="2">{{ form_data.get('third_country_transfers', '') }}</textarea>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="safeguards" class="form-label">Appropriate Safeguards</label>
+                    <textarea class="form-control" id="safeguards" name="safeguards" rows="2">{{ form_data.get('safeguards', '') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Retention -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Retention</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="retention_period" class="form-label">Retention Period *</label>
+                    <input type="text" class="form-control" id="retention_period" name="retention_period" 
+                           value="{{ form_data.get('retention_period', '') }}" required>
+                    <div class="form-text">e.g., "5 years", "Until purpose fulfilled"</div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="retention_criteria" class="form-label">Retention Criteria</label>
+                    <textarea class="form-control" id="retention_criteria" name="retention_criteria" rows="2">{{ form_data.get('retention_criteria', '') }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="security_measures" class="form-label">Technical and Organisational Security Measures *</label>
+                <textarea class="form-control" id="security_measures" name="security_measures" rows="3" required>{{ form_data.get('security_measures', '') }}</textarea>
+                <div class="form-text">Describe the security measures in place to protect this data</div>
+            </div>
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <label for="breach_likelihood" class="form-label">Data Breach Likelihood</label>
+                    <select class="form-select" id="breach_likelihood" name="breach_likelihood">
+                        <option value="Low" {% if form_data.get('breach_likelihood') == 'Low' %}selected{% endif %}>Low</option>
+                        <option value="Medium" {% if form_data.get('breach_likelihood') == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="High" {% if form_data.get('breach_likelihood') == 'High' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="breach_impact" class="form-label">Data Breach Impact</label>
+                    <select class="form-select" id="breach_impact" name="breach_impact">
+                        <option value="Low" {% if form_data.get('breach_impact') == 'Low' %}selected{% endif %}>Low</option>
+                        <option value="Medium" {% if form_data.get('breach_impact') == 'Medium' %}selected{% endif %}>Medium</option>
+                        <option value="High" {% if form_data.get('breach_impact') == 'High' %}selected{% endif %}>High</option>
+                    </select>
+                </div>
+                <div class="col-md-4 mb-3">
+                    <label for="dpia_required" class="form-label">DPIA Required</label>
+                    <select class="form-select" id="dpia_required" name="dpia_required">
+                        <option value="No" {% if form_data.get('dpia_required') == 'No' %}selected{% endif %}>No</option>
+                        <option value="Yes" {% if form_data.get('dpia_required') == 'Yes' %}selected{% endif %}>Yes</option>
+                        <option value="Consider" {% if form_data.get('dpia_required') == 'Consider' %}selected{% endif %}>Consider</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Additional Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="additional_info" class="form-label">Additional Information</label>
+                <textarea class="form-control" id="additional_info" name="additional_info" rows="3">{{ form_data.get('additional_info', '') }}</textarea>
+                <div class="form-text">Any additional relevant information about this processing activity</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Selection -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="fas fa-flag me-2"></i>Status</h5>
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label for="status" class="form-label">Record Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="Draft" {% if form_data.get('status') == 'Draft' %}selected{% endif %}>Draft</option>
+                    <option value="Pending Review" {% if form_data.get('status') == 'Pending Review' %}selected{% endif %}>Submit for Review</option>
+                </select>
+                <div class="form-text">Draft records can be edited later. Submitted records require Privacy Officer approval.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>Create ROPA Record
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Form progress tracking
+function updateProgress() {
+    const requiredFields = document.querySelectorAll('input[required], select[required], textarea[required]');
+    const checkboxGroups = ['data_categories', 'data_subjects']; // Required checkbox groups
+    
+    let filled = 0;
+    let total = requiredFields.length + checkboxGroups.length;
+    
+    // Check regular required fields
+    requiredFields.forEach(field => {
+        if (field.value.trim() !== '') {
+            filled++;
+        }
+    });
+    
+    // Check required checkbox groups
+    checkboxGroups.forEach(groupName => {
+        const checkboxes = document.querySelectorAll(`input[name="${groupName}"]:checked`);
+        if (checkboxes.length > 0) {
+            filled++;
+        }
+    });
+    
+    const percentage = Math.round((filled / total) * 100);
+    document.getElementById('formProgress').style.width = percentage + '%';
+    document.getElementById('progressText').textContent = percentage + '%';
+}
+
+// Automation features
+document.getElementById('description').addEventListener('blur', function() {
+    const description = this.value;
+    if (description.trim() !== '') {
+        // Auto-classify category based on description
+        fetch('/api/auto_classify', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({description: description})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.category) {
+                document.getElementById('category').value = data.category;
+                updateProgress();
+            }
+        })
+        .catch(error => console.log('Auto-classification failed:', error));
+    }
+});
+
+document.getElementById('category').addEventListener('change', function() {
+    const category = this.value;
+    const department = document.getElementById('department_function').value;
+    
+    if (category || department) {
+        // Suggest processing purpose
+        fetch('/api/suggest_purpose', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({category: category, department: department})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.purpose && !document.getElementById('processing_purpose').value) {
+                document.getElementById('processing_purpose').value = data.purpose;
+                updateProgress();
+            }
+        })
+        .catch(error => console.log('Purpose suggestion failed:', error));
+    }
+});
+
+// Risk assessment on data category changes
+function assessRisk() {
+    const dataCategories = Array.from(document.querySelectorAll('input[name="data_categories"]:checked')).map(cb => cb.value);
+    const specialCategories = Array.from(document.querySelectorAll('input[name="special_categories"]:checked')).map(cb => cb.value);
+    
+    if (dataCategories.length > 0 || specialCategories.length > 0) {
+        fetch('/api/assess_risk', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                data_categories: dataCategories,
+                special_categories: specialCategories
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.risk_level) {
+                document.getElementById('breach_likelihood').value = data.risk_level;
+                document.getElementById('breach_impact').value = data.risk_level;
+                document.getElementById('dpia_required').value = data.dpia_required || 'No';
+                updateProgress();
+            }
+        })
+        .catch(error => console.log('Risk assessment failed:', error));
+    }
+}
+
+// Security measures suggestion
+function suggestSecurity() {
+    const dataCategories = Array.from(document.querySelectorAll('input[name="data_categories"]:checked')).map(cb => cb.value);
+    const riskLevel = document.getElementById('breach_likelihood').value;
+    
+    if (dataCategories.length > 0 && !document.getElementById('security_measures').value) {
+        fetch('/api/suggest_security', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                data_categories: dataCategories,
+                risk_level: riskLevel
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.measures) {
+                document.getElementById('security_measures').value = data.measures;
+                updateProgress();
+            }
+        })
+        .catch(error => console.log('Security suggestion failed:', error));
+    }
+}
+
+// Event listeners for automation
+document.querySelectorAll('input[name="data_categories"], input[name="special_categories"]').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        assessRisk();
+        suggestSecurity();
+        updateProgress();
+    });
+});
+
+document.getElementById('breach_likelihood').addEventListener('change', suggestSecurity);
+
+// Update progress on all form changes
+document.querySelectorAll('input, select, textarea').forEach(field => {
+    field.addEventListener('input', updateProgress);
+    field.addEventListener('change', updateProgress);
+});
+
+// Initial progress calculation
+document.addEventListener('DOMContentLoaded', updateProgress);
+
+// Auto-fill functionality for controller details
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-fill common controller details if empty
+    if (!document.getElementById('controller_name').value) {
+        document.getElementById('controller_name').value = 'Your Company Ltd';
+    }
+    if (!document.getElementById('dpo_name').value) {
+        document.getElementById('dpo_name').value = 'Data Protection Officer';
+    }
+    if (!document.getElementById('dpo_contact').value) {
+        document.getElementById('dpo_contact').value = 'dpo@yourcompany.com';
+    }
+    updateProgress();
+});
+</script>
+{% endblock %}

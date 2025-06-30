@@ -1,0 +1,370 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Logs - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-list me-2"></i>Security Audit Logs</h1>
+    <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Audit Log Information -->
+<div class="alert alert-info mb-4">
+    <h5 class="alert-heading">
+        <i class="fas fa-info-circle me-2"></i>Audit Log Information
+    </h5>
+    <p class="mb-0">
+        This section contains security audit logs tracking all user activities, login attempts, 
+        data modifications, and system events for compliance and security monitoring purposes.
+    </p>
+</div>
+
+<!-- Filter and Search -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-filter me-2"></i>Filter Logs
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" id="filterForm">
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    <label for="event_type" class="form-label">Event Type</label>
+                    <select class="form-select" id="event_type" name="event_type">
+                        <option value="">All Events</option>
+                        <option value="Login Success">Login Success</option>
+                        <option value="Login Failed">Login Failed</option>
+                        <option value="Logout">Logout</option>
+                        <option value="ROPA Record Created">Record Created</option>
+                        <option value="ROPA Record Updated">Record Updated</option>
+                        <option value="ROPA Record Deleted">Record Deleted</option>
+                        <option value="ROPA Status Updated">Status Updated</option>
+                        <option value="File Uploaded">File Uploaded</option>
+                        <option value="Data Exported">Data Exported</option>
+                        <option value="Template Downloaded">Template Downloaded</option>
+                        <option value="User Registration">User Registration</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="user_email" class="form-label">User Email</label>
+                    <input type="email" class="form-control" id="user_email" name="user_email" 
+                           placeholder="Filter by user email">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="date_from" class="form-label">Date From</label>
+                    <input type="date" class="form-control" id="date_from" name="date_from">
+                </div>
+                
+                <div class="col-md-3 mb-3">
+                    <label for="date_to" class="form-label">Date To</label>
+                    <input type="date" class="form-control" id="date_to" name="date_to">
+                </div>
+            </div>
+            
+            <div class="d-flex justify-content-between">
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Apply Filters
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="clearFilters()">
+                        <i class="fas fa-times me-2"></i>Clear
+                    </button>
+                </div>
+                <div>
+                    <button type="button" class="btn btn-outline-info" onclick="refreshLogs()">
+                        <i class="fas fa-sync-alt me-2"></i>Refresh
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Audit Logs Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>Audit Events
+                {% if logs.total_count %}
+                    <span class="badge bg-primary">{{ logs.total_count }} total</span>
+                {% endif %}
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <button type="button" class="btn btn-outline-success" id="successFilter">
+                    <i class="fas fa-check me-1"></i>Success
+                </button>
+                <button type="button" class="btn btn-outline-danger" id="errorFilter">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Errors
+                </button>
+                <button type="button" class="btn btn-outline-warning" id="securityFilter">
+                    <i class="fas fa-shield-alt me-1"></i>Security
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if logs.logs %}
+            <div class="table-responsive">
+                <table class="table table-hover table-sm" id="auditTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 130px;">Timestamp</th>
+                            <th style="width: 150px;">Event Type</th>
+                            <th style="width: 200px;">User</th>
+                            <th style="width: 120px;">IP Address</th>
+                            <th>Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in logs.logs %}
+                        <tr class="{% if 'Failed' in log.event_type or 'Error' in log.event_type %}table-danger{% elif 'Success' in log.event_type %}table-success{% elif 'Login' in log.event_type or 'Registration' in log.event_type %}table-warning{% endif %}"
+                            data-event-category="{% if 'Failed' in log.event_type or 'Error' in log.event_type %}error{% elif 'Success' in log.event_type %}success{% elif 'Login' in log.event_type or 'Registration' in log.event_type %}security{% else %}other{% endif %}">
+                            <td>
+                                <small>
+                                    {% if log.timestamp %}
+                                        {{ log.timestamp.strftime('%Y-%m-%d') }}<br>
+                                        <span class="text-muted">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% elif 'Login' in log.event_type %}warning{% else %}primary{% endif %}">
+                                    {{ log.event_type }}
+                                </span>
+                            </td>
+                            <td>
+                                <small>
+                                    {{ log.user_email }}
+                                    {% if log.user_email in ['admin@company.com'] %}
+                                        <span class="badge bg-secondary">Admin</span>
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <small class="font-monospace">{{ log.ip_address or 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <small>{{ log.description }}</small>
+                                {% if log.additional_data %}
+                                    <br><small class="text-muted">{{ log.additional_data[:100] }}{% if log.additional_data|length > 100 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if logs.total_pages > 1 %}
+            <nav aria-label="Audit log pagination">
+                <ul class="pagination justify-content-center mt-3">
+                    {% if logs.page > 1 %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ logs.page - 1 }}">Previous</a>
+                    </li>
+                    {% endif %}
+                    
+                    {% for page_num in range(1, logs.total_pages + 1) %}
+                        {% if page_num == logs.page %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ page_num }}</span>
+                        </li>
+                        {% elif page_num <= 3 or page_num >= logs.total_pages - 2 or (page_num >= logs.page - 1 and page_num <= logs.page + 1) %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_num }}">{{ page_num }}</a>
+                        </li>
+                        {% elif page_num == 4 or page_num == logs.total_pages - 3 %}
+                        <li class="page-item disabled">
+                            <span class="page-link">...</span>
+                        </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if logs.page < logs.total_pages %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ logs.page + 1 }}">Next</a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-list fa-3x text-muted mb-3"></i>
+                <h5>No Audit Logs Found</h5>
+                <p class="text-muted">No audit events match your current filters.</p>
+                <button type="button" class="btn btn-outline-primary" onclick="clearFilters()">
+                    <i class="fas fa-times me-2"></i>Clear Filters
+                </button>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Security Summary -->
+{% if logs.logs %}
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-check-circle me-2"></i>Successful Events
+                </h6>
+                <h4 class="mb-0" id="successCount">-</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-danger text-white">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Failed/Error Events
+                </h6>
+                <h4 class="mb-0" id="errorCount">-</h4>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="fas fa-shield-alt me-2"></i>Security Events
+                </h6>
+                <h4 class="mb-0" id="securityCount">-</h4>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Calculate and display event counts
+document.addEventListener('DOMContentLoaded', function() {
+    const rows = document.querySelectorAll('#auditTable tbody tr');
+    let successCount = 0;
+    let errorCount = 0;
+    let securityCount = 0;
+    
+    rows.forEach(row => {
+        const category = row.dataset.eventCategory;
+        switch(category) {
+            case 'success':
+                successCount++;
+                break;
+            case 'error':
+                errorCount++;
+                break;
+            case 'security':
+                securityCount++;
+                break;
+        }
+    });
+    
+    if (document.getElementById('successCount')) {
+        document.getElementById('successCount').textContent = successCount;
+        document.getElementById('errorCount').textContent = errorCount;
+        document.getElementById('securityCount').textContent = securityCount;
+    }
+});
+
+// Event type filtering
+document.getElementById('successFilter').addEventListener('click', function() {
+    filterByCategory('success');
+    this.classList.toggle('active');
+});
+
+document.getElementById('errorFilter').addEventListener('click', function() {
+    filterByCategory('error');
+    this.classList.toggle('active');
+});
+
+document.getElementById('securityFilter').addEventListener('click', function() {
+    filterByCategory('security');
+    this.classList.toggle('active');
+});
+
+function filterByCategory(category) {
+    const rows = document.querySelectorAll('#auditTable tbody tr');
+    rows.forEach(row => {
+        if (category === 'all' || row.dataset.eventCategory === category) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+// Clear all filters
+function clearFilters() {
+    document.getElementById('filterForm').reset();
+    const rows = document.querySelectorAll('#auditTable tbody tr');
+    rows.forEach(row => {
+        row.style.display = '';
+    });
+    
+    // Remove active states from filter buttons
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Reload page to clear URL parameters
+    window.location.href = window.location.pathname;
+}
+
+// Refresh logs
+function refreshLogs() {
+    window.location.reload();
+}
+
+// Auto-refresh every 30 seconds
+let autoRefreshInterval;
+const autoRefreshCheckbox = document.getElementById('autoRefresh');
+
+function startAutoRefresh() {
+    autoRefreshInterval = setInterval(() => {
+        window.location.reload();
+    }, 30000); // 30 seconds
+}
+
+function stopAutoRefresh() {
+    if (autoRefreshInterval) {
+        clearInterval(autoRefreshInterval);
+    }
+}
+
+// Add auto-refresh toggle if needed
+if (document.querySelector('#auditTable tbody tr')) {
+    const cardHeader = document.querySelector('.card-header .d-flex');
+    const autoRefreshToggle = document.createElement('div');
+    autoRefreshToggle.innerHTML = `
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="autoRefresh">
+            <label class="form-check-label" for="autoRefresh">
+                <small>Auto-refresh (30s)</small>
+            </label>
+        </div>
+    `;
+    cardHeader.appendChild(autoRefreshToggle);
+    
+    document.getElementById('autoRefresh').addEventListener('change', function() {
+        if (this.checked) {
+            startAutoRefresh();
+        } else {
+            stopAutoRefresh();
+        }
+    });
+}
+</script>
+{% endblock %}

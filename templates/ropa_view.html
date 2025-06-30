@@ -1,0 +1,300 @@
+{% extends "base.html" %}
+
+{% block title %}View Activity - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-eye me-2"></i>View ROPA Activity</h1>
+    <div>
+        <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-primary me-2">
+            <i class="fas fa-edit me-2"></i>Edit Record
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Record Header Info -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-8">
+                <h3 class="mb-2">{{ record.processing_activity_name }}</h3>
+                <p class="text-muted mb-3">{{ record.description or 'No description provided' }}</p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if record.category %}
+                    <span class="badge bg-secondary">{{ record.category }}</span>
+                    {% endif %}
+                    {% if record.department_function %}
+                    <span class="badge bg-info">{{ record.department_function }}</span>
+                    {% endif %}
+                    <span class="badge bg-{% if record.status == 'Approved' %}success{% elif record.status == 'Pending Review' %}warning{% elif record.status == 'Rejected' %}danger{% else %}secondary{% endif %}">
+                        {{ record.status }}
+                    </span>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title">Record Information</h6>
+                        <p class="card-text mb-1"><strong>ID:</strong> {{ record.id }}</p>
+                        <p class="card-text mb-1"><strong>Created:</strong> {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else 'N/A' }}</p>
+                        <p class="card-text mb-1"><strong>Created by:</strong> {{ record.created_by }}</p>
+                        {% if record.updated_at %}
+                        <p class="card-text mb-1"><strong>Updated:</strong> {{ record.updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                        {% endif %}
+                        {% if record.approved_by %}
+                        <p class="card-text mb-0"><strong>Approved by:</strong> {{ record.approved_by }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status Actions for Privacy Officers -->
+{% if session.user_role == 'Privacy Officer' and record.status == 'Pending Review' %}
+<div class="card mb-4 border-warning">
+    <div class="card-header bg-warning text-dark">
+        <h5 class="mb-0"><i class="fas fa-exclamation-triangle me-2"></i>Pending Review Actions</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-3">This record is pending your review. Please approve or reject this ROPA activity.</p>
+        <div class="btn-group" role="group">
+            <a href="{{ url_for('update_status', record_id=record.id, status='Approved') }}" 
+               class="btn btn-success" onclick="return confirm('Are you sure you want to approve this record?')">
+                <i class="fas fa-check me-2"></i>Approve
+            </a>
+            <a href="{{ url_for('update_status', record_id=record.id, status='Rejected') }}" 
+               class="btn btn-danger" onclick="return confirm('Are you sure you want to reject this record?')">
+                <i class="fas fa-times me-2"></i>Reject
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Detailed Information Sections -->
+<div class="row">
+    <!-- Controller Details -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Controller Details</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Name:</dt>
+                    <dd class="col-sm-8">{{ record.controller_name or 'Not specified' }}</dd>
+                    
+                    <dt class="col-sm-4">Contact:</dt>
+                    <dd class="col-sm-8">{{ record.controller_contact or 'Not specified' }}</dd>
+                    
+                    <dt class="col-sm-4">Address:</dt>
+                    <dd class="col-sm-8">{{ record.controller_address or 'Not specified' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <!-- DPO Details -->
+    <div class="col-md-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Data Protection Officer</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                    <dt class="col-sm-4">Name:</dt>
+                    <dd class="col-sm-8">{{ record.dpo_name or 'Not specified' }}</dd>
+                    
+                    <dt class="col-sm-4">Contact:</dt>
+                    <dd class="col-sm-8">{{ record.dpo_contact or 'Not specified' }}</dd>
+                    
+                    <dt class="col-sm-4">Address:</dt>
+                    <dd class="col-sm-8">{{ record.dpo_address or 'Not specified' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Processing Details -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-cogs me-2"></i>Processing Details</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Purpose:</dt>
+            <dd class="col-sm-9">{{ record.processing_purpose or 'Not specified' }}</dd>
+            
+            <dt class="col-sm-3">Legal Basis:</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-primary">{{ record.legal_basis or 'Not specified' }}</span>
+            </dd>
+            
+            {% if record.legitimate_interests %}
+            <dt class="col-sm-3">Legitimate Interests:</dt>
+            <dd class="col-sm-9">{{ record.legitimate_interests }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<!-- Data Categories -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-database me-2"></i>Data Categories</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <h6>Personal Data Categories:</h6>
+                {% if record.data_categories %}
+                    {% for category in record.data_categories.split(', ') %}
+                        <span class="badge bg-secondary me-1 mb-1">{{ category }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span class="text-muted">Not specified</span>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-6 mb-3">
+                <h6>Special Categories:</h6>
+                {% if record.special_categories %}
+                    {% for category in record.special_categories.split(', ') %}
+                        <span class="badge bg-warning me-1 mb-1">{{ category }}</span>
+                    {% endfor %}
+                {% else %}
+                    <span class="text-muted">None specified</span>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="mt-3">
+            <h6>Data Subjects:</h6>
+            {% if record.data_subjects %}
+                {% for subject in record.data_subjects.split(', ') %}
+                    <span class="badge bg-info me-1 mb-1">{{ subject }}</span>
+                {% endfor %}
+            {% else %}
+                <span class="text-muted">Not specified</span>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Recipients & Transfers -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-share me-2"></i>Recipients & Transfers</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Recipients:</dt>
+            <dd class="col-sm-9">{{ record.recipients or 'Not specified' }}</dd>
+            
+            {% if record.third_country_transfers %}
+            <dt class="col-sm-3">Third Country Transfers:</dt>
+            <dd class="col-sm-9">{{ record.third_country_transfers }}</dd>
+            {% endif %}
+            
+            {% if record.safeguards %}
+            <dt class="col-sm-3">Safeguards:</dt>
+            <dd class="col-sm-9">{{ record.safeguards }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<!-- Retention -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Retention</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Retention Period:</dt>
+            <dd class="col-sm-9">{{ record.retention_period or 'Not specified' }}</dd>
+            
+            {% if record.retention_criteria %}
+            <dt class="col-sm-3">Retention Criteria:</dt>
+            <dd class="col-sm-9">{{ record.retention_criteria }}</dd>
+            {% endif %}
+        </dl>
+    </div>
+</div>
+
+<!-- Security & Risk Assessment -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Security & Risk Assessment</h5>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">Security Measures:</dt>
+            <dd class="col-sm-9">{{ record.security_measures or 'Not specified' }}</dd>
+            
+            <dt class="col-sm-3">Breach Likelihood:</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-{% if record.breach_likelihood == 'High' %}danger{% elif record.breach_likelihood == 'Medium' %}warning{% else %}success{% endif %}">
+                    {{ record.breach_likelihood or 'Medium' }}
+                </span>
+            </dd>
+            
+            <dt class="col-sm-3">Breach Impact:</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-{% if record.breach_impact == 'High' %}danger{% elif record.breach_impact == 'Medium' %}warning{% else %}success{% endif %}">
+                    {{ record.breach_impact or 'Medium' }}
+                </span>
+            </dd>
+            
+            <dt class="col-sm-3">DPIA Required:</dt>
+            <dd class="col-sm-9">
+                <span class="badge bg-{% if record.dpia_required == 'Yes' %}danger{% elif record.dpia_required == 'Consider' %}warning{% else %}success{% endif %}">
+                    {{ record.dpia_required or 'No' }}
+                </span>
+            </dd>
+        </dl>
+    </div>
+</div>
+
+<!-- Additional Information -->
+{% if record.additional_info %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-plus-circle me-2"></i>Additional Information</h5>
+    </div>
+    <div class="card-body">
+        <p class="mb-0">{{ record.additional_info }}</p>
+    </div>
+</div>
+{% endif %}
+
+<!-- Actions -->
+<div class="card">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <div>
+                {% if session.user_role == 'Privacy Officer' or record.created_by == session.user_email %}
+                <a href="{{ url_for('delete_activity', record_id=record.id) }}" class="btn btn-outline-danger" 
+                   onclick="return confirm('Are you sure you want to delete this record? This action cannot be undone.')">
+                    <i class="fas fa-trash me-2"></i>Delete Record
+                </a>
+                {% endif %}
+            </div>
+            <div>
+                <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-file-pdf me-2"></i>Export as PDF
+                </a>
+                <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Record
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
