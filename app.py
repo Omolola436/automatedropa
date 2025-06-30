@@ -170,6 +170,10 @@ def add_activity():
     """Add new ROPA activity"""
     if request.method == 'POST':
         try:
+            # Determine action (draft, submit for review, or approve)
+            action = request.form.get('action', 'draft')
+            user_role = session.get('user_role', 'Privacy Champion')
+            
             # Collect form data
             form_data = {
                 'processing_activity_name': request.form.get('processing_activity_name', ''),
@@ -190,41 +194,55 @@ def add_activity():
                 'representative_address': request.form.get('representative_address', ''),
                 'processing_purpose': request.form.get('processing_purpose', ''),
                 'legal_basis': request.form.get('legal_basis', ''),
-                'legitimate_interests': request.form.get('legitimate_interests', ''),
+                'legitimate_interest_basis': request.form.get('legitimate_interest_basis', ''),
                 'data_categories': ', '.join(request.form.getlist('data_categories')),
                 'special_categories': ', '.join(request.form.getlist('special_categories')),
                 'data_subjects': ', '.join(request.form.getlist('data_subjects')),
                 'recipients': request.form.get('recipients', ''),
                 'third_country_transfers': request.form.get('third_country_transfers', ''),
-                'international_transfers': request.form.get('international_transfers', ''),
                 'safeguards': request.form.get('safeguards', ''),
                 'retention_period': request.form.get('retention_period', ''),
                 'retention_criteria': request.form.get('retention_criteria', ''),
-                'retention_justification': request.form.get('retention_justification', ''),
                 'security_measures': request.form.get('security_measures', ''),
-                'breach_likelihood': request.form.get('breach_likelihood', 'Medium'),
-                'breach_impact': request.form.get('breach_impact', 'Medium'),
-                'dpia_required': request.form.get('dpia_required', 'No'),
-                'additional_info': request.form.get('additional_info', ''),
-                'status': request.form.get('status', 'Draft')
+                'additional_info': request.form.get('additional_info', '')
             }
             
-            # Validate required fields
-            validation_result = validate_required_fields(form_data)
-            if not validation_result['valid']:
-                flash(f'Validation failed: {", ".join(validation_result["missing_fields"])}', 'error')
-                return render_template('ropa_form.html', 
-                                     form_data=form_data,
-                                     predefined_options=get_predefined_options())
+            # Set status based on action and user role
+            if action == 'draft':
+                form_data['status'] = 'Draft'
+            elif action == 'submit' and user_role == 'Privacy Champion':
+                form_data['status'] = 'Pending Review'
+            elif action == 'approve' and user_role == 'Privacy Officer':
+                form_data['status'] = 'Approved'
+            else:
+                form_data['status'] = 'Draft'
+            
+            # Validate required fields if not saving as draft
+            if action != 'draft':
+                validation_result = validate_required_fields(form_data)
+                if not validation_result['valid']:
+                    flash(f'Validation failed: {", ".join(validation_result["missing_fields"])}', 'error')
+                    return render_template('add_activity.html', form_data=form_data)
             
             # Save record
             record_id = save_ropa_record(form_data, session['user_email'])
             
             if record_id:
-                log_audit_event('ROPA Record Created', session['user_email'], get_client_ip(request),
-                              f'Created new ROPA record: {form_data["processing_activity_name"]}')
-                flash('ROPA record created successfully!', 'success')
-                return redirect(url_for('index'))
+                # Log appropriate audit event based on action
+                if action == 'draft':
+                    log_audit_event('ROPA Record Saved as Draft', session['user_email'], get_client_ip(request),
+                                  f'ROPA record saved as draft: {form_data["processing_activity_name"]}')
+                    flash('ROPA record saved as draft successfully!', 'success')
+                elif action == 'submit':
+                    log_audit_event('ROPA Record Submitted for Review', session['user_email'], get_client_ip(request),
+                                  f'ROPA record submitted for review: {form_data["processing_activity_name"]}')
+                    flash('ROPA record submitted for Privacy Officer review successfully!', 'success')
+                elif action == 'approve':
+                    log_audit_event('ROPA Record Approved', session['user_email'], get_client_ip(request),
+                                  f'ROPA record approved: {form_data["processing_activity_name"]}')
+                    flash('ROPA record created and approved successfully!', 'success')
+                
+                return redirect(url_for('privacy_champion_dashboard' if user_role == 'Privacy Champion' else 'privacy_officer_dashboard'))
             else:
                 flash('Error creating ROPA record', 'error')
                 
@@ -232,10 +250,8 @@ def add_activity():
             logging.error(f"Error creating ROPA record: {str(e)}")
             flash('An error occurred while creating the record', 'error')
     
-    # GET request - show form
-    return render_template('ropa_form.html', 
-                         form_data={},
-                         predefined_options=get_predefined_options())
+    # GET request - show tabbed form
+    return render_template('add_activity.html', form_data={})
 
 @app.route('/edit_activity/<int:record_id>', methods=['GET', 'POST'])
 def edit_activity(record_id):

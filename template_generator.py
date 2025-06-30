@@ -191,19 +191,26 @@ def generate_ropa_template():
                 cell.font = header_font
                 cell.fill = header_fill
     
-    # Adjust column widths
+    # Adjust column widths - handle merged cells properly
     for ws_name in [ws, legal_basis_ws, categories_ws]:
-        for column in ws_name.columns:
+        for col_num in range(1, ws_name.max_column + 1):
             max_length = 0
-            column_letter = column[0].column_letter
-            for cell in column:
+            column_letter = ws_name.cell(row=1, column=col_num).column_letter
+            
+            for row_num in range(1, ws_name.max_row + 1):
+                cell = ws_name.cell(row=row_num, column=col_num)
+                # Skip merged cells
+                if hasattr(cell, 'coordinate') and cell.coordinate in ws_name.merged_cells:
+                    continue
                 try:
-                    if len(str(cell.value)) > max_length:
+                    if cell.value and len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
                 except:
                     pass
+            
             adjusted_width = min(max_length + 2, 50)  # Cap at 50 chars
-            ws_name.column_dimensions[column_letter].width = adjusted_width
+            if adjusted_width > 0:
+                ws_name.column_dimensions[column_letter].width = adjusted_width
     
     # Save to temporary file
     temp_dir = tempfile.gettempdir()

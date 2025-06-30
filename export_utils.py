@@ -45,12 +45,15 @@ def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_
         base_query = "SELECT * FROM ropa_records WHERE 1=1"
         params = []
     
-    # Status filtering
-    status_filters = ["'Approved'"]
+    # Status filtering - include all statuses if no specific filters
+    status_filters = []
     if include_drafts:
         status_filters.append("'Draft'")
     if include_rejected:
         status_filters.append("'Rejected'")
+    
+    # Always include approved records and pending review for export
+    status_filters.extend(["'Approved'", "'Pending Review'"])
     
     status_clause = " AND status IN (" + ", ".join(status_filters) + ")"
     query = base_query + status_clause + " ORDER BY created_at DESC"

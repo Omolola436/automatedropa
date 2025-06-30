@@ -87,7 +87,11 @@ def assess_risk(data_categories, special_categories):
     
     # Check for high-risk regular data
     if data_categories:
-        data_list = [cat.strip() for cat in data_categories.split(',') if cat.strip()]
+        # Handle both string and list inputs
+        if isinstance(data_categories, list):
+            data_list = [str(cat).strip() for cat in data_categories if str(cat).strip()]
+        else:
+            data_list = [cat.strip() for cat in str(data_categories).split(',') if cat.strip()]
         high_risk_data = [cat for cat in data_list if cat in risk_factors["high_risk_data"]]
         medium_risk_data = [cat for cat in data_list if cat in risk_factors["medium_risk_data"]]
         
@@ -165,7 +169,11 @@ def suggest_security_measures(data_categories, risk_level):
     
     # Add data-specific measures
     if data_categories:
-        data_list = [cat.strip() for cat in data_categories.split(',') if cat.strip()]
+        # Handle both string and list inputs
+        if isinstance(data_categories, list):
+            data_list = [str(cat).strip() for cat in data_categories if str(cat).strip()]
+        else:
+            data_list = [cat.strip() for cat in str(data_categories).split(',') if cat.strip()]
         for data_type in data_list:
             if data_type in data_specific_measures:
                 measures.extend(data_specific_measures[data_type])
