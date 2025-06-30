@@ -234,6 +234,27 @@ def add_activity():
         db.session.add(record)
         db.session.commit()
         
+        # Process custom tabs if any were created
+        custom_tab_counter = 1
+        while f'custom_tab_name_{custom_tab_counter}' in request.form:
+            tab_name = request.form.get(f'custom_tab_name_{custom_tab_counter}')
+            tab_description = request.form.get(f'custom_tab_description_{custom_tab_counter}')
+            tab_processes = request.form.get(f'custom_tab_processes_{custom_tab_counter}')
+            
+            if tab_name and tab_processes:  # Only create if required fields are filled
+                custom_tab = models.CustomTab(
+                    tab_name=tab_name,
+                    tab_description=tab_description,
+                    processes=tab_processes,
+                    created_by=current_user.id,
+                    ropa_record_id=record.id
+                )
+                db.session.add(custom_tab)
+            
+            custom_tab_counter += 1
+        
+        db.session.commit()
+        
         log_audit_event('ROPA Created', current_user.email, f'Created ROPA record: {record.processing_activity_name}')
         flash(message, 'success')
         return redirect(url_for('privacy_champion_dashboard'))
@@ -295,7 +316,9 @@ def view_activity(record_id):
     if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
         abort(403)
     
-    return render_template('ropa_view.html', record=record)
+    # Get custom tabs for this record
+    custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
+    return render_template('ropa_view.html', record=record, custom_tabs=custom_tabs)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required

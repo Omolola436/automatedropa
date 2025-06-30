@@ -25,7 +25,7 @@
             </p>
         </div>
         <div class="col-md-4 text-md-end">
-            <strong>Department:</strong> {{ session.user_department or 'Not Assigned' }}<br>
+            <strong>Department:</strong> {{ current_user.department or 'Not Assigned' }}<br>
             <strong>Records Access:</strong> Your Department + Created by You
         </div>
     </div>
