@@ -43,11 +43,23 @@ def get_audit_logs(limit=100, page=1, per_page=50):
     
     conn.close()
     
-    # Convert to list of dictionaries
+    # Convert to list of dictionaries with proper timestamp parsing
     log_list = []
     for log in logs:
+        # Parse timestamp string to datetime object
+        timestamp_str = log[0]
+        try:
+            from datetime import datetime
+            if timestamp_str:
+                # Handle SQLite timestamp format
+                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            else:
+                timestamp = None
+        except:
+            timestamp = None
+            
         log_list.append({
-            'timestamp': log[0],
+            'timestamp': timestamp,
             'event_type': log[1],
             'user_email': log[2],
             'ip_address': log[3],
@@ -78,11 +90,23 @@ def get_recent_audit_logs(limit=10):
     logs = cursor.fetchall()
     conn.close()
     
-    # Convert to list of dictionaries
+    # Convert to list of dictionaries with proper timestamp parsing
     log_list = []
     for log in logs:
+        # Parse timestamp string to datetime object
+        timestamp_str = log[0]
+        try:
+            from datetime import datetime
+            if timestamp_str:
+                # Handle SQLite timestamp format
+                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+            else:
+                timestamp = None
+        except:
+            timestamp = None
+            
         log_list.append({
-            'timestamp': log[0],
+            'timestamp': timestamp,
             'event_type': log[1],
             'user_email': log[2],
             'ip_address': log[3],

@@ -92,11 +92,7 @@ def init_database():
     
     conn.commit()
     
-    # Create default admin user if none exists
-    cursor.execute("SELECT COUNT(*) FROM users WHERE role = 'Privacy Officer'")
-    if cursor.fetchone()[0] == 0:
-        create_user('admin@company.com', 'admin123', 'Privacy Officer', 'IT')
-        create_user('champion@company.com', 'champion123', 'Privacy Champion', 'HR')
+    # Database initialization complete - users must register to access the system
     
     conn.close()
 

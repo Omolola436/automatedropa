@@ -196,7 +196,7 @@
                             <tbody>
                                 {% for log in audit_logs.logs[:5] %}
                                 <tr>
-                                    <td><small>{{ log.timestamp.strftime('%m-%d %H:%M') if log.timestamp else 'N/A' }}</small></td>
+                                    <td><small>{% if log.timestamp and log.timestamp.strftime %}{{ log.timestamp.strftime('%m-%d %H:%M') }}{% else %}N/A{% endif %}</small></td>
                                     <td>
                                         <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% else %}primary{% endif %}">
                                             {{ log.event_type }}
