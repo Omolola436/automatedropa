@@ -335,6 +335,10 @@ def update_status(record_id, status):
     if 'comments' in request.form:
         record.review_comments = request.form['comments']
     
+    # If approved, integrate custom activities into main ROPA record
+    if status == 'Approved':
+        integrate_custom_activities(record)
+    
     db.session.commit()
     
     log_audit_event('ROPA Status Updated', current_user.email, f'Updated status of ROPA {record.processing_activity_name} to {status}')
@@ -477,6 +481,71 @@ def api_suggest_security():
     risk_level = data.get('risk_level', 'Medium')
     suggestions = suggest_security_measures(data_categories, risk_level)
     return jsonify({'suggestions': suggestions})
+
+def integrate_custom_activities(record):
+    """Integrate approved custom activities into main ROPA record"""
+    import json
+    
+    # Get all custom tabs for this record
+    custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
+    
+    if not custom_tabs:
+        return
+    
+    # Collect all processes from custom tabs
+    all_processes = []
+    for tab in custom_tabs:
+        if tab.processes:
+            try:
+                processes = json.loads(tab.processes)
+                if isinstance(processes, list):
+                    all_processes.extend(processes)
+            except (json.JSONDecodeError, TypeError):
+                continue
+    
+    if not all_processes:
+        return
+    
+    # Merge process information into main ROPA record
+    # Collect unique purposes, data categories, etc.
+    purposes = set()
+    data_categories = set()
+    recipients = set()
+    security_measures = set()
+    
+    # Parse existing values
+    if record.processing_purpose:
+        purposes.add(record.processing_purpose.strip())
+    if record.data_categories:
+        data_categories.update([cat.strip() for cat in record.data_categories.split(';') if cat.strip()])
+    if record.recipients:
+        recipients.update([rec.strip() for rec in record.recipients.split(';') if rec.strip()])
+    if record.security_measures:
+        security_measures.update([sec.strip() for sec in record.security_measures.split(';') if sec.strip()])
+    
+    # Add custom process information
+    for process in all_processes:
+        if process.get('purpose'):
+            purposes.add(process['purpose'].strip())
+        if process.get('data_category'):
+            data_categories.add(process['data_category'].strip())
+        if process.get('recipients'):
+            recipients.add(process['recipients'].strip())
+        if process.get('security_measures'):
+            security_measures.add(process['security_measures'].strip())
+    
+    # Update record with merged information
+    record.processing_purpose = '; '.join(sorted(purposes)) if purposes else record.processing_purpose
+    record.data_categories = '; '.join(sorted(data_categories)) if data_categories else record.data_categories
+    record.recipients = '; '.join(sorted(recipients)) if recipients else record.recipients
+    record.security_measures = '; '.join(sorted(security_measures)) if security_measures else record.security_measures
+    
+    # Mark custom tabs as integrated by deleting them (they're now part of main record)
+    for tab in custom_tabs:
+        db.session.delete(tab)
+    
+    log_audit_event('Custom Activities Integrated', record.creator.email, 
+                   f'Integrated {len(all_processes)} custom activities into ROPA {record.processing_activity_name}')
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
