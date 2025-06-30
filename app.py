@@ -419,7 +419,10 @@ def export_data():
         return send_file(file_path, as_attachment=True, download_name=filename)
     except Exception as e:
         flash(f'Error generating export: {str(e)}', 'error')
-        return redirect(url_for('privacy_champion_dashboard'))
+        if current_user.role == 'Privacy Officer':
+            return redirect(url_for('privacy_officer_dashboard'))
+        else:
+            return redirect(url_for('privacy_champion_dashboard'))
 
 @app.route('/audit-logs')
 @login_required

@@ -192,10 +192,11 @@ def generate_ropa_template():
                 cell.fill = header_fill
     
     # Adjust column widths - handle merged cells properly
+    from openpyxl.utils import get_column_letter
     for ws_name in [ws, legal_basis_ws, categories_ws]:
         for col_num in range(1, ws_name.max_column + 1):
             max_length = 0
-            column_letter = ws_name.cell(row=1, column=col_num).column_letter
+            column_letter = get_column_letter(col_num)
             
             for row_num in range(1, ws_name.max_row + 1):
                 cell = ws_name.cell(row=row_num, column=col_num)
