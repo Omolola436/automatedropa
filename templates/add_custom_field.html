@@ -35,30 +35,40 @@
         <form method="POST" class="needs-validation" novalidate>
             <div class="row">
                 <div class="col-md-6 mb-3">
-                    <label for="tab_category" class="form-label">Category <span class="text-danger">*</span></label>
-                    <select class="form-select" id="tab_category" name="tab_category" required>
-                        <option value="">Select a category...</option>
-                        <optgroup label="Basic Information">
-                            <option value="Basic Info">Basic Info</option>
-                            <option value="Controller">Controller</option>
-                            <option value="DPO">DPO</option>
-                            <option value="Processor">Processor</option>
-                        </optgroup>
-                        <optgroup label="Processing Activities">
-                            <option value="Processing">Processing</option>
-                            <option value="Data">Data</option>
-                            <option value="Recipients">Recipients</option>
-                            <option value="Retention">Retention</option>
-                            <option value="Security">Security</option>
-                        </optgroup>
+                    <label for="main_category" class="form-label">Main Category <span class="text-danger">*</span></label>
+                    <select class="form-select" id="main_category" name="main_category" required>
+                        <option value="">Select main category...</option>
+                        <option value="Basic Info">Basic Info</option>
+                        <option value="Controller">Controller</option>
+                        <option value="DPO">DPO</option>
+                        <option value="Processor">Processor</option>
+                        <option value="Processing Activities">Processing Activities</option>
                     </select>
                     <div class="invalid-feedback">
-                        Please select a category.
-                    </div>
-                    <div class="form-text">
-                        Choose the ROPA section where this field should appear.
+                        Please select a main category.
                     </div>
                 </div>
+                
+                <div class="col-md-6 mb-3" id="sub_category_container" style="display: none;">
+                    <label for="sub_category" class="form-label">Processing Sub-Category <span class="text-danger">*</span></label>
+                    <select class="form-select" id="sub_category" name="sub_category">
+                        <option value="">Select sub-category...</option>
+                        <option value="Processing">Processing</option>
+                        <option value="Data">Data</option>
+                        <option value="Recipients">Recipients</option>
+                        <option value="Retention">Retention</option>
+                        <option value="Security">Security</option>
+                    </select>
+                    <div class="invalid-feedback">
+                        Please select a sub-category.
+                    </div>
+                    <div class="form-text">
+                        Choose the specific processing area for this field.
+                    </div>
+                </div>
+            </div>
+            
+            <input type="hidden" id="tab_category" name="tab_category">
 
                 <div class="col-md-6 mb-3">
                     <label for="field_name" class="form-label">Field Name <span class="text-danger">*</span></label>
@@ -161,6 +171,33 @@ document.addEventListener('DOMContentLoaded', function() {
     const isRequiredCheck = document.getElementById('is_required');
     const fieldOptionsTextarea = document.getElementById('field_options');
     const previewContainer = document.getElementById('field_preview');
+    const mainCategorySelect = document.getElementById('main_category');
+    const subCategoryContainer = document.getElementById('sub_category_container');
+    const subCategorySelect = document.getElementById('sub_category');
+    const tabCategoryInput = document.getElementById('tab_category');
+
+    // Show/hide subcategory based on main category
+    mainCategorySelect.addEventListener('change', function() {
+        if (this.value === 'Processing Activities') {
+            subCategoryContainer.style.display = 'block';
+            subCategorySelect.required = true;
+        } else {
+            subCategoryContainer.style.display = 'none';
+            subCategorySelect.required = false;
+            subCategorySelect.value = '';
+        }
+        updateTabCategory();
+    });
+
+    // Update tab category when subcategory changes
+    subCategorySelect.addEventListener('change', updateTabCategory);
+
+    function updateTabCategory() {
+        const mainCat = mainCategorySelect.value;
+        const subCat = subCategorySelect.value;
+        
+        tabCategoryInput.value = mainCat === 'Processing Activities' ? subCat : mainCat;
+    }
 
     // Show/hide options container based on field type
     fieldTypeSelect.addEventListener('change', function() {
