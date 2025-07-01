@@ -16,7 +16,8 @@
         <i class="fas fa-info-circle me-2"></i>Custom Field Guidelines
     </h5>
     <ul class="mb-0">
-        <li>Custom fields are organized into categories that match ROPA form sections</li>
+        <li>Custom fields are organized into <strong>Basic Information</strong> and <strong>Processing Activities</strong> groups</li>
+        <li>Processing Activities includes: Processing, Data, Recipients, Retention, and Security fields</li>
         <li>Once approved, fields will be automatically added to all existing ROPA records</li>
         <li>New ROPA templates will include approved custom fields</li>
         <li>Choose field types carefully as they cannot be changed after approval</li>
@@ -37,9 +38,19 @@
                     <label for="tab_category" class="form-label">Category <span class="text-danger">*</span></label>
                     <select class="form-select" id="tab_category" name="tab_category" required>
                         <option value="">Select a category...</option>
-                        {% for category in categories %}
-                        <option value="{{ category }}">{{ category }}</option>
-                        {% endfor %}
+                        <optgroup label="Basic Information">
+                            <option value="Basic Info">Basic Info</option>
+                            <option value="Controller">Controller</option>
+                            <option value="DPO">DPO</option>
+                            <option value="Processor">Processor</option>
+                        </optgroup>
+                        <optgroup label="Processing Activities">
+                            <option value="Processing">Processing</option>
+                            <option value="Data">Data</option>
+                            <option value="Recipients">Recipients</option>
+                            <option value="Retention">Retention</option>
+                            <option value="Security">Security</option>
+                        </optgroup>
                     </select>
                     <div class="invalid-feedback">
                         Please select a category.

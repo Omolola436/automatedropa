@@ -49,7 +49,12 @@
                     {% for tab in pending_tabs %}
                     <tr>
                         <td>
-                            <span class="badge bg-info">{{ tab.tab_category }}</span>
+                            {% if tab.tab_category in ['Processing', 'Data', 'Recipients', 'Retention', 'Security'] %}
+                                <span class="badge bg-primary">Processing Activities</span>
+                                <br><small class="text-muted">{{ tab.tab_category }}</small>
+                            {% else %}
+                                <span class="badge bg-info">{{ tab.tab_category }}</span>
+                            {% endif %}
                         </td>
                         <td>
                             <div>

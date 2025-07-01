@@ -22,7 +22,7 @@
     </h5>
     <p class="mb-0">
         Create custom fields that will be automatically added to ROPA templates and existing records once approved by Privacy Officers.
-        Fields are organized into categories: Basic Info, Controller, DPO, Processor, Processing, Data, Recipients, Retention, and Security.
+        Fields are organized into <strong>Basic Information</strong> (Basic Info, Controller, DPO, Processor) and <strong>Processing Activities</strong> (Processing, Data, Recipients, Retention, Security).
     </p>
 </div>
 
@@ -70,7 +70,12 @@
                     {% for tab in custom_tabs %}
                     <tr data-status="{{ tab.status }}">
                         <td>
-                            <span class="badge bg-info">{{ tab.tab_category }}</span>
+                            {% if tab.tab_category in ['Processing', 'Data', 'Recipients', 'Retention', 'Security'] %}
+                                <span class="badge bg-primary">Processing Activities</span>
+                                <br><small class="text-muted">{{ tab.tab_category }}</small>
+                            {% else %}
+                                <span class="badge bg-info">{{ tab.tab_category }}</span>
+                            {% endif %}
                         </td>
                         <td>
                             <strong>{{ tab.field_name }}</strong>
