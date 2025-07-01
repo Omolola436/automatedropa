@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Review Custom Fields - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-user-tie me-2"></i>Review Custom Fields</h1>
+    <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Information -->
+<div class="alert alert-warning mb-4">
+    <h5 class="alert-heading">
+        <i class="fas fa-exclamation-triangle me-2"></i>Privacy Officer Review
+    </h5>
+    <p class="mb-0">
+        Review and approve custom fields submitted by Privacy Champions. Approved fields will be automatically 
+        integrated into all existing ROPA records and included in future templates.
+    </p>
+</div>
+
+<!-- Pending Custom Fields -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-clock me-2"></i>Pending Custom Fields
+            {% if pending_tabs %}
+            <span class="badge bg-warning ms-2">{{ pending_tabs|length }}</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if pending_tabs %}
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Field Details</th>
+                        <th>Field Type</th>
+                        <th>Created By</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tab in pending_tabs %}
+                    <tr>
+                        <td>
+                            <span class="badge bg-info">{{ tab.tab_category }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <strong>{{ tab.field_name }}</strong>
+                                {% if tab.is_required %}
+                                <span class="badge bg-warning ms-2">Required</span>
+                                {% endif %}
+                            </div>
+                            {% if tab.field_description %}
+                            <small class="text-muted">{{ tab.field_description }}</small>
+                            {% endif %}
+                            {% if tab.field_options %}
+                            <div class="mt-2">
+                                <small><strong>Options:</strong> 
+                                {% set options = tab.field_options %}
+                                {% if options %}
+                                    {% for option in options.split(',')[:3] %}
+                                        {{ option.strip() }}{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                    {% if options.split(',')[3:] %}...{% endif %}
+                                {% endif %}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ tab.field_type }}</span>
+                        </td>
+                        <td>
+                            <div>{{ tab.creator.email }}</div>
+                            <small class="text-muted">{{ tab.creator.department or 'No department' }}</small>
+                        </td>
+                        <td>
+                            <small>{{ tab.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-success" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#approveModal{{ tab.id }}">
+                                    <i class="fas fa-check"></i> Approve
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#rejectModal{{ tab.id }}">
+                                    <i class="fas fa-times"></i> Reject
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+            <h5>No Pending Reviews</h5>
+            <p class="text-muted">All custom field submissions have been reviewed.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Approval Modals -->
+{% for tab in pending_tabs %}
+<div class="modal fade" id="approveModal{{ tab.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Approve Custom Field</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('approve_custom_field', field_id=tab.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-success">
+                        <h6><i class="fas fa-check-circle me-2"></i>Field to be Approved:</h6>
+                        <p class="mb-2"><strong>{{ tab.field_name }}</strong> ({{ tab.tab_category }})</p>
+                        <p class="mb-0">{{ tab.field_description or 'No description provided' }}</p>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6><i class="fas fa-info-circle me-2"></i>Approval Impact:</h6>
+                        <ul class="mb-0">
+                            <li>Field will be added to all existing ROPA records</li>
+                            <li>New ROPA templates will include this field</li>
+                            <li>Field cannot be modified after approval</li>
+                        </ul>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="approve_comments{{ tab.id }}" class="form-label">Comments (Optional)</label>
+                        <textarea class="form-control" id="approve_comments{{ tab.id }}" name="comments" rows="3"
+                                  placeholder="Add any comments about the approval..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Approve & Integrate
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="rejectModal{{ tab.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Reject Custom Field</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('reject_custom_field', field_id=tab.id) }}">
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <h6><i class="fas fa-times-circle me-2"></i>Field to be Rejected:</h6>
+                        <p class="mb-2"><strong>{{ tab.field_name }}</strong> ({{ tab.tab_category }})</p>
+                        <p class="mb-0">{{ tab.field_description or 'No description provided' }}</p>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reject_comments{{ tab.id }}" class="form-label">Reason for Rejection <span class="text-danger">*</span></label>
+                        <textarea class="form-control" id="reject_comments{{ tab.id }}" name="comments" rows="3"
+                                  placeholder="Explain why this field is being rejected..." required></textarea>
+                        <div class="form-text">
+                            Provide clear feedback to help the Privacy Champion improve future submissions.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-times me-2"></i>Reject Field
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Validate rejection forms
+    const rejectForms = document.querySelectorAll('form[action*="reject-custom-field"]');
+    rejectForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const textarea = form.querySelector('textarea[name="comments"]');
+            if (!textarea.value.trim()) {
+                e.preventDefault();
+                textarea.classList.add('is-invalid');
+                if (!textarea.nextElementSibling || !textarea.nextElementSibling.classList.contains('invalid-feedback')) {
+                    const feedback = document.createElement('div');
+                    feedback.className = 'invalid-feedback';
+                    feedback.textContent = 'Please provide a reason for rejection.';
+                    textarea.parentNode.insertBefore(feedback, textarea.nextSibling);
+                }
+            } else {
+                textarea.classList.remove('is-invalid');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

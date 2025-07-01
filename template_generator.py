@@ -1,21 +1,29 @@
 """
-ROPA Template Generator
+ROPA Template Generator with Custom Fields Support
 """
 import pandas as pd
 import tempfile
 import os
+import json
 from datetime import datetime
 from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
 from openpyxl.utils.dataframe import dataframe_to_rows
+from custom_tab_automation import get_approved_custom_fields_by_category
 
 def generate_ropa_template():
-    """Generate Excel template for ROPA data collection"""
+    """Generate Excel template for ROPA data collection with custom fields"""
     
     # Create workbook and worksheet
     wb = Workbook()
     ws = wb.active
     ws.title = "ROPA Template"
+    
+    # Get approved custom fields
+    try:
+        custom_fields = get_approved_custom_fields_by_category()
+    except:
+        custom_fields = {}
     
     # Define headers and their descriptions
     headers = [
@@ -49,6 +57,15 @@ def generate_ropa_template():
         ("Security Measures", "Technical and organizational security measures (REQUIRED)"),
         ("Additional Information", "Any additional relevant information")
     ]
+    
+    # Add approved custom fields to headers
+    for category, fields in custom_fields.items():
+        for field in fields:
+            field_header = f"{category} - {field['field_name']}"
+            field_desc = f"Custom field: {field['field_name']}"
+            if field['is_required']:
+                field_desc += " (REQUIRED)"
+            headers.append((field_header, field_desc))
     
     # Style definitions
     header_font = Font(bold=True, color="FFFFFF")

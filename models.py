@@ -95,10 +95,51 @@ class CustomTab(db.Model):
     __tablename__ = 'custom_tabs'
     
     id = db.Column(Integer, primary_key=True)
-    tab_name = db.Column(String(100), nullable=False)
-    tab_description = db.Column(Text)
-    processes = db.Column(Text)  # JSON string of processes
+    tab_category = db.Column(String(50), nullable=False)  # Basic Info, Controller, etc.
+    field_name = db.Column(String(100), nullable=False)
+    field_description = db.Column(Text)
+    field_type = db.Column(String(50), default='text')  # text, textarea, select, checkbox
+    field_options = db.Column(Text)  # JSON for select options
+    is_required = db.Column(Boolean, default=False)
+    status = db.Column(String(50), default='Draft')  # Draft, Pending Review, Approved, Rejected
     created_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
-    ropa_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=False)
+    reviewed_by = db.Column(Integer, db.ForeignKey('users.id'))
+    reviewed_at = db.Column(DateTime)
+    review_comments = db.Column(Text)
     created_at = db.Column(DateTime, default=datetime.utcnow)
     updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    creator = db.relationship('User', foreign_keys=[created_by], backref='custom_tabs_created')
+    reviewer = db.relationship('User', foreign_keys=[reviewed_by], backref='custom_tabs_reviewed')
+
+
+class ApprovedCustomField(db.Model):
+    __tablename__ = 'approved_custom_fields'
+    
+    id = db.Column(Integer, primary_key=True)
+    custom_tab_id = db.Column(Integer, db.ForeignKey('custom_tabs.id'), nullable=False)
+    field_name = db.Column(String(100), nullable=False)
+    tab_category = db.Column(String(50), nullable=False)
+    field_type = db.Column(String(50), nullable=False)
+    field_options = db.Column(Text)
+    is_required = db.Column(Boolean, default=False)
+    approved_at = db.Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    custom_tab = db.relationship('CustomTab', backref='approved_field')
+
+
+class ROPACustomData(db.Model):
+    __tablename__ = 'ropa_custom_data'
+    
+    id = db.Column(Integer, primary_key=True)
+    ropa_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=False)
+    custom_field_id = db.Column(Integer, db.ForeignKey('approved_custom_fields.id'), nullable=False)
+    field_value = db.Column(Text)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    ropa_record = db.relationship('ROPARecord', backref='custom_data')
+    custom_field = db.relationship('ApprovedCustomField', backref='ropa_data')

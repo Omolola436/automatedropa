@@ -1,5 +1,6 @@
 import os
 import logging
+import json
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -540,6 +541,126 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in {'xlsx', 'xls', 'csv'}
+
+
+@app.route('/custom-tabs')
+@login_required
+def custom_tabs():
+    """Manage custom tabs"""
+    if current_user.role == 'Privacy Officer':
+        # Privacy Officers see pending custom tabs for review
+        from custom_tab_automation import get_pending_custom_tabs
+        pending_tabs = get_pending_custom_tabs()
+        return render_template('custom_tabs_admin.html', pending_tabs=pending_tabs)
+    else:
+        # Privacy Champions see their custom tab submissions
+        custom_tabs = models.CustomTab.query.filter_by(created_by=current_user.id).all()
+        return render_template('custom_tabs.html', custom_tabs=custom_tabs)
+
+
+@app.route('/add-custom-field', methods=['GET', 'POST'])
+@login_required
+def add_custom_field():
+    """Add new custom field"""
+    if current_user.role not in ['Privacy Champion', 'Privacy Officer']:
+        abort(403)
+    
+    if request.method == 'POST':
+        try:
+            custom_tab = models.CustomTab()
+            custom_tab.tab_category = request.form.get('tab_category')
+            custom_tab.field_name = request.form.get('field_name')
+            custom_tab.field_description = request.form.get('field_description')
+            custom_tab.field_type = request.form.get('field_type', 'text')
+            custom_tab.is_required = 'is_required' in request.form
+            custom_tab.created_by = current_user.id
+            custom_tab.status = 'Draft'
+            
+            # Handle field options for select fields
+            if custom_tab.field_type == 'select':
+                options = request.form.get('field_options', '').split('\n')
+                options = [opt.strip() for opt in options if opt.strip()]
+                custom_tab.field_options = json.dumps(options)
+            
+            db.session.add(custom_tab)
+            db.session.commit()
+            
+            from audit_logger import log_audit_event
+            log_audit_event(
+                "CUSTOM_FIELD_CREATED",
+                current_user.email,
+                f"Created custom field '{custom_tab.field_name}' in category '{custom_tab.tab_category}'"
+            )
+            
+            flash('Custom field created successfully!', 'success')
+            return redirect(url_for('custom_tabs'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating custom field: {str(e)}', 'error')
+    
+    # Define the available categories
+    categories = ['Basic Info', 'Controller', 'DPO', 'Processor', 'Processing', 'Data', 'Recipients', 'Retention', 'Security']
+    return render_template('add_custom_field.html', categories=categories)
+
+
+@app.route('/submit-custom-field/<int:field_id>')
+@login_required
+def submit_custom_field(field_id):
+    """Submit custom field for review"""
+    custom_tab = models.CustomTab.query.get_or_404(field_id)
+    
+    if custom_tab.created_by != current_user.id:
+        abort(403)
+    
+    from custom_tab_automation import submit_custom_tab_for_review
+    result = submit_custom_tab_for_review(field_id)
+    
+    if result['success']:
+        flash('Custom field submitted for review!', 'success')
+    else:
+        flash(result['message'], 'error')
+    
+    return redirect(url_for('custom_tabs'))
+
+
+@app.route('/approve-custom-field/<int:field_id>', methods=['POST'])
+@login_required
+def approve_custom_field(field_id):
+    """Approve custom field (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    from custom_tab_automation import approve_custom_tab
+    comments = request.form.get('comments', '')
+    result = approve_custom_tab(field_id, current_user.id, comments)
+    
+    if result['success']:
+        flash('Custom field approved and integrated into all existing ROPA records!', 'success')
+    else:
+        flash(result['message'], 'error')
+    
+    return redirect(url_for('custom_tabs'))
+
+
+@app.route('/reject-custom-field/<int:field_id>', methods=['POST'])
+@login_required
+def reject_custom_field(field_id):
+    """Reject custom field (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    from custom_tab_automation import reject_custom_tab
+    comments = request.form.get('comments', 'No reason provided')
+    result = reject_custom_tab(field_id, current_user.id, comments)
+    
+    if result['success']:
+        flash('Custom field rejected.', 'warning')
+    else:
+        flash(result['message'], 'error')
+    
+    return redirect(url_for('custom_tabs'))
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)

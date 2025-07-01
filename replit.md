@@ -105,6 +105,14 @@ The system is designed for flexible deployment:
   - Added downloadable templates and bulk upload functionality
   - Maintained audit logging and security features
   - Fresh SQLite database with no pre-existing accounts
+- July 1, 2025. Enhanced Custom Tab Automation:
+  - Implemented dynamic custom field system with approval workflow
+  - Added automatic integration of approved fields into existing ROPA records
+  - Custom fields auto-included in downloadable templates
+  - Enhanced export/import functionality for round-trip editing
+  - Organized custom fields into 9 categories: Basic Info, Controller, DPO, Processor, Processing, Data, Recipients, Retention, Security
+  - Fixed dashboard card clickability and improved UI for light theme
+  - Removed PostgreSQL references, using SQLite only
 
 ## User Preferences
 

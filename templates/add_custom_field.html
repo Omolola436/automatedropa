@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Add Custom Field - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-plus me-2"></i>Add Custom Field</h1>
+    <a href="{{ url_for('custom_tabs') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Custom Fields
+    </a>
+</div>
+
+<!-- Information -->
+<div class="alert alert-info mb-4">
+    <h5 class="alert-heading">
+        <i class="fas fa-info-circle me-2"></i>Custom Field Guidelines
+    </h5>
+    <ul class="mb-0">
+        <li>Custom fields are organized into categories that match ROPA form sections</li>
+        <li>Once approved, fields will be automatically added to all existing ROPA records</li>
+        <li>New ROPA templates will include approved custom fields</li>
+        <li>Choose field types carefully as they cannot be changed after approval</li>
+    </ul>
+</div>
+
+<!-- Add Custom Field Form -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-plus-square me-2"></i>Create New Custom Field
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="needs-validation" novalidate>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="tab_category" class="form-label">Category <span class="text-danger">*</span></label>
+                    <select class="form-select" id="tab_category" name="tab_category" required>
+                        <option value="">Select a category...</option>
+                        {% for category in categories %}
+                        <option value="{{ category }}">{{ category }}</option>
+                        {% endfor %}
+                    </select>
+                    <div class="invalid-feedback">
+                        Please select a category.
+                    </div>
+                    <div class="form-text">
+                        Choose the ROPA section where this field should appear.
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label for="field_name" class="form-label">Field Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="field_name" name="field_name" required 
+                           placeholder="e.g., Secondary Contact Email">
+                    <div class="invalid-feedback">
+                        Please provide a field name.
+                    </div>
+                    <div class="form-text">
+                        This will be the label users see for this field.
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label for="field_description" class="form-label">Description</label>
+                <textarea class="form-control" id="field_description" name="field_description" rows="3"
+                          placeholder="Describe what this field is for and when it should be used..."></textarea>
+                <div class="form-text">
+                    Help users understand what information to provide in this field.
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="field_type" class="form-label">Field Type <span class="text-danger">*</span></label>
+                    <select class="form-select" id="field_type" name="field_type" required>
+                        <option value="text">Text Input</option>
+                        <option value="textarea">Text Area (Multi-line)</option>
+                        <option value="select">Dropdown Selection</option>
+                        <option value="checkbox">Checkbox (Yes/No)</option>
+                        <option value="email">Email Address</option>
+                        <option value="url">Website URL</option>
+                        <option value="date">Date</option>
+                    </select>
+                    <div class="invalid-feedback">
+                        Please select a field type.
+                    </div>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <div class="form-check mt-4">
+                        <input class="form-check-input" type="checkbox" id="is_required" name="is_required">
+                        <label class="form-check-label" for="is_required">
+                            <strong>Required Field</strong>
+                        </label>
+                        <div class="form-text">
+                            Check if this field must be completed before submitting ROPA records.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3" id="field_options_container" style="display: none;">
+                <label for="field_options" class="form-label">Dropdown Options</label>
+                <textarea class="form-control" id="field_options" name="field_options" rows="4"
+                          placeholder="Option 1&#10;Option 2&#10;Option 3"></textarea>
+                <div class="form-text">
+                    Enter each option on a new line. These will appear in the dropdown list.
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-12">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="card-title">
+                                <i class="fas fa-eye me-2"></i>Preview
+                            </h6>
+                            <div id="field_preview">
+                                <label class="form-label">Your Field Name</label>
+                                <input type="text" class="form-control" placeholder="This is how your field will appear">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{{ url_for('custom_tabs') }}" class="btn btn-secondary me-md-2">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Create Custom Field
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fieldTypeSelect = document.getElementById('field_type');
+    const fieldOptionsContainer = document.getElementById('field_options_container');
+    const fieldNameInput = document.getElementById('field_name');
+    const fieldDescInput = document.getElementById('field_description');
+    const isRequiredCheck = document.getElementById('is_required');
+    const fieldOptionsTextarea = document.getElementById('field_options');
+    const previewContainer = document.getElementById('field_preview');
+
+    // Show/hide options container based on field type
+    fieldTypeSelect.addEventListener('change', function() {
+        if (this.value === 'select') {
+            fieldOptionsContainer.style.display = 'block';
+        } else {
+            fieldOptionsContainer.style.display = 'none';
+        }
+        updatePreview();
+    });
+
+    // Update preview when inputs change
+    [fieldNameInput, fieldDescInput, isRequiredCheck, fieldOptionsTextarea].forEach(input => {
+        input.addEventListener('input', updatePreview);
+        input.addEventListener('change', updatePreview);
+    });
+
+    function updatePreview() {
+        const fieldName = fieldNameInput.value || 'Your Field Name';
+        const fieldDesc = fieldDescInput.value;
+        const fieldType = fieldTypeSelect.value;
+        const isRequired = isRequiredCheck.checked;
+        const options = fieldOptionsTextarea.value.split('\n').filter(opt => opt.trim());
+
+        let previewHTML = '';
+        
+        // Label
+        previewHTML += `<label class="form-label">${fieldName}`;
+        if (isRequired) {
+            previewHTML += ' <span class="text-danger">*</span>';
+        }
+        previewHTML += '</label>';
+
+        // Field
+        switch (fieldType) {
+            case 'text':
+            case 'email':
+            case 'url':
+                previewHTML += `<input type="${fieldType}" class="form-control" placeholder="Enter ${fieldName.toLowerCase()}">`;
+                break;
+            case 'textarea':
+                previewHTML += `<textarea class="form-control" rows="3" placeholder="Enter ${fieldName.toLowerCase()}"></textarea>`;
+                break;
+            case 'select':
+                previewHTML += `<select class="form-select">`;
+                previewHTML += `<option value="">Select ${fieldName.toLowerCase()}...</option>`;
+                options.forEach(option => {
+                    if (option.trim()) {
+                        previewHTML += `<option value="${option.trim()}">${option.trim()}</option>`;
+                    }
+                });
+                previewHTML += `</select>`;
+                break;
+            case 'checkbox':
+                previewHTML += `<div class="form-check">`;
+                previewHTML += `<input class="form-check-input" type="checkbox" id="preview_check">`;
+                previewHTML += `<label class="form-check-label" for="preview_check">Yes</label>`;
+                previewHTML += `</div>`;
+                break;
+            case 'date':
+                previewHTML += `<input type="date" class="form-control">`;
+                break;
+        }
+
+        // Description
+        if (fieldDesc) {
+            previewHTML += `<div class="form-text">${fieldDesc}</div>`;
+        }
+
+        previewContainer.innerHTML = previewHTML;
+    }
+
+    // Initial preview
+    updatePreview();
+
+    // Form validation
+    const form = document.querySelector('.needs-validation');
+    form.addEventListener('submit', function(event) {
+        if (!form.checkValidity()) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        form.classList.add('was-validated');
+    }, false);
+});
+</script>
+{% endblock %}

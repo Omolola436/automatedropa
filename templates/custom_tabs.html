@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block title %}Custom Fields - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-plus-square me-2"></i>Custom Fields</h1>
+    <div>
+        <a href="{{ url_for('add_custom_field') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Field
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Information -->
+<div class="alert alert-info mb-4">
+    <h5 class="alert-heading">
+        <i class="fas fa-info-circle me-2"></i>Custom Fields Management
+    </h5>
+    <p class="mb-0">
+        Create custom fields that will be automatically added to ROPA templates and existing records once approved by Privacy Officers.
+        Fields are organized into categories: Basic Info, Controller, DPO, Processor, Processing, Data, Recipients, Retention, and Security.
+    </p>
+</div>
+
+<!-- Custom Fields Table -->
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>Your Custom Fields
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="statusFilter" id="all" value="all" checked>
+                <label class="btn btn-outline-primary" for="all">All</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="draft" value="Draft">
+                <label class="btn btn-outline-secondary" for="draft">Draft</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="pending" value="Pending Review">
+                <label class="btn btn-outline-warning" for="pending">Pending</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="approved" value="Approved">
+                <label class="btn btn-outline-success" for="approved">Approved</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="rejected" value="Rejected">
+                <label class="btn btn-outline-danger" for="rejected">Rejected</label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if custom_tabs %}
+        <div class="table-responsive">
+            <table class="table table-striped table-hover" id="customTabsTable">
+                <thead>
+                    <tr>
+                        <th>Category</th>
+                        <th>Field Name</th>
+                        <th>Field Type</th>
+                        <th>Required</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tab in custom_tabs %}
+                    <tr data-status="{{ tab.status }}">
+                        <td>
+                            <span class="badge bg-info">{{ tab.tab_category }}</span>
+                        </td>
+                        <td>
+                            <strong>{{ tab.field_name }}</strong>
+                            {% if tab.field_description %}
+                            <br><small class="text-muted">{{ tab.field_description }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ tab.field_type }}</span>
+                        </td>
+                        <td>
+                            {% if tab.is_required %}
+                                <span class="badge bg-warning">Required</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark">Optional</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if tab.status == 'Draft' %}
+                                <span class="badge bg-secondary">{{ tab.status }}</span>
+                            {% elif tab.status == 'Pending Review' %}
+                                <span class="badge bg-warning">{{ tab.status }}</span>
+                            {% elif tab.status == 'Approved' %}
+                                <span class="badge bg-success">{{ tab.status }}</span>
+                            {% elif tab.status == 'Rejected' %}
+                                <span class="badge bg-danger">{{ tab.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm" role="group">
+                                {% if tab.status == 'Draft' %}
+                                    <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
+                                       class="btn btn-outline-primary" title="Submit for Review">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                {% if tab.status == 'Rejected' and tab.review_comments %}
+                                    <button type="button" class="btn btn-outline-info" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#reviewModal{{ tab.id }}" 
+                                            title="View Review Comments">
+                                        <i class="fas fa-comment"></i>
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4">
+            <i class="fas fa-plus-square fa-3x text-muted mb-3"></i>
+            <h5>No Custom Fields Yet</h5>
+            <p class="text-muted">Create your first custom field to extend the ROPA form.</p>
+            <a href="{{ url_for('add_custom_field') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Add Custom Field
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Review Comments Modals -->
+{% for tab in custom_tabs %}
+{% if tab.status == 'Rejected' and tab.review_comments %}
+<div class="modal fade" id="reviewModal{{ tab.id }}" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Review Comments</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <h6>Field: {{ tab.field_name }}</h6>
+                <p class="mb-2"><strong>Status:</strong> {{ tab.status }}</p>
+                <p class="mb-2"><strong>Reviewed:</strong> {{ tab.reviewed_at.strftime('%Y-%m-%d %H:%M') if tab.reviewed_at }}</p>
+                <p><strong>Comments:</strong></p>
+                <div class="alert alert-warning">
+                    {{ tab.review_comments }}
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Status filtering
+document.addEventListener('DOMContentLoaded', function() {
+    const statusFilters = document.querySelectorAll('input[name="statusFilter"]');
+    const tableRows = document.querySelectorAll('#customTabsTable tbody tr');
+    
+    statusFilters.forEach(filter => {
+        filter.addEventListener('change', function() {
+            const selectedStatus = this.value;
+            
+            tableRows.forEach(row => {
+                const rowStatus = row.getAttribute('data-status');
+                
+                if (selectedStatus === 'all' || rowStatus === selectedStatus) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        });
+    });
+});
+</script>
+{% endblock %}
