@@ -116,19 +116,22 @@
                         <tr>
                             <th style="width: 130px;">Timestamp</th>
                             <th style="width: 150px;">Event Type</th>
-                            <th style="width: 200px;">User</th>
+                            <th style="width: 180px;">User</th>
                             <th style="width: 120px;">IP Address</th>
+                            <th style="width: 100px;">Session</th>
+                            <th style="width: 80px;">Method</th>
                             <th>Description</th>
+                            <th style="width: 30px;">Details</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for log in logs.logs %}
-                        <tr class="{% if 'Failed' in log.event_type or 'Error' in log.event_type %}table-danger{% elif 'Success' in log.event_type %}table-success{% elif 'Login' in log.event_type or 'Registration' in log.event_type %}table-warning{% endif %}"
-                            data-event-category="{% if 'Failed' in log.event_type or 'Error' in log.event_type %}error{% elif 'Success' in log.event_type %}success{% elif 'Login' in log.event_type or 'Registration' in log.event_type %}security{% else %}other{% endif %}">
+                        <tr class="{% if log.is_security_event %}table-warning{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}table-danger{% elif 'Success' in log.event_type %}table-success{% endif %}"
+                            data-event-category="{% if 'Failed' in log.event_type or 'Error' in log.event_type %}error{% elif 'Success' in log.event_type %}success{% elif log.is_security_event %}security{% else %}other{% endif %}">
                             <td>
                                 <small>
                                     {% if log.timestamp %}
-                                        {{ log.timestamp.strftime('%Y-%m-%d') }}<br>
+                                        {{ log.timestamp.strftime('%m-%d') }}<br>
                                         <span class="text-muted">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
                                     {% else %}
                                         N/A
@@ -136,15 +139,16 @@
                                 </small>
                             </td>
                             <td>
-                                <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% elif 'Login' in log.event_type %}warning{% else %}primary{% endif %}">
+                                <span class="badge bg-{% if log.is_security_event %}warning{% elif 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% else %}primary{% endif %}">
+                                    {% if log.is_security_event %}<i class="fas fa-shield-alt me-1"></i>{% endif %}
                                     {{ log.event_type }}
                                 </span>
                             </td>
                             <td>
                                 <small>
                                     {{ log.user_email }}
-                                    {% if log.user_email in ['admin@company.com'] %}
-                                        <span class="badge bg-secondary">Admin</span>
+                                    {% if log.user_email == 'system' %}
+                                        <span class="badge bg-secondary">SYS</span>
                                     {% endif %}
                                 </small>
                             </td>
@@ -152,12 +156,55 @@
                                 <small class="font-monospace">{{ log.ip_address or 'N/A' }}</small>
                             </td>
                             <td>
+                                <small class="font-monospace text-muted">{{ log.session_id or 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <small class="badge bg-secondary">{{ log.request_method or 'N/A' }}</small>
+                            </td>
+                            <td>
                                 <small>{{ log.description }}</small>
+                                {% if log.user_agent and log.user_agent != 'Unknown' %}
+                                    <br><small class="text-muted">{{ log.user_agent[:80] }}{% if log.user_agent|length > 80 %}...{% endif %}</small>
+                                {% endif %}
+                            </td>
+                            <td>
                                 {% if log.additional_data %}
-                                    <br><small class="text-muted">{{ log.additional_data[:100] }}{% if log.additional_data|length > 100 %}...{% endif %}</small>
+                                <button class="btn btn-outline-info btn-sm" type="button" data-bs-toggle="collapse" 
+                                        data-bs-target="#details-{{ log.id }}" aria-expanded="false">
+                                    <i class="fas fa-info"></i>
+                                </button>
                                 {% endif %}
                             </td>
                         </tr>
+                        {% if log.additional_data %}
+                        <tr class="collapse" id="details-{{ log.id }}">
+                            <td colspan="8" class="bg-light">
+                                <div class="p-2">
+                                    <h6 class="mb-2">Security Details:</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small>
+                                                <strong>Request URL:</strong> {{ log.request_url or 'N/A' }}<br>
+                                                <strong>Referer:</strong> {{ log.referer or 'N/A' }}<br>
+                                                <strong>Server:</strong> {{ log.server_name or 'localhost' }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small>
+                                                <strong>Full User Agent:</strong><br>
+                                                {{ log.user_agent or 'Unknown' }}<br>
+                                                <strong>Session ID:</strong> {{ log.session_id or 'N/A' }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                    {% if log.additional_data.get('additional_data') %}
+                                    <hr class="my-2">
+                                    <small><strong>Additional Data:</strong> {{ log.additional_data.get('additional_data') }}</small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endif %}
                         {% endfor %}
                     </tbody>
                 </table>

@@ -57,26 +57,8 @@ from template_generator import generate_ropa_template
 def load_user(user_id):
     return models.User.query.get(int(user_id))
 
-def get_client_ip():
-    """Get client IP address from request"""
-    if request.environ.get('HTTP_X_FORWARDED_FOR') is None:
-        return request.environ['REMOTE_ADDR']
-    else:
-        return request.environ['HTTP_X_FORWARDED_FOR']
-
-def log_audit_event(event_type, user_email, description, ip_address=None):
-    """Log an audit event"""
-    if ip_address is None:
-        ip_address = get_client_ip()
-    
-    audit_log = models.AuditLog(
-        event_type=event_type,
-        user_email=user_email,
-        ip_address=ip_address,
-        description=description
-    )
-    db.session.add(audit_log)
-    db.session.commit()
+# Import enhanced audit logging functions
+from audit_logger import log_audit_event, log_security_event, get_client_ip
 
 @app.route('/')
 def index():
@@ -433,14 +415,21 @@ def export_data():
 def audit_logs():
     """View audit logs (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
+        log_security_event('Unauthorized Access', current_user.email, 
+                          f'Attempted to access audit logs without Privacy Officer role')
         abort(403)
     
     page = request.args.get('page', 1, type=int)
-    logs = models.AuditLog.query.order_by(models.AuditLog.timestamp.desc()).paginate(
-        page=page, per_page=50, error_out=False
-    )
+    per_page = request.args.get('per_page', 50, type=int)
     
-    return render_template('audit_logs.html', logs=logs)
+    # Use enhanced audit log retrieval
+    from audit_logger import get_audit_logs
+    logs_data = get_audit_logs(page=page, per_page=per_page)
+    
+    log_audit_event('Audit Logs Viewed', current_user.email, 
+                   f'Accessed audit logs page {page}')
+    
+    return render_template('audit_logs.html', logs=logs_data)
 
 # API endpoints for automation features
 @app.route('/api/auto-classify', methods=['POST'])
