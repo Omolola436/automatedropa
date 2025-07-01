@@ -18,100 +18,96 @@
 <!-- Statistics Cards -->
 <div class="row mb-4">
     <div class="col-md-2 mb-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Total Records</h6>
-                        <h3 class="mb-0">{{ total_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
+        <a href="#records-table" class="dashboard-card-clickable">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Records</h6>
+                            <h3 class="mb-0">{{ total_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="col-md-2 mb-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Approved</h6>
-                        <h3 class="mb-0">{{ approved_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+        <a href="javascript:void(0)" onclick="filterRecords('Approved')" class="dashboard-card-clickable">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Approved</h6>
+                            <h3 class="mb-0">{{ approved_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="col-md-2 mb-3">
-        <div class="card bg-warning text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Pending</h6>
-                        <h3 class="mb-0">{{ pending_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x opacity-75"></i>
+        <a href="javascript:void(0)" onclick="filterRecords('Pending Review')" class="dashboard-card-clickable">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Pending</h6>
+                            <h3 class="mb-0">{{ pending_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="col-md-2 mb-3">
-        <div class="card bg-secondary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Drafts</h6>
-                        <h3 class="mb-0">{{ draft_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-edit fa-2x opacity-75"></i>
+        <a href="javascript:void(0)" onclick="filterRecords('Draft')" class="dashboard-card-clickable">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Drafts</h6>
+                            <h3 class="mb-0">{{ draft_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-edit fa-2x opacity-75"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
     <div class="col-md-2 mb-3">
-        <div class="card bg-danger text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Rejected</h6>
-                        <h3 class="mb-0">{{ rejected_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-times-circle fa-2x opacity-75"></i>
+        <a href="javascript:void(0)" onclick="filterRecords('Rejected')" class="dashboard-card-clickable">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Rejected</h6>
+                            <h3 class="mb-0">{{ rejected_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-times-circle fa-2x opacity-75"></i>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
     </div>
 
-    <div class="col-md-2 mb-3">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Compliance</h6>
-                        <h3 class="mb-0">{{ ((approved_records / total_records * 100) if total_records > 0 else 0) | round(0) }}%</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-chart-pie fa-2x opacity-75"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+
 </div>
 
 <!-- Management Actions -->
@@ -218,7 +214,7 @@
 </div>
 
 <!-- ROPA Records Table -->
-<div class="card">
+<div class="card" id="records-table">
     <div class="card-header">
         <div class="d-flex justify-content-between align-items-center">
             <h5 class="mb-0">
