@@ -1,5 +1,26 @@
 /* Custom styles for GDPR ROPA System */
 
+/* Eye-friendly background and color improvements */
+body {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+/* Make dashboard cards clickable */
+.dashboard-card-clickable {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: inherit;
+}
+
+.dashboard-card-clickable:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    text-decoration: none;
+    color: inherit;
+}
+
 /* Additional spacing and layout improvements */
 .navbar-brand {
     font-weight: 600;

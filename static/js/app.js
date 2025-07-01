@@ -413,6 +413,24 @@ const ROPAApp = {
         updateProgress();
     },
 
+    // Filter records by status (for dashboard cards)
+    filterRecords: function(status) {
+        // Trigger the appropriate filter button
+        const filterButtons = document.querySelectorAll('input[name="statusFilter"]');
+        filterButtons.forEach(button => {
+            if (button.value === status) {
+                button.checked = true;
+                button.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Scroll to records table
+        const recordsTable = document.getElementById('records-table');
+        if (recordsTable) {
+            recordsTable.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    },
+
     // Utility functions
     utils: {
         // Format date for display
@@ -466,3 +484,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Export for global use
 window.ROPAApp = ROPAApp;
+
+// Global function for dashboard card filtering
+function filterRecords(status) {
+    ROPAApp.filterRecords(status);
+}
