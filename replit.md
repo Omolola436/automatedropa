@@ -80,7 +80,6 @@ The system is designed for flexible deployment:
 - No external dependencies required
 
 ### Production Considerations
-- Database migration path to PostgreSQL using SQLAlchemy
 - Environment-based configuration
 - Session secret management
 - File upload security measures
