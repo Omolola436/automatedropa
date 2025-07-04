@@ -81,9 +81,9 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        
+
         user = models.User.query.filter_by(email=email).first()
-        
+
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
             user.last_login = datetime.utcnow()
@@ -93,7 +93,7 @@ def login():
         else:
             log_audit_event('Login Failed', email, 'Failed login attempt')
             flash('Invalid email or password', 'error')
-    
+
     return render_template('login.html')
 
 @app.route('/register')
@@ -116,16 +116,16 @@ def privacy_champion_dashboard():
     """Privacy Champion dashboard"""
     if current_user.role not in ['Privacy Champion', 'Privacy Officer']:
         abort(403)
-    
+
     # Get user's ROPA records
     records = models.ROPARecord.query.filter_by(created_by=current_user.id).all()
-    
+
     # Statistics
     total_records = len(records)
     draft_records = len([r for r in records if r.status == 'Draft'])
     pending_records = len([r for r in records if r.status == 'Under Review'])
     approved_records = len([r for r in records if r.status == 'Approved'])
-    
+
     return render_template('privacy_champion_dashboard.html', 
                          records=records,
                          total_records=total_records,
@@ -139,16 +139,16 @@ def privacy_officer_dashboard():
     """Privacy Officer dashboard"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     # Get all ROPA records
     all_records = models.ROPARecord.query.all()
     pending_records = models.ROPARecord.query.filter_by(status='Under Review').all()
-    
+
     # Statistics
     total_records = len(all_records)
     pending_count = len(pending_records)
     approved_records = len([r for r in all_records if r.status == 'Approved'])
-    
+
     return render_template('privacy_officer_dashboard.html',
                          all_records=all_records,
                          pending_records=pending_records,
@@ -178,7 +178,7 @@ def add_activity():
             security_measures=request.form.get('security_measures'),
             created_by=current_user.id
         )
-        
+
         # Check the action type from the form
         action = request.form.get('action', 'submit')
         if action == 'draft':
@@ -193,17 +193,17 @@ def add_activity():
         else:
             record.status = 'Under Review'
             message = 'ROPA record submitted for review'
-        
+
         db.session.add(record)
         db.session.commit()
-        
+
         # Process custom tabs if any were created
         custom_tab_counter = 1
         while f'custom_tab_name_{custom_tab_counter}' in request.form:
             tab_name = request.form.get(f'custom_tab_name_{custom_tab_counter}')
             tab_description = request.form.get(f'custom_tab_description_{custom_tab_counter}')
             tab_processes = request.form.get(f'custom_tab_processes_{custom_tab_counter}')
-            
+
             if tab_name and tab_processes:  # Only create if required fields are filled
                 custom_tab = models.CustomTab(
                     tab_name=tab_name,
@@ -213,15 +213,15 @@ def add_activity():
                     ropa_record_id=record.id
                 )
                 db.session.add(custom_tab)
-            
+
             custom_tab_counter += 1
-        
+
         db.session.commit()
-        
+
         log_audit_event('ROPA Created', current_user.email, f'Created ROPA record: {record.processing_activity_name}')
         flash(message, 'success')
         return redirect(url_for('privacy_champion_dashboard'))
-    
+
     options = get_predefined_options()
     return render_template('add_activity.html', options=options)
 
@@ -230,11 +230,11 @@ def add_activity():
 def edit_activity(record_id):
     """Edit existing ROPA activity"""
     record = models.ROPARecord.query.get_or_404(record_id)
-    
+
     # Check permissions
     if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
         abort(403)
-    
+
     if request.method == 'POST':
         # Update record fields
         record.processing_activity_name = request.form['processing_activity_name']
@@ -251,7 +251,7 @@ def edit_activity(record_id):
         record.retention_period = request.form.get('retention_period')
         record.security_measures = request.form.get('security_measures')
         record.updated_at = datetime.utcnow()
-        
+
         # Check if saving as draft or submitting for review
         if 'save_draft' in request.form:
             record.status = 'Draft'
@@ -259,13 +259,13 @@ def edit_activity(record_id):
         else:
             record.status = 'Under Review'
             message = 'ROPA record updated and submitted for review'
-        
+
         db.session.commit()
-        
+
         log_audit_event('ROPA Updated', current_user.email, f'Updated ROPA record: {record.processing_activity_name}')
         flash(message, 'success')
         return redirect(url_for('privacy_champion_dashboard'))
-    
+
     options = get_predefined_options()
     return render_template('ropa_edit.html', record=record, options=options)
 
@@ -274,11 +274,11 @@ def edit_activity(record_id):
 def view_activity(record_id):
     """View ROPA activity details"""
     record = models.ROPARecord.query.get_or_404(record_id)
-    
+
     # Check permissions
     if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
         abort(403)
-    
+
     # Get custom tabs for this record
     custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
     return render_template('ropa_view.html', record=record, custom_tabs=custom_tabs)
@@ -289,21 +289,21 @@ def update_status(record_id, status):
     """Update ROPA record status (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     record = models.ROPARecord.query.get_or_404(record_id)
     record.status = status
     record.reviewed_by = current_user.id
     record.reviewed_at = datetime.utcnow()
-    
+
     if 'comments' in request.form:
         record.review_comments = request.form['comments']
-    
+
     # If approved, integrate custom activities into main ROPA record
     if status == 'Approved':
         integrate_custom_activities(record)
-    
+
     db.session.commit()
-    
+
     log_audit_event('ROPA Status Updated', current_user.email, f'Updated status of ROPA {record.processing_activity_name} to {status}')
     flash(f'ROPA record status updated to {status}', 'success')
     return redirect(url_for('privacy_officer_dashboard'))
@@ -313,15 +313,15 @@ def update_status(record_id, status):
 def delete_activity(record_id):
     """Delete ROPA activity"""
     record = models.ROPARecord.query.get_or_404(record_id)
-    
+
     # Check permissions
     if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
         abort(403)
-    
+
     record_name = record.processing_activity_name
     db.session.delete(record)
     db.session.commit()
-    
+
     log_audit_event('ROPA Deleted', current_user.email, f'Deleted ROPA record: {record_name}')
     flash('ROPA record deleted successfully', 'success')
     return redirect(url_for('privacy_champion_dashboard'))
@@ -332,7 +332,7 @@ def download_template():
     """Download ROPA template (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     try:
         template_path = generate_ropa_template()
         log_audit_event('Template Downloaded', current_user.email, 'Downloaded ROPA template')
@@ -347,17 +347,17 @@ def upload_file():
     """Upload and process ROPA file (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     if request.method == 'POST':
         if 'file' not in request.files:
             flash('No file selected', 'error')
             return redirect(request.url)
-        
+
         file = request.files['file']
         if file.filename == '':
             flash('No file selected', 'error')
             return redirect(request.url)
-        
+
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             try:
@@ -369,7 +369,7 @@ def upload_file():
                 flash(f'Error processing file: {str(e)}', 'error')
         else:
             flash('Invalid file type. Please upload Excel or CSV files only.', 'error')
-    
+
     return render_template('file_upload.html')
 
 @app.route('/export-data')
@@ -379,7 +379,7 @@ def export_data():
     export_format = request.args.get('format', 'excel')
     include_drafts = request.args.get('include_drafts') == 'true'
     include_rejected = request.args.get('include_rejected') == 'true'
-    
+
     try:
         file_path, filename = generate_export(current_user.email, current_user.role, export_format, include_drafts, include_rejected)
         log_audit_event('Data Exported', current_user.email, f'Exported data in {export_format} format')
@@ -399,17 +399,17 @@ def audit_logs():
         log_security_event('Unauthorized Access', current_user.email, 
                           f'Attempted to access audit logs without Privacy Officer role')
         abort(403)
-    
+
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
-    
+
     # Use enhanced audit log retrieval
     from audit_logger import get_audit_logs
     logs_data = get_audit_logs(page=page, per_page=per_page)
-    
+
     log_audit_event('Audit Logs Viewed', current_user.email, 
                    f'Accessed audit logs page {page}')
-    
+
     return render_template('audit_logs.html', logs=logs_data)
 
 @app.route('/user-management')
@@ -418,7 +418,7 @@ def user_management():
     """User management page (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     users = models.User.query.all()
     return render_template('user_management.html', users=users)
 
@@ -428,30 +428,30 @@ def add_user():
     """Add new user (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     email = request.form['email']
     password = request.form['password']
     role = request.form['role']
     department = request.form['department']
-    
+
     # Validation
     if not all([email, password, role, department]):
         flash('All fields are required', 'error')
         return redirect(url_for('user_management'))
-    
+
     if len(password) < 6:
         flash('Password must be at least 6 characters long', 'error')
         return redirect(url_for('user_management'))
-    
+
     if role not in ['Privacy Champion', 'Privacy Officer']:
         flash('Invalid role selected', 'error')
         return redirect(url_for('user_management'))
-    
+
     # Check if user already exists
     if models.User.query.filter_by(email=email).first():
         flash('Email already registered', 'error')
         return redirect(url_for('user_management'))
-    
+
     try:
         # Create new user
         user = models.User(
@@ -462,13 +462,13 @@ def add_user():
         )
         db.session.add(user)
         db.session.commit()
-        
+
         log_audit_event('User Created by Admin', current_user.email, f'Created user: {email} with role: {role}')
         flash(f'User {email} created successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error creating user: {str(e)}', 'error')
-    
+
     return redirect(url_for('user_management'))
 
 @app.route('/edit-user/<int:user_id>', methods=['POST'])
@@ -477,55 +477,55 @@ def edit_user(user_id):
     """Edit user (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     user = models.User.query.get_or_404(user_id)
-    
+
     # Don't allow editing own account through this interface
     if user.id == current_user.id:
         flash('Cannot edit your own account through this interface', 'error')
         return redirect(url_for('user_management'))
-    
+
     email = request.form['email']
     role = request.form['role']
     department = request.form['department']
     new_password = request.form.get('new_password', '').strip()
-    
+
     # Validation
     if not all([email, role, department]):
         flash('Email, role, and department are required', 'error')
         return redirect(url_for('user_management'))
-    
+
     if role not in ['Privacy Champion', 'Privacy Officer']:
         flash('Invalid role selected', 'error')
         return redirect(url_for('user_management'))
-    
+
     # Check if email is taken by another user
     existing_user = models.User.query.filter_by(email=email).first()
     if existing_user and existing_user.id != user.id:
         flash('Email already taken by another user', 'error')
         return redirect(url_for('user_management'))
-    
+
     try:
         old_email = user.email
         user.email = email
         user.role = role
         user.department = department
-        
+
         if new_password:
             if len(new_password) < 6:
                 flash('Password must be at least 6 characters long', 'error')
                 return redirect(url_for('user_management'))
             user.password_hash = generate_password_hash(new_password)
-        
+
         db.session.commit()
-        
+
         log_audit_event('User Updated by Admin', current_user.email, 
                        f'Updated user: {old_email} -> {email}, role: {role}')
         flash(f'User {email} updated successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error updating user: {str(e)}', 'error')
-    
+
     return redirect(url_for('user_management'))
 
 @app.route('/delete-user/<int:user_id>', methods=['POST'])
@@ -534,25 +534,25 @@ def delete_user(user_id):
     """Delete user (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     user = models.User.query.get_or_404(user_id)
-    
+
     # Don't allow deleting own account
     if user.id == current_user.id:
         flash('Cannot delete your own account', 'error')
         return redirect(url_for('user_management'))
-    
+
     try:
         user_email = user.email
         db.session.delete(user)
         db.session.commit()
-        
+
         log_audit_event('User Deleted by Admin', current_user.email, f'Deleted user: {user_email}')
         flash(f'User {user_email} deleted successfully!', 'success')
     except Exception as e:
         db.session.rollback()
         flash(f'Error deleting user: {str(e)}', 'error')
-    
+
     return redirect(url_for('user_management'))
 
 # API endpoints for automation features
@@ -598,13 +598,13 @@ def api_suggest_security():
 def integrate_custom_activities(record):
     """Integrate approved custom activities into main ROPA record"""
     import json
-    
+
     # Get all custom tabs for this record
     custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
-    
+
     if not custom_tabs:
         return
-    
+
     # Collect all processes from custom tabs
     all_processes = []
     for tab in custom_tabs:
@@ -615,17 +615,17 @@ def integrate_custom_activities(record):
                     all_processes.extend(processes)
             except (json.JSONDecodeError, TypeError):
                 continue
-    
+
     if not all_processes:
         return
-    
+
     # Merge process information into main ROPA record
     # Collect unique purposes, data categories, etc.
     purposes = set()
     data_categories = set()
     recipients = set()
     security_measures = set()
-    
+
     # Parse existing values
     if record.processing_purpose:
         purposes.add(record.processing_purpose.strip())
@@ -635,7 +635,7 @@ def integrate_custom_activities(record):
         recipients.update([rec.strip() for rec in record.recipients.split(';') if rec.strip()])
     if record.security_measures:
         security_measures.update([sec.strip() for sec in record.security_measures.split(';') if sec.strip()])
-    
+
     # Add custom process information
     for process in all_processes:
         if process.get('purpose'):
@@ -646,17 +646,17 @@ def integrate_custom_activities(record):
             recipients.add(process['recipients'].strip())
         if process.get('security_measures'):
             security_measures.add(process['security_measures'].strip())
-    
+
     # Update record with merged information
     record.processing_purpose = '; '.join(sorted(purposes)) if purposes else record.processing_purpose
     record.data_categories = '; '.join(sorted(data_categories)) if data_categories else record.data_categories
     record.recipients = '; '.join(sorted(recipients)) if recipients else record.recipients
     record.security_measures = '; '.join(sorted(security_measures)) if security_measures else record.security_measures
-    
+
     # Mark custom tabs as integrated by deleting them (they're now part of main record)
     for tab in custom_tabs:
         db.session.delete(tab)
-    
+
     log_audit_event('Custom Activities Integrated', record.creator.email, 
                    f'Integrated {len(all_processes)} custom activities into ROPA {record.processing_activity_name}')
 
@@ -687,7 +687,7 @@ def add_custom_field():
     """Add new custom field"""
     if current_user.role not in ['Privacy Champion', 'Privacy Officer']:
         abort(403)
-    
+
     if request.method == 'POST':
         try:
             custom_tab = models.CustomTab()
@@ -698,30 +698,30 @@ def add_custom_field():
             custom_tab.is_required = 'is_required' in request.form
             custom_tab.created_by = current_user.id
             custom_tab.status = 'Draft'
-            
+
             # Handle field options for select fields
             if custom_tab.field_type == 'select':
                 options = request.form.get('field_options', '').split('\n')
                 options = [opt.strip() for opt in options if opt.strip()]
                 custom_tab.field_options = json.dumps(options)
-            
+
             db.session.add(custom_tab)
             db.session.commit()
-            
+
             from audit_logger import log_audit_event
             log_audit_event(
                 "CUSTOM_FIELD_CREATED",
                 current_user.email,
                 f"Created custom field '{custom_tab.field_name}' in category '{custom_tab.tab_category}'"
             )
-            
+
             flash('Custom field created successfully!', 'success')
             return redirect(url_for('custom_tabs'))
-            
+
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating custom field: {str(e)}', 'error')
-    
+
     # Define the available categories
     categories = ['Basic Info', 'Controller', 'DPO', 'Processor', 'Processing', 'Data', 'Recipients', 'Retention', 'Security']
     return render_template('add_custom_field.html', categories=categories)
@@ -732,18 +732,18 @@ def add_custom_field():
 def submit_custom_field(field_id):
     """Submit custom field for review"""
     custom_tab = models.CustomTab.query.get_or_404(field_id)
-    
+
     if custom_tab.created_by != current_user.id:
         abort(403)
-    
+
     from custom_tab_automation import submit_custom_tab_for_review
     result = submit_custom_tab_for_review(field_id)
-    
+
     if result['success']:
         flash('Custom field submitted for review!', 'success')
     else:
         flash(result['message'], 'error')
-    
+
     return redirect(url_for('custom_tabs'))
 
 
@@ -753,16 +753,16 @@ def approve_custom_field(field_id):
     """Approve custom field (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     from custom_tab_automation import approve_custom_tab
     comments = request.form.get('comments', '')
     result = approve_custom_tab(field_id, current_user.id, comments)
-    
+
     if result['success']:
         flash('Custom field approved and integrated into all existing ROPA records!', 'success')
     else:
         flash(result['message'], 'error')
-    
+
     return redirect(url_for('custom_tabs'))
 
 
@@ -772,18 +772,117 @@ def reject_custom_field(field_id):
     """Reject custom field (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
-    
+
     from custom_tab_automation import reject_custom_tab
     comments = request.form.get('comments', 'No reason provided')
     result = reject_custom_tab(field_id, current_user.id, comments)
-    
+
     if result['success']:
         flash('Custom field rejected.', 'warning')
     else:
         flash(result['message'], 'error')
-    
+
     return redirect(url_for('custom_tabs'))
 
+
+@app.route('/ropa-form')
+@login_required
+def ropa_form():
+    """Display ROPA form with custom fields"""
+    from custom_tab_automation import get_approved_custom_fields_by_category
+    try:
+        custom_fields = get_approved_custom_fields_by_category()
+    except:
+        custom_fields = {}
+
+    return render_template('ropa_form.html', custom_fields=custom_fields)
+
+@app.route('/ropa/<int:id>')
+@login_required
+def view_ropa(id):
+    """View ROPA record with custom fields"""
+    record = models.ROPARecord.query.get_or_404(id)
+
+    # Check permissions
+    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+        abort(403)
+
+    # Get custom fields and their data for this record
+    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record
+    try:
+        custom_fields = get_approved_custom_fields_by_category()
+        custom_data = get_custom_data_for_record(record.id)
+    except:
+        custom_fields = {}
+        custom_data = {}
+
+    return render_template('ropa_view.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
+
+@app.route('/ropa/<int:id>/edit', methods=['GET', 'POST'])
+@login_required
+def edit_ropa(id):
+    """Edit ROPA record with custom fields"""
+    record = models.ROPARecord.query.get_or_404(id)
+
+    # Check permissions
+    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+        abort(403)
+
+    # Get custom fields and their data
+    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record, update_custom_data_for_record
+    try:
+        custom_fields = get_approved_custom_fields_by_category()
+        custom_data = get_custom_data_for_record(record.id)
+    except:
+        custom_fields = {}
+        custom_data = {}
+
+    if request.method == 'POST':
+        # Update record fields
+        record.processing_activity_name = request.form.get('processing_activity_name')
+        record.category = request.form.get('category')
+        record.description = request.form.get('description')
+        record.department_function = request.form.get('department_function')
+        record.controller_name = request.form.get('controller_name')
+        record.controller_contact = request.form.get('controller_contact')
+        record.controller_address = request.form.get('controller_address')
+        record.processing_purpose = request.form.get('processing_purpose')
+        record.legal_basis = request.form.get('legal_basis')
+        record.data_categories = request.form.get('data_categories')
+        record.data_subjects = request.form.get('data_subjects')
+        record.retention_period = request.form.get('retention_period')
+        record.security_measures = request.form.get('security_measures')
+
+        # Handle custom fields
+        custom_updates = {}
+        for category, fields in custom_fields.items():
+            for field in fields:
+                field_name = f"custom_field_{field['id']}"
+                if field_name in request.form:
+                    custom_updates[field['id']] = request.form.get(field_name, '')
+
+        try:
+            db.session.commit()
+
+            # Update custom field data
+            if custom_updates:
+                update_custom_data_for_record(record.id, custom_updates)
+
+            flash('ROPA record updated successfully!', 'success')
+
+            # Log the update
+            log_audit_event(
+                "ROPA_UPDATED",
+                f"user_{current_user.id}",
+                f"Updated ROPA record '{record.processing_activity_name}' (ID: {record.id}) with custom fields"
+            )
+
+            return redirect(url_for('view_ropa', id=record.id))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating record: {str(e)}', 'error')
+
+    return render_template('ropa_edit.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
