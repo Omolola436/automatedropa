@@ -1,5 +1,5 @@
 """
-Utility functions for GDPR ROPA system
+Utility functions for Privacy ROPA system
 """
 
 def get_predefined_options():

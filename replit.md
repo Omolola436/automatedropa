@@ -1,8 +1,8 @@
-# GDPR ROPA System
+# Privacy ROPA System
 
 ## Overview
 
-This is a comprehensive GDPR Record of Processing Activities (ROPA) management system built with Flask and SQLite. The system enables organizations to manage their data processing activities in compliance with GDPR requirements through a web-based interface with role-based access control, automated features, and comprehensive audit logging.
+This is a comprehensive Privacy Record of Processing Activities (ROPA) management system built with Flask and SQLite. The system enables organizations to manage their data processing activities in compliance with GDPR requirements through a web-based interface with role-based access control, automated features, and comprehensive audit logging.
 
 ## System Architecture
 

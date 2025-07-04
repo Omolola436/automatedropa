@@ -1,5 +1,5 @@
 """
-Automation features for GDPR ROPA system
+Automation features for Privacy ROPA system
 """
 
 def auto_classify_data(description):
