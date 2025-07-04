@@ -45,6 +45,10 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 with app.app_context():
     # Import models here to ensure they're registered
     import models
+    # Initialize database with proper schema
+    from database import init_database
+    init_database()
+    # Create all SQLAlchemy tables
     db.create_all()
 
 # Import utility functions after app context
