@@ -1,4 +1,4 @@
-// GDPR ROPA System - Client-side JavaScript
+// Privacy ROPA System - Client-side JavaScript
 
 // Global application object
 const ROPAApp = {
