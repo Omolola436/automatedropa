@@ -96,35 +96,11 @@ def login():
     
     return render_template('login.html')
 
-@app.route('/register', methods=['GET', 'POST'])
+@app.route('/register')
 def register():
-    """User registration"""
-    if request.method == 'POST':
-        email = request.form['email']
-        password = request.form['password']
-        role = request.form['role']
-        department = request.form.get('department', '')
-        
-        # Check if user already exists
-        if models.User.query.filter_by(email=email).first():
-            flash('Email already registered', 'error')
-            return render_template('register.html')
-        
-        # Create new user
-        user = models.User(
-            email=email,
-            password_hash=generate_password_hash(password),
-            role=role,
-            department=department
-        )
-        db.session.add(user)
-        db.session.commit()
-        
-        log_audit_event('User Registration', email, f'New user registered with role: {role}')
-        flash('Registration successful! Please log in.', 'success')
-        return redirect(url_for('login'))
-    
-    return render_template('register.html')
+    """Redirect to login - public registration disabled"""
+    flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
+    return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required
@@ -435,6 +411,149 @@ def audit_logs():
                    f'Accessed audit logs page {page}')
     
     return render_template('audit_logs.html', logs=logs_data)
+
+@app.route('/user-management')
+@login_required
+def user_management():
+    """User management page (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    users = models.User.query.all()
+    return render_template('user_management.html', users=users)
+
+@app.route('/add-user', methods=['POST'])
+@login_required
+def add_user():
+    """Add new user (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    email = request.form['email']
+    password = request.form['password']
+    role = request.form['role']
+    department = request.form['department']
+    
+    # Validation
+    if not all([email, password, role, department]):
+        flash('All fields are required', 'error')
+        return redirect(url_for('user_management'))
+    
+    if len(password) < 6:
+        flash('Password must be at least 6 characters long', 'error')
+        return redirect(url_for('user_management'))
+    
+    if role not in ['Privacy Champion', 'Privacy Officer']:
+        flash('Invalid role selected', 'error')
+        return redirect(url_for('user_management'))
+    
+    # Check if user already exists
+    if models.User.query.filter_by(email=email).first():
+        flash('Email already registered', 'error')
+        return redirect(url_for('user_management'))
+    
+    try:
+        # Create new user
+        user = models.User(
+            email=email,
+            password_hash=generate_password_hash(password),
+            role=role,
+            department=department
+        )
+        db.session.add(user)
+        db.session.commit()
+        
+        log_audit_event('User Created by Admin', current_user.email, f'Created user: {email} with role: {role}')
+        flash(f'User {email} created successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error creating user: {str(e)}', 'error')
+    
+    return redirect(url_for('user_management'))
+
+@app.route('/edit-user/<int:user_id>', methods=['POST'])
+@login_required
+def edit_user(user_id):
+    """Edit user (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    user = models.User.query.get_or_404(user_id)
+    
+    # Don't allow editing own account through this interface
+    if user.id == current_user.id:
+        flash('Cannot edit your own account through this interface', 'error')
+        return redirect(url_for('user_management'))
+    
+    email = request.form['email']
+    role = request.form['role']
+    department = request.form['department']
+    new_password = request.form.get('new_password', '').strip()
+    
+    # Validation
+    if not all([email, role, department]):
+        flash('Email, role, and department are required', 'error')
+        return redirect(url_for('user_management'))
+    
+    if role not in ['Privacy Champion', 'Privacy Officer']:
+        flash('Invalid role selected', 'error')
+        return redirect(url_for('user_management'))
+    
+    # Check if email is taken by another user
+    existing_user = models.User.query.filter_by(email=email).first()
+    if existing_user and existing_user.id != user.id:
+        flash('Email already taken by another user', 'error')
+        return redirect(url_for('user_management'))
+    
+    try:
+        old_email = user.email
+        user.email = email
+        user.role = role
+        user.department = department
+        
+        if new_password:
+            if len(new_password) < 6:
+                flash('Password must be at least 6 characters long', 'error')
+                return redirect(url_for('user_management'))
+            user.password_hash = generate_password_hash(new_password)
+        
+        db.session.commit()
+        
+        log_audit_event('User Updated by Admin', current_user.email, 
+                       f'Updated user: {old_email} -> {email}, role: {role}')
+        flash(f'User {email} updated successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error updating user: {str(e)}', 'error')
+    
+    return redirect(url_for('user_management'))
+
+@app.route('/delete-user/<int:user_id>', methods=['POST'])
+@login_required
+def delete_user(user_id):
+    """Delete user (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    user = models.User.query.get_or_404(user_id)
+    
+    # Don't allow deleting own account
+    if user.id == current_user.id:
+        flash('Cannot delete your own account', 'error')
+        return redirect(url_for('user_management'))
+    
+    try:
+        user_email = user.email
+        db.session.delete(user)
+        db.session.commit()
+        
+        log_audit_event('User Deleted by Admin', current_user.email, f'Deleted user: {user_email}')
+        flash(f'User {user_email} deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error deleting user: {str(e)}', 'error')
+    
+    return redirect(url_for('user_management'))
 
 # API endpoints for automation features
 @app.route('/api/auto-classify', methods=['POST'])

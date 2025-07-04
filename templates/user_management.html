@@ -1,0 +1,230 @@
+
+{% extends "base.html" %}
+
+{% block title %}User Management - GDPR ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users-cog me-2"></i>User Management</h1>
+    <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+    </a>
+</div>
+
+<!-- Add New User Form -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-user-plus me-2"></i>Add New User
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{{ url_for('add_user') }}">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="email" class="form-label">Email Address *</label>
+                    <input type="email" class="form-control" id="email" name="email" required>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="password" class="form-label">Password *</label>
+                    <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                    <div class="form-text">Minimum 6 characters</div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label for="role" class="form-label">Role *</label>
+                    <select class="form-select" id="role" name="role" required>
+                        <option value="">Select Role</option>
+                        <option value="Privacy Champion">Privacy Champion</option>
+                        <option value="Privacy Officer">Privacy Officer</option>
+                    </select>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label for="department" class="form-label">Department *</label>
+                    <select class="form-select" id="department" name="department" required>
+                        <option value="">Select Department</option>
+                        <option value="HR">Human Resources</option>
+                        <option value="IT">Information Technology</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Legal">Legal</option>
+                        <option value="Operations">Operations</option>
+                        <option value="Administration">Administration</option>
+                    </select>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+                <i class="fas fa-user-plus me-2"></i>Add User
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Users List -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>Registered Users ({{ users|length }})
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if users %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Created</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for user in users %}
+                        <tr>
+                            <td>
+                                <strong>{{ user.email }}</strong>
+                                {% if user.id == current_user.id %}
+                                    <span class="badge bg-info ms-2">You</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-{% if user.role == 'Privacy Officer' %}primary{% else %}secondary{% endif %}">
+                                    {{ user.role }}
+                                </span>
+                            </td>
+                            <td>{{ user.department or 'N/A' }}</td>
+                            <td>
+                                <small>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</small>
+                            </td>
+                            <td>
+                                <small>{{ user.last_login.strftime('%Y-%m-%d %H:%M') if user.last_login else 'Never' }}</small>
+                            </td>
+                            <td>
+                                {% if user.id != current_user.id %}
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-primary" 
+                                            onclick="editUser({{ user.id }}, '{{ user.email }}', '{{ user.role }}', '{{ user.department }}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger" 
+                                            onclick="deleteUser({{ user.id }}, '{{ user.email }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                {% else %}
+                                <small class="text-muted">Your account</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <h5>No Users Found</h5>
+                <p class="text-muted">Add the first user to get started.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal fade" id="editUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editUserForm" method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="edit_email" class="form-label">Email Address *</label>
+                        <input type="email" class="form-control" id="edit_email" name="email" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_role" class="form-label">Role *</label>
+                        <select class="form-select" id="edit_role" name="role" required>
+                            <option value="Privacy Champion">Privacy Champion</option>
+                            <option value="Privacy Officer">Privacy Officer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_department" class="form-label">Department *</label>
+                        <select class="form-select" id="edit_department" name="department" required>
+                            <option value="HR">Human Resources</option>
+                            <option value="IT">Information Technology</option>
+                            <option value="Marketing">Marketing</option>
+                            <option value="Sales">Sales</option>
+                            <option value="Finance">Finance</option>
+                            <option value="Legal">Legal</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Administration">Administration</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_password" class="form-label">New Password</label>
+                        <input type="password" class="form-control" id="edit_password" name="new_password" minlength="6">
+                        <div class="form-text">Leave blank to keep current password</div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete User Modal -->
+<div class="modal fade" id="deleteUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete User</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the user <strong id="deleteUserEmail"></strong>?</p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form id="deleteUserForm" method="POST" style="display: inline;">
+                    <button type="submit" class="btn btn-danger">Delete User</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function editUser(userId, email, role, department) {
+    document.getElementById('edit_email').value = email;
+    document.getElementById('edit_role').value = role;
+    document.getElementById('edit_department').value = department;
+    document.getElementById('edit_password').value = '';
+    
+    document.getElementById('editUserForm').action = '/edit-user/' + userId;
+    
+    new bootstrap.Modal(document.getElementById('editUserModal')).show();
+}
+
+function deleteUser(userId, email) {
+    document.getElementById('deleteUserEmail').textContent = email;
+    document.getElementById('deleteUserForm').action = '/delete-user/' + userId;
+    
+    new bootstrap.Modal(document.getElementById('deleteUserModal')).show();
+}
+</script>
+{% endblock %}
