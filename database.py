@@ -90,6 +90,57 @@ def init_database():
         )
     """)
     
+    # Custom tabs table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_tabs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tab_category TEXT NOT NULL,
+            field_name TEXT NOT NULL,
+            field_description TEXT,
+            field_type TEXT DEFAULT 'text',
+            field_options TEXT,
+            is_required BOOLEAN DEFAULT 0,
+            status TEXT DEFAULT 'Draft',
+            created_by INTEGER NOT NULL,
+            reviewed_by INTEGER,
+            reviewed_at DATETIME,
+            review_comments TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (created_by) REFERENCES users (id),
+            FOREIGN KEY (reviewed_by) REFERENCES users (id)
+        )
+    """)
+    
+    # Approved custom fields table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS approved_custom_fields (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            custom_tab_id INTEGER NOT NULL,
+            field_name TEXT NOT NULL,
+            tab_category TEXT NOT NULL,
+            field_type TEXT NOT NULL,
+            field_options TEXT,
+            is_required BOOLEAN DEFAULT 0,
+            approved_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (custom_tab_id) REFERENCES custom_tabs (id)
+        )
+    """)
+    
+    # ROPA custom data table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ropa_custom_data (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ropa_record_id INTEGER NOT NULL,
+            custom_field_id INTEGER NOT NULL,
+            field_value TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (ropa_record_id) REFERENCES ropa_records (id),
+            FOREIGN KEY (custom_field_id) REFERENCES approved_custom_fields (id)
+        )
+    """)
+    
     conn.commit()
     
     # Database initialization complete - users must register to access the system
