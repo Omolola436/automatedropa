@@ -1,3 +1,4 @@
+
 """
 ROPA Template Generator with Custom Fields Support
 """
@@ -12,12 +13,12 @@ from openpyxl.utils.dataframe import dataframe_to_rows
 from custom_tab_automation import get_approved_custom_fields_by_category
 
 def generate_ropa_template():
-    """Generate Excel template for ROPA data collection with custom fields"""
+    """Generate Excel template for ROPA data collection matching the uploaded format"""
     
     # Create workbook and worksheet
     wb = Workbook()
     ws = wb.active
-    ws.title = "ROPA Template"
+    ws.title = "Record of Processing Activities"
     
     # Get approved custom fields
     try:
@@ -25,36 +26,31 @@ def generate_ropa_template():
     except:
         custom_fields = {}
     
-    # Define headers and their descriptions
+    # Define headers matching the uploaded document structure
     headers = [
-        ("Processing Activity Name", "Name of the processing activity (REQUIRED)"),
-        ("Category", "Category of processing (e.g., HR, Marketing, Sales)"),
-        ("Description", "Detailed description of the processing activity (REQUIRED)"),
-        ("Department/Function", "Department or business function responsible"),
-        ("Controller Name", "Name of the data controller (REQUIRED)"),  
-        ("Controller Contact", "Contact details of the controller (REQUIRED)"),
-        ("Controller Address", "Address of the controller (REQUIRED)"),
+        ("Processing Activity Name", "Name of the processing activity"),
+        ("Category", "Category of processing activity"),
+        ("Description", "Description of the processing activity"),
+        ("Data Controller", "Name of the data controller"),
+        ("Contact Details", "Contact details of the controller"),
+        ("Controller Address", "Address of the controller"),
         ("DPO Name", "Data Protection Officer name"),
         ("DPO Contact", "DPO contact details"),
-        ("DPO Address", "DPO address"),
-        ("Processor Name", "Name of data processor (if applicable)"),
-        ("Processor Contact", "Processor contact details"),
-        ("Processor Address", "Processor address"),
-        ("Representative Name", "EU representative name (if applicable)"),
-        ("Representative Contact", "Representative contact details"),
-        ("Representative Address", "Representative address"),
-        ("Purpose of Processing", "Purpose and legal justification (REQUIRED)"),
-        ("Legal Basis", "Legal basis under GDPR (REQUIRED)"),
+        ("Purpose of Processing", "Purpose and justification for processing"),
+        ("Legal Basis", "Legal basis under GDPR (Art. 6)"),
         ("Legitimate Interests", "Details if legal basis is legitimate interests"),
-        ("Data Categories", "Categories of personal data processed (REQUIRED)"),
-        ("Special Categories", "Special categories of personal data"),
-        ("Data Subjects", "Categories of data subjects (REQUIRED)"),
-        ("Recipients", "Categories of recipients (REQUIRED)"),
-        ("Third Country Transfers", "Details of transfers to third countries"),
-        ("Safeguards", "Safeguards for third country transfers"),
-        ("Retention Period", "How long data is kept (REQUIRED)"),
+        ("Categories of Personal Data", "Types of personal data processed"),
+        ("Special Categories", "Special categories of personal data (Art. 9)"),
+        ("Data Subjects", "Categories of data subjects"),
+        ("Recipients", "Recipients or categories of recipients"),
+        ("Third Country Transfers", "Transfers to third countries or international organizations"),
+        ("Safeguards", "Appropriate safeguards for transfers"),
+        ("Retention Period", "Retention period for personal data"),
         ("Retention Criteria", "Criteria for determining retention period"),
-        ("Security Measures", "Technical and organizational security measures (REQUIRED)"),
+        ("Technical Measures", "Technical security measures"),
+        ("Organizational Measures", "Organizational security measures"),
+        ("Source of Data", "Source of personal data"),
+        ("Data Subject Rights", "Information about data subject rights"),
         ("Additional Information", "Any additional relevant information")
     ]
     
@@ -68,8 +64,10 @@ def generate_ropa_template():
             headers.append((field_header, field_desc))
     
     # Style definitions
-    header_font = Font(bold=True, color="FFFFFF")
-    header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    title_font = Font(bold=True, size=14, color="FFFFFF")
+    title_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    header_font = Font(bold=True, size=11, color="000000")
+    header_fill = PatternFill(start_color="D9E2F3", end_color="D9E2F3", fill_type="solid")
     required_fill = PatternFill(start_color="FFD700", end_color="FFD700", fill_type="solid")
     border = Border(
         left=Side(style='thin'),
@@ -79,168 +77,223 @@ def generate_ropa_template():
     )
     
     # Add title
-    ws['A1'] = "GDPR ROPA Data Collection Template"
-    ws['A1'].font = Font(bold=True, size=16)
-    ws.merge_cells('A1:D1')
+    ws['A1'] = "RECORD OF PROCESSING ACTIVITIES"
+    ws['A1'].font = title_font
+    ws['A1'].fill = title_fill
+    ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    ws.merge_cells('A1:X1')
+    ws.row_dimensions[1].height = 30
+    
+    # Add subtitle
+    ws['A2'] = "GDPR Article 30 Compliance Template"
+    ws['A2'].font = Font(bold=True, size=12)
+    ws['A2'].alignment = Alignment(horizontal='center')
+    ws.merge_cells('A2:X2')
+    ws.row_dimensions[2].height = 25
     
     # Add instructions
     instructions = [
-        "Instructions:",
-        "1. Fill in all REQUIRED fields (highlighted in yellow)",
-        "2. Provide as much detail as possible for accurate ROPA records",
-        "3. Use the dropdown values where provided",
-        "4. Save and upload this file back to the system when complete",
+        "",
+        "Instructions for completing this Record of Processing Activities:",
+        "1. Complete all fields marked as REQUIRED",
+        "2. Provide detailed information for each processing activity",
+        "3. Ensure legal basis is clearly identified under GDPR Article 6",
+        "4. Include appropriate safeguards for any third country transfers",
+        "5. Save and upload this completed file back to the system",
         ""
     ]
     
     row = 3
     for instruction in instructions:
         ws[f'A{row}'] = instruction
-        if instruction.startswith("Instructions:"):
-            ws[f'A{row}'].font = Font(bold=True)
+        if instruction.startswith("Instructions"):
+            ws[f'A{row}'].font = Font(bold=True, size=11)
+        elif instruction.startswith(("1.", "2.", "3.", "4.", "5.")):
+            ws[f'A{row}'].font = Font(size=10)
         row += 1
     
     # Add headers
     header_row = row + 1
     for col, (header, description) in enumerate(headers, 1):
+        # Header cell
         cell = ws.cell(row=header_row, column=col, value=header)
         cell.font = header_font
         cell.fill = header_fill
         cell.border = border
-        cell.alignment = Alignment(wrap_text=True, vertical='center')
+        cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
         
-        # Add description in second row
+        # Description cell
         desc_cell = ws.cell(row=header_row + 1, column=col, value=description)
+        desc_cell.font = Font(size=9, italic=True)
         desc_cell.border = border
         desc_cell.alignment = Alignment(wrap_text=True, vertical='center')
         
         # Highlight required fields
-        if "(REQUIRED)" in description:
+        if any(req in header for req in ["Processing Activity Name", "Data Controller", "Purpose of Processing", "Legal Basis", "Categories of Personal Data", "Data Subjects", "Recipients", "Retention Period"]):
             desc_cell.fill = required_fill
     
     # Add example data row
     example_row = header_row + 2
     example_data = [
-        "Employee Data Management",  # Processing Activity Name
+        "Employee Human Resources Management",  # Processing Activity Name
         "Human Resources",  # Category
-        "Processing of employee personal data for HR management purposes",  # Description
-        "HR",  # Department/Function
-        "Your Company Ltd",  # Controller Name
-        "hr@yourcompany.com",  # Controller Contact
-        "123 Business Street, City, Country",  # Controller Address
-        "Jane Doe",  # DPO Name
-        "dpo@yourcompany.com",  # DPO Contact
-        "123 Business Street, City, Country",  # DPO Address
-        "",  # Processor Name
-        "",  # Processor Contact
-        "",  # Processor Address
-        "",  # Representative Name
-        "",  # Representative Contact
-        "",  # Representative Address
-        "Human Resources Management",  # Purpose of Processing
-        "Contract",  # Legal Basis
+        "Processing of employee personal data for HR administration, payroll, benefits, and performance management",  # Description
+        "Your Company Name Ltd",  # Data Controller
+        "hr@yourcompany.com, +44 123 456 7890",  # Contact Details
+        "123 Business Street, London, UK, SW1A 1AA",  # Controller Address
+        "Jane Smith",  # DPO Name
+        "dpo@yourcompany.com, +44 123 456 7891",  # DPO Contact
+        "Human resources management, payroll processing, employee benefits administration",  # Purpose of Processing
+        "Article 6(1)(b) - Performance of contract",  # Legal Basis
         "",  # Legitimate Interests
-        "Contact Information, Identity Data, Employment Data",  # Data Categories
+        "Name, email, phone number, address, employee ID, salary, bank details, performance data",  # Categories of Personal Data
         "",  # Special Categories
-        "Employees, Job Applicants",  # Data Subjects
-        "HR Department, Payroll Provider",  # Recipients
+        "Current employees, former employees, job applicants",  # Data Subjects
+        "HR department, payroll provider, pension scheme administrators",  # Recipients
         "",  # Third Country Transfers
         "",  # Safeguards
-        "7 years after employment ends",  # Retention Period
-        "Legal requirement and business necessity",  # Retention Criteria
-        "Access controls, encryption, regular backups",  # Security Measures
-        "Standard HR processing activities"  # Additional Information
+        "7 years after employment termination",  # Retention Period
+        "Legal obligations and legitimate business interests",  # Retention Criteria
+        "Access controls, encryption, secure servers, regular backups",  # Technical Measures
+        "Staff training, data protection policies, incident response procedures",  # Organizational Measures
+        "Employee application forms, employment contracts, direct from employees",  # Source of Data
+        "Access, rectification, erasure, portability, restriction of processing",  # Data Subject Rights
+        "Regular review and updates as required by GDPR"  # Additional Information
     ]
     
+    # Fill example data
     for col, value in enumerate(example_data, 1):
-        cell = ws.cell(row=example_row, column=col, value=value)
-        cell.border = border
         if col <= len(headers):
+            cell = ws.cell(row=example_row, column=col, value=value)
+            cell.border = border
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
             # Light blue fill for example row
-            cell.fill = PatternFill(start_color="E6F3FF", end_color="E6F3FF", fill_type="solid")
+            cell.fill = PatternFill(start_color="F0F8FF", end_color="F0F8FF", fill_type="solid")
     
-    # Add legal basis options sheet
-    legal_basis_ws = wb.create_sheet("Legal Basis Options")
-    legal_basis_options = [
-        ("Legal Basis", "Description", "When to Use"),
-        ("Consent", "Individual has given clear consent", "Marketing, optional services"),
-        ("Contract", "Processing necessary for contract performance", "Employee data, customer orders"),
-        ("Legal Obligation", "Required by law", "Tax records, regulatory reporting"),
-        ("Vital Interests", "Protecting someone's life", "Medical emergencies"),
-        ("Public Task", "Performing official functions", "Government agencies"),
-        ("Legitimate Interests", "Legitimate business interests", "Fraud prevention, direct marketing")
+    # Set row heights
+    ws.row_dimensions[header_row].height = 40
+    ws.row_dimensions[header_row + 1].height = 60
+    ws.row_dimensions[example_row].height = 80
+    
+    # Add additional worksheets for reference
+    
+    # Legal Basis Reference Sheet
+    legal_basis_ws = wb.create_sheet("Legal Basis Reference")
+    legal_basis_data = [
+        ("Article", "Legal Basis", "Description", "Examples"),
+        ("6(1)(a)", "Consent", "Individual has given clear consent", "Marketing emails, newsletters, optional services"),
+        ("6(1)(b)", "Contract", "Processing necessary for contract performance", "Employee records, customer orders, service delivery"),
+        ("6(1)(c)", "Legal Obligation", "Required by law", "Tax records, regulatory reporting, statutory obligations"),
+        ("6(1)(d)", "Vital Interests", "Protecting someone's life", "Medical emergencies, health and safety incidents"),
+        ("6(1)(e)", "Public Task", "Performing official functions", "Government services, public sector duties"),
+        ("6(1)(f)", "Legitimate Interests", "Legitimate business interests", "Fraud prevention, direct marketing, security")
     ]
     
-    for row, (basis, desc, when) in enumerate(legal_basis_options, 1):
-        legal_basis_ws.cell(row=row, column=1, value=basis)
-        legal_basis_ws.cell(row=row, column=2, value=desc)
-        legal_basis_ws.cell(row=row, column=3, value=when)
+    for row, (article, basis, desc, examples) in enumerate(legal_basis_data, 1):
+        legal_basis_ws.cell(row=row, column=1, value=article)
+        legal_basis_ws.cell(row=row, column=2, value=basis)
+        legal_basis_ws.cell(row=row, column=3, value=desc)
+        legal_basis_ws.cell(row=row, column=4, value=examples)
         
         if row == 1:  # Header row
-            for col in range(1, 4):
+            for col in range(1, 5):
                 cell = legal_basis_ws.cell(row=row, column=col)
                 cell.font = header_font
                 cell.fill = header_fill
+                cell.border = border
+        else:
+            for col in range(1, 5):
+                cell = legal_basis_ws.cell(row=row, column=col)
+                cell.border = border
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
     
-    # Add data categories sheet
-    categories_ws = wb.create_sheet("Data Categories")
+    # Data Categories Reference Sheet
+    categories_ws = wb.create_sheet("Data Categories Reference")
     data_categories = [
-        ("Category", "Examples"),
-        ("Contact Information", "Name, email, phone, address"),
-        ("Identity Data", "Name, date of birth, ID numbers"),
-        ("Employment Data", "Job title, salary, performance reviews"),
-        ("Financial Data", "Bank details, payment information"),
-        ("Technical Data", "IP address, login data, cookies"),
-        ("Usage Data", "Website usage, app interactions"),
-        ("Marketing Data", "Preferences, marketing responses"),
-        ("Location Data", "GPS coordinates, delivery addresses"),
-        ("Communication Data", "Emails, messages, call logs"),
-        ("Transaction Data", "Purchase history, billing records")
+        ("Category", "Examples", "Sensitivity Level"),
+        ("Identity Data", "Name, date of birth, ID numbers, photographs", "Standard"),
+        ("Contact Information", "Email, phone, postal address, social media", "Standard"),
+        ("Financial Data", "Bank details, payment information, salary, expenses", "High"),
+        ("Employment Data", "Job title, performance reviews, disciplinary records", "Standard"),
+        ("Technical Data", "IP address, login data, cookies, device information", "Standard"),
+        ("Usage Data", "Website usage, application interactions, preferences", "Standard"),
+        ("Location Data", "GPS coordinates, delivery addresses, travel data", "Standard"),
+        ("Communication Data", "Emails, messages, call logs, meeting records", "Standard"),
+        ("Health Data", "Medical records, health assessments, absence records", "Special Category"),
+        ("Biometric Data", "Fingerprints, facial recognition, voice patterns", "Special Category")
     ]
     
-    for row, (category, examples) in enumerate(data_categories, 1):
+    for row, (category, examples, sensitivity) in enumerate(data_categories, 1):
         categories_ws.cell(row=row, column=1, value=category)
         categories_ws.cell(row=row, column=2, value=examples)
+        categories_ws.cell(row=row, column=3, value=sensitivity)
         
         if row == 1:  # Header row
-            for col in range(1, 3):
+            for col in range(1, 4):
                 cell = categories_ws.cell(row=row, column=col)
                 cell.font = header_font
                 cell.fill = header_fill
+                cell.border = border
+        else:
+            for col in range(1, 4):
+                cell = categories_ws.cell(row=row, column=col)
+                cell.border = border
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
+                # Highlight special categories
+                if sensitivity == "Special Category":
+                    cell.fill = PatternFill(start_color="FFE6E6", end_color="FFE6E6", fill_type="solid")
     
-    # Adjust column widths - handle merged cells properly
+    # Adjust column widths for all sheets
     from openpyxl.utils import get_column_letter
-    for ws_name in [ws, legal_basis_ws, categories_ws]:
-        for col_num in range(1, ws_name.max_column + 1):
-            max_length = 0
+    
+    # Main sheet column widths
+    column_widths = {
+        1: 25,   # Processing Activity Name
+        2: 15,   # Category
+        3: 35,   # Description
+        4: 20,   # Data Controller
+        5: 25,   # Contact Details
+        6: 30,   # Controller Address
+        7: 15,   # DPO Name
+        8: 25,   # DPO Contact
+        9: 30,   # Purpose of Processing
+        10: 20,  # Legal Basis
+        11: 25,  # Legitimate Interests
+        12: 35,  # Categories of Personal Data
+        13: 20,  # Special Categories
+        14: 25,  # Data Subjects
+        15: 25,  # Recipients
+        16: 25,  # Third Country Transfers
+        17: 25,  # Safeguards
+        18: 20,  # Retention Period
+        19: 25,  # Retention Criteria
+        20: 30,  # Technical Measures
+        21: 30,  # Organizational Measures
+        22: 25,  # Source of Data
+        23: 25,  # Data Subject Rights
+        24: 25   # Additional Information
+    }
+    
+    for col_num, width in column_widths.items():
+        if col_num <= len(headers):
             column_letter = get_column_letter(col_num)
-            
-            for row_num in range(1, ws_name.max_row + 1):
-                cell = ws_name.cell(row=row_num, column=col_num)
-                # Skip merged cells by checking if it's part of a merged range
-                skip_cell = False
-                for merged_range in ws_name.merged_cells.ranges:
-                    if cell.coordinate in merged_range:
-                        skip_cell = True
-                        break
-                
-                if skip_cell:
-                    continue
-                    
-                try:
-                    if cell.value and len(str(cell.value)) > max_length:
-                        max_length = len(str(cell.value))
-                except:
-                    pass
-            
-            adjusted_width = min(max_length + 2, 50)  # Cap at 50 chars
-            if adjusted_width > 0:
-                ws_name.column_dimensions[column_letter].width = adjusted_width
+            ws.column_dimensions[column_letter].width = width
+    
+    # Set column widths for reference sheets
+    for ref_ws in [legal_basis_ws, categories_ws]:
+        for col_num in range(1, ref_ws.max_column + 1):
+            column_letter = get_column_letter(col_num)
+            if ref_ws == legal_basis_ws:
+                widths = [8, 18, 35, 40]
+            else:
+                widths = [20, 40, 15]
+            if col_num <= len(widths):
+                ref_ws.column_dimensions[column_letter].width = widths[col_num - 1]
     
     # Save to temporary file
     temp_dir = tempfile.gettempdir()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"ROPA_Template_{timestamp}.xlsx"
+    filename = f"Record_of_Processing_Activities_{timestamp}.xlsx"
     file_path = os.path.join(temp_dir, filename)
     
     wb.save(file_path)
