@@ -43,7 +43,7 @@ def get_approved_custom_fields_by_category():
 
 
 def generate_ropa_template():
-    """Generate Excel template for ROPA data collection matching the uploaded format"""
+    """Generate beautifully formatted Excel template for ROPA data collection"""
     
     # Create workbook
     wb = Workbook()
@@ -51,212 +51,287 @@ def generate_ropa_template():
     # Remove default sheet
     wb.remove(wb.active)
     
-    # Define styles
-    title_font = Font(bold=True, size=16, color="FFFFFF")
-    title_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-    header_font = Font(bold=True, size=12, color="FFFFFF")
-    header_fill = PatternFill(start_color="5B9BD5", end_color="5B9BD5", fill_type="solid")
-    instruction_font = Font(bold=True, size=11)
-    border = Border(
-        left=Side(style='thin'), 
-        right=Side(style='thin'), 
-        top=Side(style='thin'),
-        bottom=Side(style='thin')
+    # Define professional color scheme and styles
+    # Main brand colors - professional blue theme
+    main_blue = "1F4E79"      # Dark blue for main headers
+    light_blue = "4472C4"     # Medium blue for section headers
+    accent_blue = "D5E3F0"    # Light blue for alternating rows
+    light_gray = "F2F2F2"     # Light gray for input areas
+    white = "FFFFFF"          # White background
+    dark_text = "1F1F1F"      # Dark text
+    
+    # Define comprehensive styles
+    title_font = Font(name="Calibri", bold=True, size=18, color=white)
+    title_fill = PatternFill(start_color=main_blue, end_color=main_blue, fill_type="solid")
+    
+    subtitle_font = Font(name="Calibri", bold=True, size=14, color=main_blue)
+    subtitle_fill = PatternFill(start_color=light_gray, end_color=light_gray, fill_type="solid")
+    
+    header_font = Font(name="Calibri", bold=True, size=11, color=white)
+    header_fill = PatternFill(start_color=light_blue, end_color=light_blue, fill_type="solid")
+    
+    subheader_font = Font(name="Calibri", bold=False, size=9, color=dark_text, italic=True)
+    subheader_fill = PatternFill(start_color=accent_blue, end_color=accent_blue, fill_type="solid")
+    
+    instruction_font = Font(name="Calibri", bold=True, size=11, color=main_blue)
+    normal_font = Font(name="Calibri", size=10, color=dark_text)
+    small_font = Font(name="Calibri", size=9, color=dark_text)
+    
+    sample_fill = PatternFill(start_color=light_gray, end_color=light_gray, fill_type="solid")
+    
+    # Define borders
+    thick_border = Border(
+        left=Side(style='thick', color=main_blue), 
+        right=Side(style='thick', color=main_blue), 
+        top=Side(style='thick', color=main_blue),
+        bottom=Side(style='thick', color=main_blue)
+    )
+    
+    medium_border = Border(
+        left=Side(style='medium', color=light_blue), 
+        right=Side(style='medium', color=light_blue), 
+        top=Side(style='medium', color=light_blue),
+        bottom=Side(style='medium', color=light_blue)
+    )
+    
+    thin_border = Border(
+        left=Side(style='thin', color='CCCCCC'), 
+        right=Side(style='thin', color='CCCCCC'), 
+        top=Side(style='thin', color='CCCCCC'),
+        bottom=Side(style='thin', color='CCCCCC')
     )
     
     # Create Introduction Sheet
     intro_ws = wb.create_sheet("Introduction", 0)
     
-    # Introduction content
+    # Main title with enhanced formatting
     intro_ws['A1'] = "RECORD OF PROCESSING ACTIVITIES"
     intro_ws['A1'].font = title_font
     intro_ws['A1'].fill = title_fill
     intro_ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
-    intro_ws.merge_cells('A1:F1')
-    intro_ws.row_dimensions[1].height = 35
+    intro_ws['A1'].border = thick_border
+    intro_ws.merge_cells('A1:G1')
+    intro_ws.row_dimensions[1].height = 40
     
-    intro_ws['A3'] = "GDPR Article 30 Compliance Template"
-    intro_ws['A3'].font = Font(bold=True, size=14)
-    intro_ws['A3'].alignment = Alignment(horizontal='center')
-    intro_ws.merge_cells('A3:F3')
-    intro_ws.row_dimensions[3].height = 25
+    # Subtitle
+    intro_ws['A2'] = "GDPR Article 30 Compliance Template"
+    intro_ws['A2'].font = subtitle_font
+    intro_ws['A2'].fill = subtitle_fill
+    intro_ws['A2'].alignment = Alignment(horizontal='center', vertical='center')
+    intro_ws['A2'].border = medium_border
+    intro_ws.merge_cells('A2:G2')
+    intro_ws.row_dimensions[2].height = 30
     
-    # Instructions
+    # Add logo placeholder
+    intro_ws['A4'] = "🏢 Your Organization Logo Here"
+    intro_ws['A4'].font = Font(name="Calibri", size=12, color=light_blue)
+    intro_ws['A4'].alignment = Alignment(horizontal='center')
+    intro_ws.merge_cells('A4:G4')
+    intro_ws.row_dimensions[4].height = 25
+    
+    # Enhanced instructions with better formatting
     instructions = [
-        "",
-        "About This Template:",
-        "This template is designed to help you comply with GDPR Article 30 requirements for maintaining records of processing activities.",
-        "",
-        "Instructions:",
-        "1. This workbook contains three sheets: Introduction (this sheet), Controller, and Processor",
-        "2. Complete the Controller sheet if your organization acts as a data controller",
-        "3. Complete the Processor sheet if your organization acts as a data processor",
-        "4. Fill in all required fields marked with (*)",
-        "5. Provide detailed and accurate information for each processing activity",
-        "6. Ensure legal basis is clearly identified under GDPR Article 6",
-        "7. Include appropriate safeguards for any third country transfers",
-        "8. Save and upload this completed file back to the ROPA system",
-        "",
-        "Legal Requirements:",
-        "Under GDPR Article 30, organizations must maintain records of processing activities.",
-        "This applies to:",
-        "• Organizations with 250+ employees",
-        "• Organizations processing special categories of personal data",
-        "• Organizations where processing poses risks to data subjects",
-        "",
-        "Sheet Descriptions:",
-        "",
-        "Controller Sheet:",
-        "Use this sheet when your organization determines the purposes and means of processing personal data.",
-        "Examples: HR records, customer databases, marketing activities",
-        "",
-        "Processor Sheet:",
-        "Use this sheet when your organization processes personal data on behalf of another organization.",
-        "Examples: Cloud service providers, payroll processors, IT support services",
-        "",
-        "For questions or support, contact your Data Protection Officer or Privacy Team."
+        ("📋 ABOUT THIS TEMPLATE", "header"),
+        ("This template is designed to help you comply with GDPR Article 30 requirements for maintaining comprehensive records of processing activities.", "text"),
+        ("", "blank"),
+        ("📝 INSTRUCTIONS", "header"),
+        ("1️⃣ This workbook contains three professionally formatted sheets:", "text"),
+        ("   • Introduction (this sheet) - Overview and guidance", "indent"),
+        ("   • Controller - For data controller activities", "indent"),
+        ("   • Processor - For data processor activities", "indent"),
+        ("", "blank"),
+        ("2️⃣ Complete the Controller sheet if your organization determines purposes and means of processing", "text"),
+        ("3️⃣ Complete the Processor sheet if your organization processes data on behalf of others", "text"),
+        ("4️⃣ Fill in all required fields marked with (*) - these are mandatory under GDPR", "text"),
+        ("5️⃣ Provide detailed and accurate information for each processing activity", "text"),
+        ("6️⃣ Ensure legal basis is clearly identified under GDPR Article 6", "text"),
+        ("7️⃣ Include appropriate safeguards for any third country transfers", "text"),
+        ("8️⃣ Save and upload this completed file back to the ROPA system", "text"),
+        ("", "blank"),
+        ("⚖️ LEGAL REQUIREMENTS", "header"),
+        ("Under GDPR Article 30, organizations must maintain detailed records of processing activities.", "text"),
+        ("This requirement applies to:", "text"),
+        ("   ✓ Organizations with 250+ employees", "indent"),
+        ("   ✓ Organizations processing special categories of personal data", "indent"),
+        ("   ✓ Organizations where processing poses risks to data subjects", "indent"),
+        ("", "blank"),
+        ("📊 SHEET DESCRIPTIONS", "header"),
+        ("", "blank"),
+        ("🎯 Controller Sheet:", "subheader"),
+        ("Use when your organization determines the purposes and means of processing personal data.", "text"),
+        ("Examples: HR records, customer databases, marketing activities, financial records", "text"),
+        ("", "blank"),
+        ("⚙️ Processor Sheet:", "subheader"),
+        ("Use when your organization processes personal data on behalf of another organization.", "text"),
+        ("Examples: Cloud service providers, payroll processors, IT support services", "text"),
+        ("", "blank"),
+        ("💡 TIPS FOR SUCCESS", "header"),
+        ("• Be specific and detailed in your descriptions", "text"),
+        ("• Use clear business language that stakeholders can understand", "text"),
+        ("• Review and update records regularly as processing activities change", "text"),
+        ("• Ensure all team members understand their data protection responsibilities", "text"),
+        ("", "blank"),
+        ("📞 SUPPORT", "header"),
+        ("For questions or support, contact your Data Protection Officer or Privacy Team.", "text")
     ]
     
-    row = 5
-    for instruction in instructions:
-        intro_ws[f'A{row}'] = instruction
-        if instruction.startswith(("About This Template:", "Instructions:", "Legal Requirements:", "Sheet Descriptions:")):
-            intro_ws[f'A{row}'].font = Font(bold=True, size=12, color="366092")
-        elif instruction.startswith(("Controller Sheet:", "Processor Sheet:")):
-            intro_ws[f'A{row}'].font = Font(bold=True, size=11)
-        elif instruction.startswith(("1.", "2.", "3.", "4.", "5.", "6.", "7.", "8.", "•")):
-            intro_ws[f'A{row}'].font = Font(size=10)
-        else:
-            intro_ws[f'A{row}'].font = Font(size=10)
+    row = 6
+    for instruction, style_type in instructions:
+        cell = intro_ws[f'A{row}']
+        cell.value = instruction
         
-        intro_ws[f'A{row}'].alignment = Alignment(wrap_text=True, vertical='top')
+        if style_type == "header":
+            cell.font = Font(name="Calibri", bold=True, size=12, color=main_blue)
+            cell.fill = PatternFill(start_color=accent_blue, end_color=accent_blue, fill_type="solid")
+            cell.border = thin_border
+            intro_ws.merge_cells(f'A{row}:G{row}')
+            intro_ws.row_dimensions[row].height = 25
+        elif style_type == "subheader":
+            cell.font = Font(name="Calibri", bold=True, size=11, color=light_blue)
+        elif style_type == "indent":
+            cell.font = small_font
+            cell.alignment = Alignment(indent=2)
+        elif style_type == "blank":
+            intro_ws.row_dimensions[row].height = 10
+        else:  # text
+            cell.font = normal_font
+        
+        cell.alignment = Alignment(wrap_text=True, vertical='top')
         row += 1
     
     # Set column widths for introduction
-    intro_ws.column_dimensions['A'].width = 80
+    intro_ws.column_dimensions['A'].width = 90
+    for col in ['B', 'C', 'D', 'E', 'F', 'G']:
+        intro_ws.column_dimensions[col].width = 5
     
-    # Create Controller Sheet
+    # Create Controller Sheet with enhanced styling
     controller_ws = wb.create_sheet("Controller", 1)
     
-    # Controller headers
+    # Controller headers with descriptions
     controller_headers = [
-        ("Processing Activity Name *", "Name of the processing activity"),
-        ("Category", "Category of processing activity"),
-        ("Description *", "Description of the processing activity"),
-        ("Department/Function", "Department or business function responsible"),
-        ("Controller Name *", "Name of the data controller"),
-        ("Controller Contact *", "Contact details of the controller"),
-        ("Controller Address *", "Address of the controller"),
-        ("DPO Name", "Data Protection Officer name"),
-        ("DPO Contact", "DPO contact details"),
-        ("Purpose of Processing *", "Purpose and justification for processing"),
-        ("Legal Basis *", "Legal basis under GDPR Article 6"),
+        ("Processing Activity Name *", "Unique name identifying this processing activity"),
+        ("Category", "Business category (HR, Marketing, Finance, etc.)"),
+        ("Description *", "Detailed description of what data is processed and why"),
+        ("Department/Function", "Responsible department or business function"),
+        ("Controller Name *", "Legal name of the data controller organization"),
+        ("Controller Contact *", "Primary contact person and details"),
+        ("Controller Address *", "Legal address of the controller"),
+        ("DPO Name", "Data Protection Officer name (if applicable)"),
+        ("DPO Contact", "DPO contact details (email/phone)"),
+        ("Purpose of Processing *", "Specific purpose and business justification"),
+        ("Legal Basis *", "Legal basis under GDPR Article 6 (1)(a-f)"),
         ("Legitimate Interests", "Details if legal basis is legitimate interests"),
         ("Categories of Personal Data *", "Types of personal data processed"),
-        ("Special Categories", "Special categories of personal data (Article 9)"),
-        ("Data Subjects *", "Categories of data subjects"),
-        ("Recipients *", "Recipients or categories of recipients"),
-        ("Third Country Transfers", "Details of transfers outside EU/EEA"),
-        ("Safeguards", "Safeguards for international transfers"),
-        ("Retention Period *", "How long data is kept"),
-        ("Retention Criteria", "Criteria for determining retention period"),
-        ("Security Measures *", "Technical and organizational measures"),
-        ("Status", "Draft/Under Review/Approved"),
-        ("Notes", "Additional notes or comments")
+        ("Special Categories", "Special categories under GDPR Article 9"),
+        ("Data Subjects *", "Categories of individuals whose data is processed"),
+        ("Recipients *", "Who receives or has access to the data"),
+        ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
+        ("Safeguards", "Protective measures for international transfers"),
+        ("Retention Period *", "How long data is retained"),
+        ("Retention Criteria", "Criteria used to determine retention period"),
+        ("Security Measures *", "Technical and organizational security measures"),
+        ("Status", "Current status (Draft/Under Review/Approved)"),
+        ("Notes", "Additional comments or special considerations")
     ]
     
-    # Add controller title
-    controller_ws['A1'] = "DATA CONTROLLER - RECORD OF PROCESSING ACTIVITIES"
+    # Add controller title with enhanced styling
+    controller_ws['A1'] = "📊 DATA CONTROLLER - RECORD OF PROCESSING ACTIVITIES"
     controller_ws['A1'].font = title_font
     controller_ws['A1'].fill = title_fill
     controller_ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    controller_ws['A1'].border = thick_border
     controller_ws.merge_cells(f'A1:{get_column_letter(len(controller_headers))}1')
-    controller_ws.row_dimensions[1].height = 30
+    controller_ws.row_dimensions[1].height = 35
     
-    # Add controller headers
+    # Add controller headers with enhanced styling
     for col, (header, description) in enumerate(controller_headers, 1):
+        # Main header
         cell = controller_ws.cell(row=2, column=col)
         cell.value = header
         cell.font = header_font
         cell.fill = header_fill
-        cell.border = border
+        cell.border = medium_border
         cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
         
-        # Add description in row 3
+        # Description row
         desc_cell = controller_ws.cell(row=3, column=col)
         desc_cell.value = description
-        desc_cell.font = Font(size=9, italic=True)
+        desc_cell.font = subheader_font
+        desc_cell.fill = subheader_fill
         desc_cell.alignment = Alignment(wrap_text=True, vertical='top')
-        desc_cell.border = border
+        desc_cell.border = thin_border
     
     # Set row heights
-    controller_ws.row_dimensions[2].height = 25
-    controller_ws.row_dimensions[3].height = 35
+    controller_ws.row_dimensions[2].height = 30
+    controller_ws.row_dimensions[3].height = 40
     
-    # Create Processor Sheet
+    # Create Processor Sheet with enhanced styling
     processor_ws = wb.create_sheet("Processor", 2)
     
-    # Processor headers
+    # Processor headers with descriptions
     processor_headers = [
-        ("Processing Activity Name *", "Name of the processing activity"),
-        ("Category", "Category of processing activity"),
-        ("Description *", "Description of the processing activity"),
-        ("Department/Function", "Department or business function responsible"),
-        ("Processor Name *", "Name of the data processor"),
-        ("Processor Contact *", "Contact details of the processor"),
-        ("Processor Address *", "Address of the processor"),
-        ("Controller Name *", "Name of the data controller (client)"),
-        ("Controller Contact *", "Contact details of the controller"),
+        ("Processing Activity Name *", "Unique name identifying this processing activity"),
+        ("Category", "Business category (IT Services, Payroll, etc.)"),
+        ("Description *", "Detailed description of processing on behalf of controller"),
+        ("Department/Function", "Responsible department or business function"),
+        ("Processor Name *", "Legal name of the data processor organization"),
+        ("Processor Contact *", "Primary contact person and details"),
+        ("Processor Address *", "Legal address of the processor"),
+        ("Controller Name *", "Legal name of the data controller (your client)"),
+        ("Controller Contact *", "Controller's contact details"),
         ("DPO Name", "Data Protection Officer name"),
-        ("DPO Contact", "DPO contact details"),
-        ("Purpose of Processing *", "Purpose of processing on behalf of controller"),
-        ("Legal Basis *", "Legal basis under GDPR Article 6"),
+        ("DPO Contact", "DPO contact details (email/phone)"),
+        ("Purpose of Processing *", "Specific purpose as instructed by controller"),
+        ("Legal Basis *", "Controller's legal basis under GDPR Article 6"),
         ("Categories of Personal Data *", "Types of personal data processed"),
-        ("Special Categories", "Special categories of personal data (Article 9)"),
-        ("Data Subjects *", "Categories of data subjects"),
-        ("Recipients", "Recipients or categories of recipients"),
-        ("Third Country Transfers", "Details of transfers outside EU/EEA"),
-        ("Safeguards", "Safeguards for international transfers"),
-        ("Retention Period *", "How long data is kept"),
-        ("Retention Criteria", "Criteria for determining retention period"),
-        ("Security Measures *", "Technical and organizational measures"),
-        ("Processing Instructions", "Instructions received from controller"),
-        ("Sub-processors", "Details of any sub-processors used"),
-        ("Status", "Draft/Under Review/Approved"),
-        ("Notes", "Additional notes or comments")
+        ("Special Categories", "Special categories under GDPR Article 9"),
+        ("Data Subjects *", "Categories of individuals whose data is processed"),
+        ("Recipients", "Who receives the data (usually the controller)"),
+        ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
+        ("Safeguards", "Protective measures for international transfers"),
+        ("Retention Period *", "Data retention period as per controller instructions"),
+        ("Retention Criteria", "Controller's criteria for determining retention"),
+        ("Security Measures *", "Technical and organizational security measures"),
+        ("Processing Instructions", "Specific instructions received from controller"),
+        ("Sub-processors", "Details of any sub-processors engaged"),
+        ("Status", "Current status (Draft/Under Review/Approved)"),
+        ("Notes", "Additional comments or special considerations")
     ]
     
-    # Add processor title
-    processor_ws['A1'] = "DATA PROCESSOR - RECORD OF PROCESSING ACTIVITIES"
+    # Add processor title with enhanced styling
+    processor_ws['A1'] = "⚙️ DATA PROCESSOR - RECORD OF PROCESSING ACTIVITIES"
     processor_ws['A1'].font = title_font
     processor_ws['A1'].fill = title_fill
     processor_ws['A1'].alignment = Alignment(horizontal='center', vertical='center')
+    processor_ws['A1'].border = thick_border
     processor_ws.merge_cells(f'A1:{get_column_letter(len(processor_headers))}1')
-    processor_ws.row_dimensions[1].height = 30
+    processor_ws.row_dimensions[1].height = 35
     
-    # Add processor headers
+    # Add processor headers with enhanced styling
     for col, (header, description) in enumerate(processor_headers, 1):
+        # Main header
         cell = processor_ws.cell(row=2, column=col)
         cell.value = header
         cell.font = header_font
         cell.fill = header_fill
-        cell.border = border
+        cell.border = medium_border
         cell.alignment = Alignment(wrap_text=True, vertical='center', horizontal='center')
         
-        # Add description in row 3
+        # Description row
         desc_cell = processor_ws.cell(row=3, column=col)
         desc_cell.value = description
-        desc_cell.font = Font(size=9, italic=True)
+        desc_cell.font = subheader_font
+        desc_cell.fill = subheader_fill
         desc_cell.alignment = Alignment(wrap_text=True, vertical='top')
-        desc_cell.border = border
+        desc_cell.border = thin_border
     
     # Set row heights
-    processor_ws.row_dimensions[2].height = 25
-    processor_ws.row_dimensions[3].height = 35
+    processor_ws.row_dimensions[2].height = 30
+    processor_ws.row_dimensions[3].height = 40
     
-    # Set column widths for both sheets
-    controller_column_widths = [25, 15, 35, 20, 25, 25, 30, 20, 25, 35, 20, 30, 30, 25, 25, 30, 25, 30, 20, 25, 35, 15, 30]
-    processor_column_widths = [25, 15, 35, 20, 25, 25, 30, 25, 25, 20, 25, 35, 20, 30, 25, 25, 30, 25, 30, 20, 25, 35, 30, 30, 15, 30]
+    # Set optimized column widths
+    controller_column_widths = [28, 18, 40, 22, 28, 28, 35, 22, 28, 40, 25, 35, 35, 28, 28, 35, 30, 35, 25, 30, 40, 18, 35]
+    processor_column_widths = [28, 18, 40, 22, 28, 28, 35, 28, 28, 22, 28, 40, 25, 35, 28, 28, 35, 30, 35, 25, 30, 40, 35, 35, 18, 35]
     
     for i, width in enumerate(controller_column_widths, 1):
         controller_ws.column_dimensions[get_column_letter(i)].width = width
@@ -264,59 +339,82 @@ def generate_ropa_template():
     for i, width in enumerate(processor_column_widths, 1):
         processor_ws.column_dimensions[get_column_letter(i)].width = width
     
-    # Add sample rows with examples
-    # Controller sample
+    # Add enhanced sample rows with professional examples
     controller_sample = [
-        "Employee Data Management", "HR", "Processing of employee personal data for HR purposes", 
-        "Human Resources", "ABC Company Ltd", "hr@company.com", "123 Business St, City, Country",
-        "Jane Smith", "dpo@company.com", "Employment administration, payroll, performance management",
-        "Contract (Art. 6(1)(b))", "", "Name, address, phone, email, salary, performance data",
-        "", "Employees, contractors", "Payroll provider, benefits administrator", "",
-        "", "7 years after employment ends", "Legal retention requirements",
-        "Access controls, encryption, regular backups", "Approved", ""
+        "Employee Data Management System", "Human Resources", "Comprehensive processing of employee personal data for employment administration, payroll, benefits, and performance management", 
+        "Human Resources Department", "ABC Company Limited", "hr.manager@company.com", "123 Business Street, Corporate City, CC1 2AB, United Kingdom",
+        "Jane Smith", "dpo@company.com", "Employment administration, payroll processing, performance evaluation, training management, and compliance monitoring",
+        "Contract (Art. 6(1)(b)) - Employment", "N/A", "Name, address, phone, email, employee ID, salary, bank details, performance data, training records",
+        "", "Current employees, former employees, contractors", "Payroll provider, benefits administrator, training providers", "",
+        "Adequate Decision (UK)", "7 years after employment termination", "Legal retention requirements and business needs",
+        "Access controls, data encryption, regular security audits, incident response procedures", "Approved", "Regular review scheduled quarterly"
     ]
     
-    # Processor sample
     processor_sample = [
-        "Payroll Processing Service", "Financial", "Processing payroll data on behalf of client companies",
-        "Operations", "XYZ Payroll Services", "contact@xyzpayroll.com", "456 Service Ave, City, Country",
-        "Client Company Name", "client@company.com", "John Doe", "dpo@xyzpayroll.com",
-        "Calculate and process payroll payments", "Contract (Art. 6(1)(b))",
-        "Name, employee ID, salary, tax information, bank details", "",
-        "Employees of client companies", "Tax authorities, banks", "", "",
-        "As specified by client (typically 7 years)", "Client's retention policy",
-        "ISO 27001 certified systems, encrypted data transmission", "Monthly payroll processing as per client instructions",
-        "Cloud hosting provider (AWS EU)", "Approved", ""
+        "Payroll Processing Service", "Financial Services", "Processing employee payroll data including salary calculations, tax deductions, and payment distribution on behalf of client organizations",
+        "Operations Department", "XYZ Payroll Services Ltd", "operations@xyzpayroll.com", "456 Service Avenue, Business Park, BP2 3CD, United Kingdom",
+        "Client Company Name", "client.contact@company.com", "John Doe", "dpo@xyzpayroll.com",
+        "Calculate monthly salaries, process tax deductions, generate payslips, and facilitate payment transfers", "Contract (Art. 6(1)(b)) - Employment",
+        "Name, employee ID, salary, tax code, bank details, National Insurance number", "",
+        "Employees of client companies", "HMRC, client company management", "", "Standard Contractual Clauses",
+        "As specified by client contract (typically 7 years)", "Client retention policy and legal requirements",
+        "ISO 27001 certified systems, encrypted data transmission, segregated client environments", "Monthly payroll processing as per detailed client instructions and service agreement",
+        "Cloud hosting provider (Microsoft Azure EU)", "Approved", "SLA guarantees 99.9% uptime with 24/7 monitoring"
     ]
     
-    # Add sample data
+    # Add beautifully formatted sample data
     for col, value in enumerate(controller_sample, 1):
         cell = controller_ws.cell(row=4, column=col)
         cell.value = value
-        cell.border = border
+        cell.border = thin_border
         cell.alignment = Alignment(wrap_text=True, vertical='top')
-        if value and col <= 2:  # Highlight first two columns
-            cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        cell.font = small_font
+        cell.fill = sample_fill
     
     for col, value in enumerate(processor_sample, 1):
         cell = processor_ws.cell(row=4, column=col)
         cell.value = value
-        cell.border = border
+        cell.border = thin_border
         cell.alignment = Alignment(wrap_text=True, vertical='top')
-        if value and col <= 2:  # Highlight first two columns
-            cell.fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+        cell.font = small_font
+        cell.fill = sample_fill
     
-    controller_ws.row_dimensions[4].height = 40
-    processor_ws.row_dimensions[4].height = 40
+    controller_ws.row_dimensions[4].height = 50
+    processor_ws.row_dimensions[4].height = 50
     
-    # Add empty rows for data entry
-    for row in range(5, 15):
+    # Add empty rows with alternating colors for data entry
+    for row in range(5, 25):
+        fill_color = white if row % 2 == 1 else accent_blue
+        fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        
         for col in range(1, len(controller_headers) + 1):
             cell = controller_ws.cell(row=row, column=col)
-            cell.border = border
+            cell.border = thin_border
+            cell.fill = fill
+            cell.font = normal_font
+            
         for col in range(1, len(processor_headers) + 1):
             cell = processor_ws.cell(row=row, column=col)
-            cell.border = border
+            cell.border = thin_border
+            cell.fill = fill
+            cell.font = normal_font
+        
+        controller_ws.row_dimensions[row].height = 25
+        processor_ws.row_dimensions[row].height = 25
+    
+    # Add footer to each sheet
+    footer_row_controller = 26
+    footer_row_processor = 26
+    
+    controller_ws[f'A{footer_row_controller}'] = "📄 Template generated by ROPA Management System | 🔒 Ensure data confidentiality when completing"
+    controller_ws[f'A{footer_row_controller}'].font = Font(name="Calibri", size=9, color=light_blue, italic=True)
+    controller_ws[f'A{footer_row_controller}'].alignment = Alignment(horizontal='center')
+    controller_ws.merge_cells(f'A{footer_row_controller}:{get_column_letter(len(controller_headers))}{footer_row_controller}')
+    
+    processor_ws[f'A{footer_row_processor}'] = "📄 Template generated by ROPA Management System | 🔒 Ensure data confidentiality when completing"
+    processor_ws[f'A{footer_row_processor}'].font = Font(name="Calibri", size=9, color=light_blue, italic=True)
+    processor_ws[f'A{footer_row_processor}'].alignment = Alignment(horizontal='center')
+    processor_ws.merge_cells(f'A{footer_row_processor}:{get_column_letter(len(processor_headers))}{footer_row_processor}')
     
     # Save to temporary file
     temp_dir = tempfile.mkdtemp()
