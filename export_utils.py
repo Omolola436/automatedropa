@@ -32,77 +32,86 @@ def generate_export(user_email, user_role, export_format, include_drafts=False, 
 def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_rejected=False):
     """Get filtered ROPA data based on export criteria"""
     
-    from app import db
-    from models import ROPARecord, User
+    from database import get_db_connection
+    import sqlite3
     
-    # Base query - Privacy Champions see only their records
-    if user_role == 'Privacy Champion':
-        # Get the user ID for the email
-        user = User.query.filter_by(email=user_email).first()
-        if not user:
-            return pd.DataFrame()  # Return empty dataframe if user not found
-        query = ROPARecord.query.filter_by(created_by=user.id)
-    else:
-        # Privacy Officers see all records
-        query = ROPARecord.query
-    
-    # Status filtering - be more inclusive for export
-    status_filters = ['Approved', 'Under Review']
-    if include_drafts:
-        status_filters.append('Draft')
-    if include_rejected:
-        status_filters.append('Rejected')
-    
-    # For Privacy Officers, if no specific inclusion flags are set, include Draft by default
-    if user_role == 'Privacy Officer' and not include_drafts and not include_rejected:
-        status_filters.append('Draft')
-    
-    query = query.filter(ROPARecord.status.in_(status_filters))
-    query = query.order_by(ROPARecord.created_at.desc())
-    
-    # Get all records and convert to DataFrame
-    records = query.all()
-    
-    print(f"DEBUG Export: Found {len(records)} records for export")
-    print(f"DEBUG Export: Status filters: {status_filters}")
-    print(f"DEBUG Export: User role: {user_role}")
-    
-    if not records:
-        return pd.DataFrame()
-    
-    # Convert to dictionary list for DataFrame
-    data = []
-    for record in records:
-        # Get creator info
-        creator = User.query.get(record.created_by)
-        creator_email = creator.email if creator else f'User ID {record.created_by}'
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
         
-        data.append({
-            'id': record.id,
-            'processing_activity_name': record.processing_activity_name,
-            'category': record.category,
-            'description': record.description,
-            'department_function': record.department_function,
-            'controller_name': record.controller_name,
-            'controller_contact': record.controller_contact,
-            'controller_address': record.controller_address,
-            'dpo_name': record.dpo_name,
-            'dpo_contact': record.dpo_contact,
-            'processing_purpose': record.processing_purpose,
-            'legal_basis': record.legal_basis,
-            'data_categories': record.data_categories,
-            'data_subjects': record.data_subjects,
-            'recipients': record.recipients,
-            'retention_period': record.retention_period,
-            'security_measures': record.security_measures,
-            'status': record.status,
-            'created_by': creator_email,
-            'created_at': record.created_at,
-            'updated_at': record.updated_at
-        })
-    
-    df = pd.DataFrame(data)
-    return df
+        # Build query based on user role
+        if user_role == 'Privacy Champion':
+            # Get user ID first
+            cursor.execute("SELECT id FROM users WHERE email = ?", (user_email,))
+            user_result = cursor.fetchone()
+            if not user_result:
+                conn.close()
+                return pd.DataFrame()
+            
+            user_id = user_result[0]
+            base_query = "SELECT * FROM ropa_records WHERE created_by = ?"
+            params = [user_id]
+        else:
+            # Privacy Officers see all records
+            base_query = "SELECT * FROM ropa_records WHERE 1=1"
+            params = []
+        
+        # Status filtering - be more inclusive for export
+        status_filters = ['Approved', 'Under Review']
+        if include_drafts:
+            status_filters.append('Draft')
+        if include_rejected:
+            status_filters.append('Rejected')
+        
+        # For Privacy Officers, if no specific inclusion flags are set, include Draft by default
+        if user_role == 'Privacy Officer' and not include_drafts and not include_rejected:
+            status_filters.append('Draft')
+        
+        # Build status filter clause
+        status_placeholders = ', '.join(['?' for _ in status_filters])
+        status_clause = f" AND status IN ({status_placeholders})"
+        params.extend(status_filters)
+        
+        # Complete query
+        query = base_query + status_clause + " ORDER BY created_at DESC"
+        
+        print(f"DEBUG Export: Executing query: {query}")
+        print(f"DEBUG Export: With params: {params}")
+        
+        # Execute query
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        
+        # Get column names
+        columns = [description[0] for description in cursor.description]
+        
+        print(f"DEBUG Export: Found {len(rows)} records for export")
+        print(f"DEBUG Export: Database columns: {columns}")
+        
+        if not rows:
+            conn.close()
+            return pd.DataFrame()
+        
+        # Create DataFrame
+        df = pd.DataFrame(rows, columns=columns)
+        
+        # Debug: Print first record to see actual data
+        if len(df) > 0:
+            print("DEBUG Export: First record raw data:")
+            first_record = df.iloc[0]
+            for col in ['id', 'processing_activity_name', 'controller_name', 'controller_contact', 'controller_address']:
+                if col in df.columns:
+                    value = first_record[col]
+                    print(f"  {col}: '{value}' (type: {type(value)})")
+        
+        conn.close()
+        return df
+        
+    except Exception as e:
+        print(f"ERROR in get_filtered_ropa_data: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return pd.DataFrame()
 
 def generate_excel_export(df):
     """Generate Excel export using the official ROPA template format populated with data"""

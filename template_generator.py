@@ -42,57 +42,19 @@ def get_all_ropa_data_for_template():
         conn = get_db_connection()
         cursor = conn.cursor()
         
-        # Get all records with explicit field selection to ensure we get the data
-        query = """
-        SELECT 
-            r.id,
-            r.processing_activity_name,
-            r.category,
-            r.description,
-            r.department_function,
-            r.controller_name,
-            r.controller_contact,
-            r.controller_address,
-            r.dpo_name,
-            r.dpo_contact,
-            r.dpo_address,
-            r.processor_name,
-            r.processor_contact,
-            r.processor_address,
-            r.representative_name,
-            r.representative_contact,
-            r.representative_address,
-            r.processing_purpose,
-            r.legal_basis,
-            r.legitimate_interests,
-            r.data_categories,
-            r.special_categories,
-            r.data_subjects,
-            r.recipients,
-            r.third_country_transfers as international_transfers,
-            r.safeguards,
-            r.retention_period,
-            r.retention_criteria,
-            r.retention_justification,
-            r.security_measures,
-            r.breach_likelihood,
-            r.breach_impact,
-            r.dpia_required,
-            r.additional_info,
-            r.status,
-            r.created_by,
-            r.created_at,
-            r.updated_at,
-            u.email as created_by_email
-        FROM ropa_records r 
-        LEFT JOIN users u ON r.created_by = u.id 
-        ORDER BY r.created_at DESC
-        """
+        # First, let's check what columns actually exist in the database
+        cursor.execute("PRAGMA table_info(ropa_records)")
+        table_info = cursor.fetchall()
+        actual_columns = [col[1] for col in table_info]
+        print(f"Actual database columns: {actual_columns}")
+        
+        # Get all records with all available columns
+        query = "SELECT * FROM ropa_records ORDER BY created_at DESC"
         
         cursor.execute(query)
         rows = cursor.fetchall()
         
-        # Get column names
+        # Get column names from cursor description
         columns = [description[0] for description in cursor.description]
         
         # Create DataFrame
@@ -100,43 +62,43 @@ def get_all_ropa_data_for_template():
         conn.close()
         
         print(f"Found {len(df)} ROPA records for template")
-        print(f"Database columns found: {list(df.columns)}")
+        print(f"Retrieved columns: {list(df.columns)}")
         
         if df.empty:
             return pd.DataFrame()
 
-        # Debug: Print all data from first record to see what we actually have
+        # Debug: Print actual values from first record before any processing
         if len(df) > 0:
-            print("Complete first record data from database:")
+            print("RAW first record data from database:")
             first_record = df.iloc[0]
-            for col in df.columns:
-                value = first_record[col]
-                if value and str(value).strip() and str(value) not in ['nan', 'None', 'NaT', 'NULL']:
-                    print(f"  {col}: '{value}'")
+            for col in ['id', 'processing_activity_name', 'controller_name', 'controller_contact', 'controller_address', 'dpo_name']:
+                if col in df.columns:
+                    raw_value = first_record[col]
+                    print(f"  {col}: '{raw_value}' (type: {type(raw_value)})")
         
-        # Clean up the data
+        # Clean up the data more carefully
         for col in df.columns:
             if col in ['created_at', 'updated_at', 'reviewed_at', 'approved_at']:
                 # Keep datetime columns as strings if they're already formatted
                 df[col] = df[col].fillna('')
             elif col == 'dpia_required':
                 # Convert boolean/int to Yes/No
-                df[col] = df[col].apply(lambda x: 'Yes' if x in [1, True, 'Yes', 'yes'] else 'No' if x in [0, False, 'No', 'no'] else str(x) if pd.notna(x) else '')
+                df[col] = df[col].apply(lambda x: 'Yes' if x in [1, True, 'Yes', 'yes'] else 'No' if x in [0, False, 'No', 'no'] else str(x) if pd.notna(x) and str(x).strip() else '')
             else:
-                # Fill NaN values with empty strings and convert to string
-                df[col] = df[col].fillna('').astype(str)
-                # Clean up 'nan' strings and other null representations
-                df[col] = df[col].replace(['nan', 'None', 'NaT', 'NULL'], '')
+                # Handle other columns - be more careful with None/null values
+                df[col] = df[col].apply(lambda x: str(x).strip() if x is not None and pd.notna(x) and str(x).strip() not in ['nan', 'None', 'NaT', 'NULL'] else '')
 
         print(f"DataFrame created with {len(df)} rows and {len(df.columns)} columns")
         
         # Debug: Show cleaned data for first record
         if len(df) > 0:
-            print("First record after cleaning:")
+            print("First record after cleaning - key fields:")
             first_record = df.iloc[0]
-            for col in ['controller_name', 'controller_contact', 'controller_address', 'dpo_name', 'processing_purpose']:
-                value = first_record[col]
-                print(f"  {col}: '{value}'")
+            key_fields = ['id', 'processing_activity_name', 'controller_name', 'controller_contact', 'controller_address', 'dpo_name', 'processing_purpose', 'status']
+            for col in key_fields:
+                if col in df.columns:
+                    value = first_record[col]
+                    print(f"  {col}: '{value}'")
         
         return df
 
