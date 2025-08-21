@@ -89,30 +89,376 @@ def get_all_ropa_data_for_template():
 def read_uploaded_excel_structure(file_path):
     """Read the uploaded ROPA Excel file to understand its exact structure"""
     try:
-        # Try to read the Excel file
-        df = pd.read_excel(file_path, header=[0, 1])  # Read with multi-level headers
-        print(f"Excel file structure:")
-        print(f"Columns: {df.columns.tolist()}")
-        print(f"Shape: {df.shape}")
-        return df
+        # Load the workbook to get all sheet names
+        wb = openpyxl.load_workbook(file_path, read_only=True)
+        sheet_names = wb.sheetnames
+        print(f"Excel file contains sheets: {sheet_names}")
+        
+        sheets_data = {}
+        for sheet_name in sheet_names:
+            try:
+                # Try to read each sheet
+                df = pd.read_excel(file_path, sheet_name=sheet_name, header=None)
+                print(f"Sheet '{sheet_name}' structure:")
+                print(f"Shape: {df.shape}")
+                sheets_data[sheet_name] = df
+            except Exception as e:
+                print(f"Error reading sheet '{sheet_name}': {str(e)}")
+                
+        wb.close()
+        return sheets_data
     except Exception as e:
         print(f"Error reading Excel file: {str(e)}")
-        try:
-            # Try with single header
-            df = pd.read_excel(file_path, header=0)
-            print(f"Excel file structure (single header):")
-            print(f"Columns: {df.columns.tolist()}")
-            print(f"Shape: {df.shape}")
-            return df
-        except Exception as e2:
-            print(f"Error reading Excel file with single header: {str(e2)}")
-            return None
+        return None
+
+def create_controller_sheet(wb, existing_data):
+    """Create the Controller Processing Activities Register sheet"""
+    ws = wb.create_sheet("Controller Processing Activities Register")
+    
+    # Define the exact column structure from the uploaded ROPA file
+    columns_structure = [
+        # Controller Details section (3 columns)
+        ("Name", "controller_name"),
+        ("Address", "controller_address"), 
+        ("Contact Details", "controller_contact"),
+        
+        # Data Protection Officer section (3 columns)
+        ("Name", "dpo_name"),
+        ("Address", "dpo_address"),
+        ("Contact Details", "dpo_contact"),
+        
+        # Representative Details section (3 columns)
+        ("Name", "representative_name"),
+        ("Address", "representative_address"),
+        ("Contact Details", "representative_contact"),
+        
+        # Processing Details (11 columns to match the image exactly)
+        ("Detail the department or function responsible for the processing", "department_function"),
+        ("Describe the purpose of the processing", "processing_purpose"),
+        ("Describe the categories of data subjects", "data_subjects"),
+        ("Describe the categories of personal data", "data_categories"),
+        ("If possible, envisaged time limits for erasure of different categories of data", "retention_period"),
+        ("Categories of recipients to whom personal data has/will be disclosed", "recipients"),
+        ("If possible, description of technical & organisational security measures (e.g. pseudonymisation, encryption, codes of conduct etc)", "security_measures"),
+        ("Legal Basis for Processing", "legal_basis"),
+        ("Is Data Protection Impact Assessment (DPIA) Required?", "dpia_required"),
+        ("International transfers", "international_transfers"),
+        ("Any other relevant information", "additional_info")
+    ]
+
+    # Create the header structure exactly as shown in the image
+    # Row 1: Main section headers
+    ws.merge_cells('A1:C1')  # Controller Details
+    ws['A1'] = 'Controller Details'
+    ws['A1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['A1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['A1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('D1:F1')  # Data Protection Officer
+    ws['D1'] = 'Data Protection Officer'
+    ws['D1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['D1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['D1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['D1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('G1:I1')  # Representative Details
+    ws['G1'] = 'Representative Details (if applicable)'
+    ws['G1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['G1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['G1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['G1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Calculate the last column letter for Processing Details
+    last_col = get_column_letter(len(columns_structure))
+    ws.merge_cells(f'J1:{last_col}1')  # Processing Details
+    ws['J1'] = 'Processing Details'
+    ws['J1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['J1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['J1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['J1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # Row 2: Sub-headers exactly as shown in the image
+    headers = [col[0] for col in columns_structure]
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col_idx, value=header)
+        cell.font = Font(bold=True, color="FFFFFF", size=9)
+        cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+
+    # Set row heights to match the image
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 80  # Taller for the detailed headers
+
+    # Set column widths to match the proportions in the image
+    column_widths = [20, 30, 25, 20, 30, 25, 20, 30, 25, 35, 35, 30, 35, 25, 30, 40, 25, 15, 25, 30]
+    for i, width in enumerate(column_widths[:len(columns_structure)], 1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # Add sample data row (Row 3) exactly as shown in the uploaded file
+    sample_data = [
+        "Trinity Pharmacy", "109 Josiah Chinamano Avenue, Harare", "",  # Controller
+        "Tendai F Mataba", "13 Meadow Bank, Northwood, Mt Pleasant", "2.63775E+11",  # DPO
+        "", "", "",  # Representative
+        "SALES", "Processing Medication", "Customer", "Identity Data", "6", "marketing dep", "Access Control",  # Processing details
+        "", "", "", ""  # Additional fields
+    ]
+    
+    # Trim sample data to match actual columns
+    sample_data = sample_data[:len(columns_structure)]
+    
+    for col_idx, value in enumerate(sample_data, 1):
+        if col_idx <= len(columns_structure):
+            cell = ws.cell(row=3, column=col_idx, value=value)
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+            cell.font = Font(name="Calibri", size=10)
+            cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+    # Add second sample row (Row 4) exactly as shown
+    sample_data_2 = [
+        "", "", "",  # Controller (empty in sample)
+        "", "", "",  # DPO (empty in sample)
+        "", "", "",  # Representative (empty in sample)
+        "HR", "Staff Information", "Staff", "Identity Data, Financial Data", "5", "HR Dep", "Access Control, Data Minimization, Encryption",  # Processing details
+        "", "", "", ""  # Additional fields
+    ]
+    
+    # Trim sample data to match actual columns
+    sample_data_2 = sample_data_2[:len(columns_structure)]
+    
+    for col_idx, value in enumerate(sample_data_2, 1):
+        if col_idx <= len(columns_structure):
+            cell = ws.cell(row=4, column=col_idx, value=value)
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+            cell.font = Font(name="Calibri", size=10)
+            cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+
+    ws.row_dimensions[3].height = 30
+    ws.row_dimensions[4].height = 30
+
+    # Add existing database data starting from row 5
+    start_row = 5
+    if not existing_data.empty:
+        print(f"Populating controller sheet with {len(existing_data)} existing records")
+        
+        for row_idx, (_, row) in enumerate(existing_data.iterrows(), start_row):
+            for col_idx, (header, db_field) in enumerate(columns_structure, 1):
+                # Get value from existing data, default to empty string
+                value = row.get(db_field, '') if db_field else ''
+
+                # Handle None values and convert to string
+                if value is None or str(value).lower() in ['nan', 'none']:
+                    value = ''
+                else:
+                    value = str(value).strip()
+
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
+                cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+                cell.alignment = Alignment(wrap_text=True, vertical='top')
+                cell.font = Font(name="Calibri", size=10)
+
+                # Apply alternating row colors
+                fill_color = "FFFFFF" if row_idx % 2 == 1 else "F2F2F2"
+                cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+
+            ws.row_dimensions[row_idx].height = 30
+
+        # Add empty rows for data entry after existing data
+        next_empty_row = start_row + len(existing_data)
+    else:
+        next_empty_row = start_row
+
+    # Add empty rows for future data entry
+    for row_idx in range(next_empty_row, next_empty_row + 20):
+        fill_color = "FFFFFF" if row_idx % 2 == 1 else "F2F2F2"
+        fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        for col_idx in range(1, len(columns_structure) + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+            cell.fill = fill
+            cell.font = Font(name="Calibri", size=10)
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+        ws.row_dimensions[row_idx].height = 30
+
+def create_processor_sheet(wb):
+    """Create the Processor sheet exactly as shown in the uploaded file"""
+    ws = wb.create_sheet("Processor")
+    
+    # Define the processor column structure
+    processor_columns = [
+        # Processor Details section (3 columns)
+        ("Name", "processor_name"),
+        ("Address", "processor_address"), 
+        ("Contact Details", "processor_contact"),
+        
+        # Data Protection Officer section (3 columns)
+        ("Name", "processor_dpo_name"),
+        ("Address", "processor_dpo_address"),
+        ("Contact Details", "processor_dpo_contact"),
+        
+        # Representative Details section (3 columns)
+        ("Name", "processor_representative_name"),
+        ("Address", "processor_representative_address"),
+        ("Contact Details", "processor_representative_contact"),
+        
+        # Processing Details for Processor
+        ("Detail the department or function responsible for the processing", "processor_department_function"),
+        ("Describe the purpose of the processing", "processor_processing_purpose"),
+        ("Describe the categories of data subjects", "processor_data_subjects"),
+        ("Describe the categories of personal data", "processor_data_categories"),
+        ("If possible, envisaged time limits for erasure of different categories of data", "processor_retention_period"),
+        ("Categories of recipients to whom personal data has/will be disclosed", "processor_recipients"),
+        ("If possible, description of technical & organisational security measures (e.g. pseudonymisation, encryption, codes of conduct etc)", "processor_security_measures"),
+        ("Legal Basis for Processing", "processor_legal_basis"),
+        ("Is Data Protection Impact Assessment (DPIA) Required?", "processor_dpia_required"),
+        ("International transfers", "processor_international_transfers"),
+        ("Any other relevant information", "processor_additional_info")
+    ]
+
+    # Create the header structure for Processor sheet
+    # Row 1: Main section headers
+    ws.merge_cells('A1:C1')  # Processor Details
+    ws['A1'] = 'Processor Details'
+    ws['A1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['A1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['A1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('D1:F1')  # Data Protection Officer
+    ws['D1'] = 'Data Protection Officer'
+    ws['D1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['D1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['D1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['D1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    ws.merge_cells('G1:I1')  # Representative Details
+    ws['G1'] = 'Representative Details (if applicable)'
+    ws['G1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['G1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['G1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['G1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    
+    # Calculate the last column letter for Processing Details
+    last_col = get_column_letter(len(processor_columns))
+    ws.merge_cells(f'J1:{last_col}1')  # Processing Details
+    ws['J1'] = 'Processing Details'
+    ws['J1'].font = Font(bold=True, color="FFFFFF", size=11)
+    ws['J1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+    ws['J1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['J1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # Row 2: Sub-headers
+    headers = [col[0] for col in processor_columns]
+    for col_idx, header in enumerate(headers, 1):
+        cell = ws.cell(row=2, column=col_idx, value=header)
+        cell.font = Font(bold=True, color="FFFFFF", size=9)
+        cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+        cell.border = Border(
+            left=Side(style='thin'),
+            right=Side(style='thin'),
+            top=Side(style='thin'),
+            bottom=Side(style='thin')
+        )
+
+    # Set row heights
+    ws.row_dimensions[1].height = 30
+    ws.row_dimensions[2].height = 80
+
+    # Set column widths
+    column_widths = [20, 30, 25, 20, 30, 25, 20, 30, 25, 35, 35, 30, 35, 25, 30, 40, 25, 15, 25, 30]
+    for i, width in enumerate(column_widths[:len(processor_columns)], 1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+
+    # Add empty rows for future data entry
+    for row_idx in range(3, 23):
+        fill_color = "FFFFFF" if row_idx % 2 == 1 else "F2F2F2"
+        fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
+        for col_idx in range(1, len(processor_columns) + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+            cell.fill = fill
+            cell.font = Font(name="Calibri", size=10)
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+        ws.row_dimensions[row_idx].height = 30
+
+def create_example_sheet(wb):
+    """Create the Example sheet with sample data"""
+    ws = wb.create_sheet("Example")
+    
+    # Add title
+    ws['A1'] = 'ROPA Examples and Guidelines'
+    ws['A1'].font = Font(bold=True, size=16, color="366092")
+    ws['A1'].alignment = Alignment(horizontal="center")
+    ws.merge_cells('A1:E1')
+    
+    # Add content starting from row 3
+    examples = [
+        ["Field", "Example", "Description", "", ""],
+        ["Processing Activity Name", "Customer Database Management", "Clear, descriptive name of the processing activity", "", ""],
+        ["Legal Basis", "Contract (Article 6(1)(b))", "Specific GDPR article and basis", "", ""],
+        ["Data Categories", "Identity Data, Contact Data", "Types of personal data being processed", "", ""],
+        ["Data Subjects", "Customers, Prospects", "Categories of individuals whose data is processed", "", ""],
+        ["Retention Period", "5 years after contract termination", "How long data is kept and when it's deleted", "", ""],
+        ["Security Measures", "Access Control, Encryption, Audit Logs", "Technical and organisational measures in place", "", ""],
+        ["Recipients", "Marketing Department, External Auditors", "Who data is shared with internally/externally", "", ""],
+        ["International Transfers", "None / EU-US Data Privacy Framework", "Any transfers outside the EU/EEA", "", ""],
+        ["DPIA Required", "Yes / No", "Whether a Data Protection Impact Assessment is needed", "", ""],
+        ["", "", "", "", ""],
+        ["Legal Basis Options:", "", "", "", ""],
+        ["• Consent (Article 6(1)(a))", "", "", "", ""],
+        ["• Contract (Article 6(1)(b))", "", "", "", ""],
+        ["• Legal Obligation (Article 6(1)(c))", "", "", "", ""],
+        ["• Vital Interests (Article 6(1)(d))", "", "", "", ""],
+        ["• Public Task (Article 6(1)(e))", "", "", "", ""],
+        ["• Legitimate Interests (Article 6(1)(f))", "", "", "", ""],
+        ["", "", "", "", ""],
+        ["Common Data Categories:", "", "", "", ""],
+        ["• Identity Data (name, ID numbers)", "", "", "", ""],
+        ["• Contact Data (email, phone, address)", "", "", "", ""],
+        ["• Financial Data (payment info, bank details)", "", "", "", ""],
+        ["• Transaction Data (purchase history)", "", "", "", ""],
+        ["• Technical Data (IP address, login data)", "", "", "", ""],
+        ["• Profile Data (preferences, interests)", "", "", "", ""],
+        ["• Usage Data (how you use our services)", "", "", "", ""],
+        ["• Marketing Data (preferences, responses)", "", "", "", ""]
+    ]
+    
+    for row_idx, row_data in enumerate(examples, 3):
+        for col_idx, value in enumerate(row_data, 1):
+            cell = ws.cell(row=row_idx, column=col_idx, value=value)
+            if row_idx == 3:  # Header row
+                cell.font = Font(bold=True, color="FFFFFF")
+                cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+            elif value.startswith("•") or value.endswith(":"):
+                cell.font = Font(bold=True)
+            cell.alignment = Alignment(wrap_text=True, vertical='top')
+            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+
+    # Set column widths
+    ws.column_dimensions['A'].width = 25
+    ws.column_dimensions['B'].width = 35
+    ws.column_dimensions['C'].width = 50
+    ws.column_dimensions['D'].width = 15
+    ws.column_dimensions['E'].width = 15
+    
+    # Set row heights
+    for row in range(1, len(examples) + 3):
+        ws.row_dimensions[row].height = 20
 
 def generate_ropa_template():
-    """Generate Controller Processing Activities Register template exactly matching the uploaded ROPA format"""
+    """Generate complete ROPA template with Controller, Processor, and Example sheets"""
     try:
         # First, try to read the uploaded ROPA file to understand its structure
-        ropa_file_path = "attached_assets/ROPA_1755785319439.xlsx"
+        ropa_file_path = "attached_assets/ROPA_1755785640068.xlsx"
         reference_structure = None
         
         if os.path.exists(ropa_file_path):
@@ -123,193 +469,29 @@ def generate_ropa_template():
         # Get existing data to populate template
         existing_data = get_all_ropa_data_for_template()
 
-        # Create workbook and worksheet
+        # Create workbook
         wb = Workbook()
-        ws = wb.active
-        ws.title = "ROPA"  # Keep it short to match the uploaded file
-
-        # Define the exact column structure from the uploaded ROPA file and image
-        # This matches the exact format shown in your image
-        columns_structure = [
-            # Controller Details section (3 columns)
-            ("Name", "controller_name"),
-            ("Address", "controller_address"), 
-            ("Contact Details", "controller_contact"),
-            
-            # Data Protection Officer section (3 columns)
-            ("Name", "dpo_name"),
-            ("Address", "dpo_address"),
-            ("Contact Details", "dpo_contact"),
-            
-            # Representative Details section (3 columns)
-            ("Name", "representative_name"),
-            ("Address", "representative_address"),
-            ("Contact Details", "representative_contact"),
-            
-            # Processing Details (11 columns to match the image exactly)
-            ("Detail the department or function responsible for the processing", "department_function"),
-            ("Describe the purpose of the processing", "processing_purpose"),
-            ("Describe the categories of data subjects", "data_subjects"),
-            ("Describe the categories of personal data", "data_categories"),
-            ("If possible, envisaged time limits for erasure of different categories of data", "retention_period"),
-            ("Categories of recipients to whom personal data has/will be disclosed", "recipients"),
-            ("If possible, description of technical & organisational security measures (e.g. pseudonymisation, encryption, codes of conduct etc)", "security_measures"),
-            ("Legal Basis for Processing", "legal_basis"),
-            ("Is Data Protection Impact Assessment (DPIA) Required?", "dpia_required"),
-            ("International transfers", "international_transfers"),
-            ("Any other relevant information", "additional_info")
-        ]
-
-        # Create the header structure exactly as shown in the image
-        # Row 1: Main section headers
-        ws.merge_cells('A1:C1')  # Controller Details
-        ws['A1'] = 'Controller Details'
-        ws['A1'].font = Font(bold=True, color="FFFFFF", size=11)
-        ws['A1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['A1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
         
-        ws.merge_cells('D1:F1')  # Data Protection Officer
-        ws['D1'] = 'Data Protection Officer'
-        ws['D1'].font = Font(bold=True, color="FFFFFF", size=11)
-        ws['D1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        ws['D1'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['D1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        # Remove the default sheet
+        wb.remove(wb.active)
+
+        # Create Controller Processing Activities Register sheet
+        create_controller_sheet(wb, existing_data)
         
-        ws.merge_cells('G1:I1')  # Representative Details
-        ws['G1'] = 'Representative Details (if applicable)'
-        ws['G1'].font = Font(bold=True, color="FFFFFF", size=11)
-        ws['G1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        ws['G1'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['G1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+        # Create Processor sheet
+        create_processor_sheet(wb)
         
-        # Calculate the last column letter for Processing Details
-        last_col = get_column_letter(len(columns_structure))
-        ws.merge_cells(f'J1:{last_col}1')  # Processing Details
-        ws['J1'] = 'Processing Details'
-        ws['J1'].font = Font(bold=True, color="FFFFFF", size=11)
-        ws['J1'].fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-        ws['J1'].alignment = Alignment(horizontal="center", vertical="center")
-        ws['J1'].border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-
-        # Row 2: Sub-headers exactly as shown in the image
-        headers = [col[0] for col in columns_structure]
-        for col_idx, header in enumerate(headers, 1):
-            cell = ws.cell(row=2, column=col_idx, value=header)
-            cell.font = Font(bold=True, color="FFFFFF", size=9)
-            cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
-            cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
-            cell.border = Border(
-                left=Side(style='thin'),
-                right=Side(style='thin'),
-                top=Side(style='thin'),
-                bottom=Side(style='thin')
-            )
-
-        # Set row heights to match the image
-        ws.row_dimensions[1].height = 30
-        ws.row_dimensions[2].height = 80  # Taller for the detailed headers
-
-        # Set column widths to match the proportions in the image
-        column_widths = [20, 30, 25, 20, 30, 25, 20, 30, 25, 35, 35, 30, 35, 25, 30, 40, 25, 15, 25, 30]
-        for i, width in enumerate(column_widths[:len(columns_structure)], 1):
-            ws.column_dimensions[get_column_letter(i)].width = width
-
-        # Add sample data row (Row 3) exactly as shown in the uploaded file
-        sample_data = [
-            "Trinity Pharmacy", "109 Josiah Chinamano Avenue, Harare", "",  # Controller
-            "Tendai F Mataba", "13 Meadow Bank, Northwood, Mt Pleasant", "2.63775E+11",  # DPO
-            "", "", "",  # Representative
-            "SALES", "Processing Medication", "Customer", "Identity Data", "6", "marketing dep", "Access Control",  # Processing details
-            "", "", "", ""  # Additional fields
-        ]
-        
-        # Trim sample data to match actual columns
-        sample_data = sample_data[:len(columns_structure)]
-        
-        for col_idx, value in enumerate(sample_data, 1):
-            if col_idx <= len(columns_structure):
-                cell = ws.cell(row=3, column=col_idx, value=value)
-                cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-                cell.alignment = Alignment(wrap_text=True, vertical='top')
-                cell.font = Font(name="Calibri", size=10)
-                cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-
-        # Add second sample row (Row 4) exactly as shown
-        sample_data_2 = [
-            "", "", "",  # Controller (empty in sample)
-            "", "", "",  # DPO (empty in sample)
-            "", "", "",  # Representative (empty in sample)
-            "HR", "Staff Information", "Staff", "Identity Data, Financial Data", "5", "HR Dep", "Access Control, Data Minimization, Encryption",  # Processing details
-            "", "", "", ""  # Additional fields
-        ]
-        
-        # Trim sample data to match actual columns
-        sample_data_2 = sample_data_2[:len(columns_structure)]
-        
-        for col_idx, value in enumerate(sample_data_2, 1):
-            if col_idx <= len(columns_structure):
-                cell = ws.cell(row=4, column=col_idx, value=value)
-                cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-                cell.alignment = Alignment(wrap_text=True, vertical='top')
-                cell.font = Font(name="Calibri", size=10)
-                cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-
-        ws.row_dimensions[3].height = 30
-        ws.row_dimensions[4].height = 30
-
-        # Add existing database data starting from row 5
-        start_row = 5
-        if not existing_data.empty:
-            print(f"Populating template with {len(existing_data)} existing records")
-            
-            for row_idx, (_, row) in enumerate(existing_data.iterrows(), start_row):
-                for col_idx, (header, db_field) in enumerate(columns_structure, 1):
-                    # Get value from existing data, default to empty string
-                    value = row.get(db_field, '') if db_field else ''
-
-                    # Handle None values and convert to string
-                    if value is None or str(value).lower() in ['nan', 'none']:
-                        value = ''
-                    else:
-                        value = str(value).strip()
-
-                    cell = ws.cell(row=row_idx, column=col_idx, value=value)
-                    cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-                    cell.alignment = Alignment(wrap_text=True, vertical='top')
-                    cell.font = Font(name="Calibri", size=10)
-
-                    # Apply alternating row colors
-                    fill_color = "FFFFFF" if row_idx % 2 == 1 else "F2F2F2"
-                    cell.fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-
-                ws.row_dimensions[row_idx].height = 30
-
-            # Add empty rows for data entry after existing data
-            next_empty_row = start_row + len(existing_data)
-        else:
-            next_empty_row = start_row
-
-        # Add empty rows for future data entry
-        for row_idx in range(next_empty_row, next_empty_row + 20):
-            fill_color = "FFFFFF" if row_idx % 2 == 1 else "F2F2F2"
-            fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")
-            for col_idx in range(1, len(columns_structure) + 1):
-                cell = ws.cell(row=row_idx, column=col_idx)
-                cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-                cell.fill = fill
-                cell.font = Font(name="Calibri", size=10)
-                cell.alignment = Alignment(wrap_text=True, vertical='top')
-            ws.row_dimensions[row_idx].height = 30
+        # Create Example sheet
+        create_example_sheet(wb)
 
         # Save to temporary file
         temp_dir = tempfile.mkdtemp()
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"ROPA_{timestamp}.xlsx"
+        filename = f"ROPA_Complete_{timestamp}.xlsx"
         file_path = os.path.join(temp_dir, filename)
 
         wb.save(file_path)
-        print(f"Template saved to: {file_path}")
+        print(f"Complete template saved to: {file_path}")
 
         return file_path
 
