@@ -108,7 +108,7 @@ def init_database():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (created_by) REFERENCES users (id),
-            FOREIGNKEY (reviewed_by) REFERENCES users (id)
+            FOREIGN KEY (reviewed_by) REFERENCES users (id)
         )
     """)
 
