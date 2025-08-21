@@ -93,6 +93,9 @@ def standardize_columns(df):
         'processing activity name': 'processing_activity_name',
         'activity name': 'processing_activity_name',
         'name': 'processing_activity_name',
+        'processing activity': 'processing_activity_name',
+        'activity': 'processing_activity_name',
+        'record name': 'processing_activity_name',
         'category': 'category',
         'description': 'description',
         'department': 'department_function',
@@ -201,6 +204,16 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
                     record_data[key] = ''
                 else:
                     record_data[key] = str(value).strip()
+
+            # Ensure we have a processing activity name (required field)
+            if not record_data.get('processing_activity_name', '').strip():
+                # Generate a default name based on available data
+                default_name = f"Processing Activity {idx + 1}"
+                if record_data.get('category', '').strip():
+                    default_name = f"{record_data['category']} - Activity {idx + 1}"
+                elif record_data.get('department_function', '').strip():
+                    default_name = f"{record_data['department_function']} - Activity {idx + 1}"
+                record_data['processing_activity_name'] = default_name
 
             # Save record
             record_id = save_ropa_record(record_data, user_email)

@@ -203,16 +203,29 @@ def get_all_users():
     conn.close()
     return df
 
-def save_ropa_record(data, created_by):
-    """Save ROPA record to database"""
+def save_ropa_record(record_data, user_email):
+    """Save ROPA record to database with enhanced error handling"""
     conn = get_db_connection()
     cursor = conn.cursor()
 
-    print(f"DEBUG: Saving ROPA record for user: {created_by}")
-    print(f"DEBUG: Record name: {data.get('processing_activity_name')}")
-    print(f"DEBUG: Record status: {data.get('status', 'Draft')}")
+    try:
+        print(f"DEBUG: Saving ROPA record for user: {user_email}")
+        print(f"DEBUG: Record name: {record_data.get('processing_activity_name', 'N/A')}")
+        print(f"DEBUG: Record status: {record_data.get('status', 'Draft')}")
 
-    cursor.execute("""
+        # Get user ID from email
+        user_id = None
+        cursor.execute("SELECT id FROM users WHERE email = ?", (user_email,))
+        user_result = cursor.fetchone()
+        if user_result:
+            user_id = user_result[0]
+        else:
+            print(f"DEBUG: User not found for email: {user_email}")
+            # Create a default user or handle this case
+            return None
+
+        # Insert into ropa_records table - match exact column count
+        insert_query = """
         INSERT INTO ropa_records (
             processing_activity_name, category, description, department_function,
             controller_name, controller_contact, controller_address,
@@ -220,57 +233,67 @@ def save_ropa_record(data, created_by):
             processor_name, processor_contact, processor_address,
             representative_name, representative_contact, representative_address,
             processing_purpose, legal_basis, legitimate_interests,
-            data_categories, special_categories, data_subjects, recipients,
-            third_country_transfers, safeguards, retention_period, retention_criteria,
-            retention_justification, security_measures, breach_likelihood, breach_impact,
-            dpia_required, additional_info, international_transfers,
-            status, created_by, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-    """, (
-        data.get('processing_activity_name', ''),
-        data.get('category', ''),
-        data.get('description', ''),
-        data.get('department_function', ''),
-        data.get('controller_name', ''),
-        data.get('controller_contact', ''),
-        data.get('controller_address', ''),
-        data.get('dpo_name', ''),
-        data.get('dpo_contact', ''),
-        data.get('dpo_address', ''),
-        data.get('processor_name', ''),
-        data.get('processor_contact', ''),
-        data.get('processor_address', ''),
-        data.get('representative_name', ''),
-        data.get('representative_contact', ''),
-        data.get('representative_address', ''),
-        data.get('processing_purpose', ''),
-        data.get('legal_basis', ''),
-        data.get('legitimate_interests', ''),
-        data.get('data_categories', ''),
-        data.get('special_categories', ''),
-        data.get('data_subjects', ''),
-        data.get('recipients', ''),
-        data.get('third_country_transfers', ''),
-        data.get('safeguards', ''),
-        data.get('retention_period', ''),
-        data.get('retention_criteria', ''),
-        data.get('retention_justification', ''),
-        data.get('security_measures', ''),
-        data.get('breach_likelihood', ''),
-        data.get('breach_impact', ''),
-        data.get('dpia_required', ''),
-        data.get('additional_info', ''),
-        data.get('international_transfers', ''),
-        data.get('status', 'Draft'),
-        created_by
-    ))
+            data_categories, special_categories, data_subjects,
+            recipients, third_country_transfers, safeguards,
+            retention_period, deletion_procedures, security_measures,
+            breach_likelihood, breach_impact, risk_level,
+            dpia_required, dpia_outcome,
+            status, created_by, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        """
 
-    record_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
+        values = (
+            record_data.get('processing_activity_name', ''),
+            record_data.get('category', ''),
+            record_data.get('description', ''),
+            record_data.get('department_function', ''),
+            record_data.get('controller_name', ''),
+            record_data.get('controller_contact', ''),
+            record_data.get('controller_address', ''),
+            record_data.get('dpo_name', ''),
+            record_data.get('dpo_contact', ''),
+            record_data.get('dpo_address', ''),
+            record_data.get('processor_name', ''),
+            record_data.get('processor_contact', ''),
+            record_data.get('processor_address', ''),
+            record_data.get('representative_name', ''),
+            record_data.get('representative_contact', ''),
+            record_data.get('representative_address', ''),
+            record_data.get('processing_purpose', ''),
+            record_data.get('legal_basis', ''),
+            record_data.get('legitimate_interests', ''),
+            record_data.get('data_categories', ''),
+            record_data.get('special_categories', ''),
+            record_data.get('data_subjects', ''),
+            record_data.get('recipients', ''),
+            record_data.get('third_country_transfers', ''),
+            record_data.get('safeguards', ''),
+            record_data.get('retention_period', ''),
+            record_data.get('deletion_procedures', ''),
+            record_data.get('security_measures', ''),
+            record_data.get('breach_likelihood', ''),
+            record_data.get('breach_impact', ''),
+            record_data.get('risk_level', ''),
+            record_data.get('dpia_required', False),
+            record_data.get('dpia_outcome', ''),
+            record_data.get('status', 'Draft'),
+            user_id
+        )
 
-    print(f"DEBUG: Successfully saved record with ID: {record_id}")
-    return record_id
+        cursor.execute(insert_query, values)
+        record_id = cursor.lastrowid
+        conn.commit()
+
+        print(f"DEBUG: Successfully saved record with ID: {record_id}")
+        return record_id
+
+    except Exception as e:
+        print(f"DEBUG: Error saving record: {str(e)}")
+        print(f"DEBUG: Values count: {len(values) if 'values' in locals() else 'Unknown'}")
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
 
 def get_ropa_records(user_email=None, role=None, status=None):
     """Get ROPA records based on user role and filters"""
