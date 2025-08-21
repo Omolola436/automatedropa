@@ -42,9 +42,10 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
+# Import models after db initialization
+import models
+
 with app.app_context():
-    # Import models here to ensure they're registered
-    import models
     # Initialize database with proper schema
     from database import init_database
     init_database()
@@ -144,17 +145,21 @@ def privacy_officer_dashboard():
     # Get all ROPA records
     all_records = models.ROPARecord.query.all()
     pending_records = models.ROPARecord.query.filter_by(status='Under Review').all()
+    draft_records = models.ROPARecord.query.filter_by(status='Draft').all()
 
     # Statistics
     total_records = len(all_records)
     pending_count = len(pending_records)
+    draft_count = len(draft_records)
     approved_records = len([r for r in all_records if r.status == 'Approved'])
 
     return render_template('privacy_officer_dashboard.html',
                          all_records=all_records,
                          pending_records=pending_records,
+                         draft_records=draft_records,
                          total_records=total_records,
                          pending_count=pending_count,
+                         draft_count=draft_count,
                          approved_records=approved_records)
 
 @app.route('/add-activity', methods=['GET', 'POST'])
