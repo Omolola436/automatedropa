@@ -167,7 +167,7 @@ def privacy_officer_dashboard():
             recent_records = []
 
         # Get pending reviews count
-        pending_count = status_counts.get('Pending Review', 0)
+        pending_count = status_counts.get('Under Review', 0)  # Changed from 'Pending Review' to 'Under Review'
 
         print(f"DEBUG: Privacy Officer Dashboard - Total records: {len(all_records)}")
         print(f"DEBUG: Status counts: {status_counts}")
