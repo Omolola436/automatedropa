@@ -35,10 +35,12 @@ def process_uploaded_file(file, user_email):
                         if pd.notna(val) and isinstance(val, str) and len(val.strip()) > 2:
                             # Check if it looks like a header (contains common ROPA terms)
                             val_lower = val.lower()
-                            if any(term in val_lower for term in ['processing', 'activity', 'controller', 'data', 'purpose', 'legal', 'category', 'subject', 'retention', 'security']):
+                            # More specific header detection
+                            if any(term in val_lower for term in ['processing', 'activity', 'controller', 'data', 'purpose', 'legal', 'category', 'subject', 'retention', 'security']) and \
+                               not any(exclude in val_lower for exclude in ['register', 'template', 'about']):
                                 meaningful_cols += 1
                     
-                    if meaningful_cols > max_meaningful_cols:
+                    if meaningful_cols > max_meaningful_cols and meaningful_cols >= 2:  # Need at least 2 meaningful columns
                         max_meaningful_cols = meaningful_cols
                         best_header_row = row_idx
                 
@@ -218,16 +220,14 @@ def process_uploaded_file(file, user_email):
                     db.session.add(user)
                     db.session.commit()
 
-                # Get all valid columns from database
-                import sqlalchemy
-                inspector = sqlalchemy.inspect(db.engine)
-                valid_columns = [col['name'] for col in inspector.get_columns('ropa_records')]
+                # Get valid model columns from ROPARecord class
+                model_columns = [column.name for column in ROPARecord.__table__.columns]
                 
-                # Create record with all valid fields from the data
+                # Create record with only valid model fields
                 record_fields = {}
                 
-                # Add standard fields
-                for field in valid_columns:
+                # Add standard fields that exist in the model
+                for field in model_columns:
                     if field not in ['id', 'created_at', 'updated_at']:
                         if field == 'created_by':
                             record_fields[field] = user.id
@@ -238,7 +238,7 @@ def process_uploaded_file(file, user_email):
                         else:
                             record_fields[field] = record_data.get(field, '')
 
-                # Create record with all fields
+                # Create record with valid model fields only
                 record = ROPARecord(**record_fields)
 
                 db.session.add(record)
@@ -360,13 +360,15 @@ def detect_and_add_new_columns(df):
         
         # Find new columns that don't exist in database
         new_columns = []
-        excluded_columns = ['id', 'unnamed_0', 'unnamed_1', 'index', '']
+        excluded_columns = ['id', 'unnamed_0', 'unnamed_1', 'index', '', 'processing_activities_register']
         
         for col in df_columns:
             if col and col not in existing_columns and col not in excluded_columns:
                 # Don't create duplicate columns for controller data variations
                 if not any(col.startswith(base) for base in ['controller_name', 'controller_address', 'controller_contact']):
-                    new_columns.append(col)
+                    # Only add columns that look like actual data fields (not header text)
+                    if not any(header_word in col.lower() for header_word in ['register', 'template', 'about', 'section', 'activities']):
+                        new_columns.append(col)
         
         # Add new columns to database table if any found
         if new_columns:
