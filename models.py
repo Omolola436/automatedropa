@@ -25,6 +25,9 @@ class User(UserMixin, db.Model):
 class ROPARecord(db.Model):
     __tablename__ = 'ropa_records'
     
+    # Allow dynamic columns to be accessed
+    __table_args__ = {'extend_existing': True}
+    
     id = db.Column(Integer, primary_key=True)
     processing_activity_name = db.Column(String(200), nullable=False)
     category = db.Column(String(100))

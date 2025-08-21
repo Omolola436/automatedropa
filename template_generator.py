@@ -7,8 +7,23 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 
 
+def get_all_database_columns():
+    """Get all columns from the ROPARecord table dynamically"""
+    try:
+        from models import ROPARecord
+        
+        # Get all column names from the model
+        columns = [column.name for column in ROPARecord.__table__.columns]
+        
+        # Filter out system columns
+        excluded_columns = ['id', 'created_by', 'reviewed_by']
+        return [col for col in columns if col not in excluded_columns]
+    except Exception as e:
+        print(f"Error getting database columns: {str(e)}")
+        return []
+
 def get_existing_ropa_records():
-    """Get all existing ROPA records for template population"""
+    """Get all existing ROPA records for template population with all dynamic fields"""
     try:
         from models import ROPARecord, User
         from app import db
@@ -16,52 +31,37 @@ def get_existing_ropa_records():
         records = ROPARecord.query.order_by(ROPARecord.created_at.desc()).all()
         records_data = []
         
+        # Get all possible columns dynamically
+        all_columns = get_all_database_columns()
+        
         for record in records:
             creator = User.query.get(record.created_by)
             creator_email = creator.email if creator else 'Unknown'
             
-            records_data.append({
-                'processing_activity_name': record.processing_activity_name or '',
-                'category': record.category or '',
-                'description': record.description or '',
-                'department_function': record.department_function or '',
-                'controller_name': record.controller_name or '',
-                'controller_contact': record.controller_contact or '',
-                'controller_address': record.controller_address or '',
-                'dpo_name': record.dpo_name or '',
-                'dpo_contact': record.dpo_contact or '',
-                'dpo_address': record.dpo_address or '',
-                'processor_name': record.processor_name or '',
-                'processor_contact': record.processor_contact or '',
-                'processor_address': record.processor_address or '',
-                'representative_name': record.representative_name or '',
-                'representative_contact': record.representative_contact or '',
-                'representative_address': record.representative_address or '',
-                'processing_purpose': record.processing_purpose or '',
-                'legal_basis': record.legal_basis or '',
-                'legitimate_interests': record.legitimate_interests or '',
-                'data_categories': record.data_categories or '',
-                'special_categories': record.special_categories or '',
-                'data_subjects': record.data_subjects or '',
-                'recipients': record.recipients or '',
-                'third_country_transfers': record.third_country_transfers or '',
-                'safeguards': record.safeguards or '',
-                'retention_period': record.retention_period or '',
-                'security_measures': record.security_measures or '',
-                'breach_likelihood': record.breach_likelihood or '',
-                'breach_impact': record.breach_impact or '',
-                'risk_level': record.risk_level or '',
-                'dpia_required': 'Yes' if record.dpia_required else 'No',
-                'dpia_outcome': record.dpia_outcome or '',
-                'status': record.status or '',
-                'created_by': creator_email,
-                'created_at': record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else ''
-            })
+            record_dict = {}
+            
+            # Add all column values dynamically
+            for col in all_columns:
+                if hasattr(record, col):
+                    value = getattr(record, col)
+                    if col == 'dpia_required':
+                        record_dict[col] = 'Yes' if value else 'No'
+                    elif col in ['created_at', 'updated_at', 'reviewed_at']:
+                        record_dict[col] = value.strftime('%Y-%m-%d %H:%M:%S') if value else ''
+                    else:
+                        record_dict[col] = str(value) if value is not None else ''
+                else:
+                    record_dict[col] = ''
+            
+            # Add creator info
+            record_dict['created_by'] = creator_email
+            
+            records_data.append(record_dict)
         
-        return records_data
+        return records_data, all_columns
     except Exception as e:
         print(f"Error getting existing records: {str(e)}")
-        return []
+        return [], []
 
 
 
@@ -104,8 +104,8 @@ def get_approved_custom_fields_by_category():
 def generate_ropa_template():
     """Generate Excel template populated with existing ROPA data"""
     
-    # Get existing ROPA records
-    existing_records = get_existing_ropa_records()
+    # Get existing ROPA records and all database columns
+    existing_records, all_db_columns = get_existing_ropa_records()
     
     # Create workbook
     wb = Workbook()
@@ -269,31 +269,60 @@ def generate_ropa_template():
     # Create Controller Sheet with enhanced styling
     controller_ws = wb.create_sheet("Controller Processing Activity", 1)
     
-    # Controller headers with descriptions
-    controller_headers = [
-        ("Processing Activity Name *", "Unique name identifying this processing activity"),
-        ("Category", "Business category (HR, Marketing, Finance, etc.)"),
-        ("Description *", "Detailed description of what data is processed and why"),
-        ("Department/Function", "Responsible department or business function"),
-        ("Controller Name *", "Legal name of the data controller organization"),
-        ("Controller Contact *", "Primary contact person and details"),
-        ("Controller Address *", "Legal address of the controller"),
-        ("DPO Name", "Data Protection Officer name (if applicable)"),
-        ("DPO Contact", "DPO contact details (email/phone)"),
-        ("Purpose of Processing *", "Specific purpose and business justification"),
-        ("Legal Basis *", "Legal basis under GDPR Article 6 (1)(a-f)"),
-        ("Legitimate Interests", "Details if legal basis is legitimate interests"),
-        ("Categories of Personal Data *", "Types of personal data processed"),
-        ("Special Categories", "Special categories under GDPR Article 9"),
-        ("Data Subjects *", "Categories of individuals whose data is processed"),
-        ("Recipients *", "Who receives or has access to the data"),
-        ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
-        ("Safeguards", "Protective measures for international transfers"),
-        ("Retention Period *", "How long data is retained"),
-        ("Security Measures *", "Technical and organizational security measures"),
-        ("Status", "Current status (Draft/Under Review/Approved)"),
-        ("Notes", "Additional comments or special considerations")
-    ]
+    # Generate controller headers dynamically from database columns
+    standard_headers_map = {
+        'processing_activity_name': ("Processing Activity Name *", "Unique name identifying this processing activity"),
+        'category': ("Category", "Business category (HR, Marketing, Finance, etc.)"),
+        'description': ("Description *", "Detailed description of what data is processed and why"),
+        'department_function': ("Department/Function", "Responsible department or business function"),
+        'controller_name': ("Controller Name *", "Legal name of the data controller organization"),
+        'controller_contact': ("Controller Contact *", "Primary contact person and details"),
+        'controller_address': ("Controller Address *", "Legal address of the controller"),
+        'dpo_name': ("DPO Name", "Data Protection Officer name (if applicable)"),
+        'dpo_contact': ("DPO Contact", "DPO contact details (email/phone)"),
+        'dpo_address': ("DPO Address", "DPO address details"),
+        'processor_name': ("Processor Name", "Data processor organization name"),
+        'processor_contact': ("Processor Contact", "Processor contact details"),
+        'processor_address': ("Processor Address", "Processor address details"),
+        'representative_name': ("Representative Name", "Representative name"),
+        'representative_contact': ("Representative Contact", "Representative contact details"),
+        'representative_address': ("Representative Address", "Representative address"),
+        'processing_purpose': ("Purpose of Processing *", "Specific purpose and business justification"),
+        'legal_basis': ("Legal Basis *", "Legal basis under GDPR Article 6 (1)(a-f)"),
+        'legitimate_interests': ("Legitimate Interests", "Details if legal basis is legitimate interests"),
+        'data_categories': ("Categories of Personal Data *", "Types of personal data processed"),
+        'special_categories': ("Special Categories", "Special categories under GDPR Article 9"),
+        'data_subjects': ("Data Subjects *", "Categories of individuals whose data is processed"),
+        'recipients': ("Recipients *", "Who receives or has access to the data"),
+        'third_country_transfers': ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
+        'safeguards': ("Safeguards", "Protective measures for international transfers"),
+        'retention_period': ("Retention Period *", "How long data is retained"),
+        'deletion_procedures': ("Deletion Procedures", "How data is deleted"),
+        'security_measures': ("Security Measures *", "Technical and organizational security measures"),
+        'breach_likelihood': ("Breach Likelihood", "Likelihood of data breach"),
+        'breach_impact': ("Breach Impact", "Impact if breach occurs"),
+        'risk_level': ("Risk Level", "Overall risk assessment"),
+        'dpia_required': ("DPIA Required", "Data Protection Impact Assessment required (Yes/No)"),
+        'dpia_outcome': ("DPIA Outcome", "Result of DPIA assessment"),
+        'status': ("Status", "Current status (Draft/Under Review/Approved)"),
+        'created_at': ("Created Date", "When record was created"),
+        'updated_at': ("Updated Date", "When record was last updated"),
+        'reviewed_at': ("Reviewed Date", "When record was reviewed"),
+        'review_comments': ("Review Comments", "Comments from reviewer")
+    }
+
+    # Build headers dynamically
+    controller_headers = []
+    for col in all_db_columns:
+        if col in standard_headers_map:
+            controller_headers.append(standard_headers_map[col])
+        else:
+            # For dynamically added columns, create a generic header
+            display_name = col.replace('_', ' ').title()
+            controller_headers.append((display_name, f"Custom field: {display_name}"))
+    
+    # Always add created_by at the end
+    controller_headers.append(("Created By", "User who created this record"))
     
     # Add controller title with enhanced styling
     controller_ws['A1'] = "📊 DATA CONTROLLER - RECORD OF PROCESSING ACTIVITIES"
@@ -399,16 +428,41 @@ def generate_ropa_template():
     for i, width in enumerate(processor_column_widths, 1):
         processor_ws.column_dimensions[get_column_letter(i)].width = width
     
-    # Add enhanced sample rows with professional examples
-    controller_sample = [
-        "Employee Data Management System", "Human Resources", "Comprehensive processing of employee personal data for employment administration, payroll, benefits, and performance management", 
-        "Human Resources Department", "ABC Company Limited", "hr.manager@company.com", "123 Business Street, Corporate City, CC1 2AB, United Kingdom",
-        "Jane Smith", "dpo@company.com", "Employment administration, payroll processing, performance evaluation, training management, and compliance monitoring",
-        "Contract (Art. 6(1)(b)) - Employment", "N/A", "Name, address, phone, email, employee ID, salary, bank details, performance data, training records",
-        "", "Current employees, former employees, contractors", "Payroll provider, benefits administrator, training providers", "",
-        "Adequate Decision (UK)", "7 years after employment termination",
-        "Access controls, data encryption, regular security audits, incident response procedures", "Approved", "Regular review scheduled quarterly"
-    ]
+    # Generate sample data dynamically based on all database columns
+    sample_data_map = {
+        'processing_activity_name': "Employee Data Management System",
+        'category': "Human Resources",
+        'description': "Comprehensive processing of employee personal data for employment administration, payroll, benefits, and performance management",
+        'department_function': "Human Resources Department",
+        'controller_name': "ABC Company Limited",
+        'controller_contact': "hr.manager@company.com",
+        'controller_address': "123 Business Street, Corporate City, CC1 2AB, United Kingdom",
+        'dpo_name': "Jane Smith",
+        'dpo_contact': "dpo@company.com",
+        'dpo_address': "Data Protection Office, ABC Company Limited",
+        'processing_purpose': "Employment administration, payroll processing, performance evaluation, training management, and compliance monitoring",
+        'legal_basis': "Contract (Art. 6(1)(b)) - Employment",
+        'legitimate_interests': "N/A",
+        'data_categories': "Name, address, phone, email, employee ID, salary, bank details, performance data, training records",
+        'special_categories': "",
+        'data_subjects': "Current employees, former employees, contractors",
+        'recipients': "Payroll provider, benefits administrator, training providers",
+        'third_country_transfers': "",
+        'safeguards': "Adequate Decision (UK)",
+        'retention_period': "7 years after employment termination",
+        'security_measures': "Access controls, data encryption, regular security audits, incident response procedures",
+        'status': "Approved",
+        'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'review_comments': "Regular review scheduled quarterly"
+    }
+
+    # Build sample row data based on database columns
+    controller_sample = []
+    for col in all_db_columns:
+        controller_sample.append(sample_data_map.get(col, f"Sample {col.replace('_', ' ').title()}"))
+    
+    # Add created_by
+    controller_sample.append("system.admin@company.com")
     
     processor_sample = [
         "Payroll Processing Service", "Financial Services", "Processing employee payroll data including salary calculations, tax deductions, and payment distribution on behalf of client organizations",
@@ -445,30 +499,13 @@ def generate_ropa_template():
     # Add existing ROPA records starting from row 5
     if existing_records:
         for i, record in enumerate(existing_records, start=5):
-            row_data = [
-                record['processing_activity_name'],
-                record['category'],
-                record['description'],
-                record['department_function'],
-                record['controller_name'],
-                record['controller_contact'],
-                record['controller_address'],
-                record['dpo_name'],
-                record['dpo_contact'],
-                record['processing_purpose'],
-                record['legal_basis'],
-                record['legitimate_interests'],
-                record['data_categories'],
-                record['special_categories'],
-                record['data_subjects'],
-                record['recipients'],
-                record['third_country_transfers'],
-                record['safeguards'],
-                record['retention_period'],
-                record['security_measures'],
-                record['status'],
-                f"Existing record - Created by {record['created_by']} on {record['created_at']}"
-            ]
+            # Build row data dynamically based on all database columns
+            row_data = []
+            for col in all_db_columns:
+                row_data.append(record.get(col, ''))
+            
+            # Add created_by
+            row_data.append(record.get('created_by', 'Unknown'))
             
             fill_color = white if i % 2 == 1 else accent_blue
             fill = PatternFill(start_color=fill_color, end_color=fill_color, fill_type="solid")

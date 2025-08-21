@@ -197,23 +197,23 @@ def privacy_officer_dashboard():
 def add_activity():
     """Add new ROPA activity"""
     if request.method == 'POST':
-        # Create new ROPA record
-        record = models.ROPARecord(
-            processing_activity_name=request.form['processing_activity_name'],
-            category=request.form.get('category'),
-            description=request.form.get('description'),
-            department_function=request.form.get('department_function'),
-            controller_name=request.form.get('controller_name'),
-            controller_contact=request.form.get('controller_contact'),
-            controller_address=request.form.get('controller_address'),
-            processing_purpose=request.form.get('processing_purpose'),
-            legal_basis=request.form.get('legal_basis'),
-            data_categories=request.form.get('data_categories'),
-            data_subjects=request.form.get('data_subjects'),
-            retention_period=request.form.get('retention_period'),
-            security_measures=request.form.get('security_measures'),
-            created_by=current_user.id
-        )
+        # Get all form data
+        form_data = request.form.to_dict()
+        
+        # Build record data dynamically
+        record_data = {
+            'processing_activity_name': form_data['processing_activity_name'],
+            'created_by': current_user.id
+        }
+        
+        # Add all other fields that exist in the model
+        model_columns = [column.name for column in models.ROPARecord.__table__.columns]
+        for field_name, value in form_data.items():
+            if field_name in model_columns and field_name not in ['id', 'created_by', 'created_at', 'updated_at']:
+                record_data[field_name] = value
+        
+        # Create new ROPA record with dynamic fields
+        record = models.ROPARecord(**record_data)
 
         # Check the action type from the form
         action = request.form.get('action', 'submit')

@@ -171,44 +171,52 @@ def process_uploaded_file(file, user_email):
                     db.session.add(user)
                     db.session.commit()
 
-                # Create record
-                record = ROPARecord(
-                    processing_activity_name=record_data['processing_activity_name'],
-                    category=record_data.get('category', ''),
-                    description=record_data.get('description', ''),
-                    department_function=record_data.get('department_function', ''),
-                    controller_name=record_data.get('controller_name', ''),
-                    controller_contact=record_data.get('controller_contact', ''),
-                    controller_address=record_data.get('controller_address', ''),
-                    dpo_name=record_data.get('dpo_name', ''),
-                    dpo_contact=record_data.get('dpo_contact', ''),
-                    dpo_address=record_data.get('dpo_address', ''),
-                    processor_name=record_data.get('processor_name', ''),
-                    processor_contact=record_data.get('processor_contact', ''),
-                    processor_address=record_data.get('processor_address', ''),
-                    representative_name=record_data.get('representative_name', ''),
-                    representative_contact=record_data.get('representative_contact', ''),
-                    representative_address=record_data.get('representative_address', ''),
-                    processing_purpose=record_data.get('processing_purpose', ''),
-                    legal_basis=record_data.get('legal_basis', ''),
-                    legitimate_interests=record_data.get('legitimate_interests', ''),
-                    data_categories=record_data.get('data_categories', ''),
-                    special_categories=record_data.get('special_categories', ''),
-                    data_subjects=record_data.get('data_subjects', ''),
-                    recipients=record_data.get('recipients', ''),
-                    third_country_transfers=record_data.get('third_country_transfers', ''),
-                    safeguards=record_data.get('safeguards', ''),
-                    retention_period=record_data.get('retention_period', ''),
-                    security_measures=record_data.get('security_measures', ''),
-                    breach_likelihood=record_data.get('breach_likelihood', ''),
-                    breach_impact=record_data.get('breach_impact', ''),
-                    risk_level=record_data.get('risk_level', ''),
-                    dpia_required=record_data.get('dpia_required', '') == 'Yes',
-                    dpia_outcome=record_data.get('dpia_outcome', ''),
-                    status='Draft',
-                    created_by=user.id,
-                    created_at=datetime.utcnow()
-                )
+                # Create record with all known fields
+                record_fields = {
+                    'processing_activity_name': record_data['processing_activity_name'],
+                    'category': record_data.get('category', ''),
+                    'description': record_data.get('description', ''),
+                    'department_function': record_data.get('department_function', ''),
+                    'controller_name': record_data.get('controller_name', ''),
+                    'controller_contact': record_data.get('controller_contact', ''),
+                    'controller_address': record_data.get('controller_address', ''),
+                    'dpo_name': record_data.get('dpo_name', ''),
+                    'dpo_contact': record_data.get('dpo_contact', ''),
+                    'dpo_address': record_data.get('dpo_address', ''),
+                    'processor_name': record_data.get('processor_name', ''),
+                    'processor_contact': record_data.get('processor_contact', ''),
+                    'processor_address': record_data.get('processor_address', ''),
+                    'representative_name': record_data.get('representative_name', ''),
+                    'representative_contact': record_data.get('representative_contact', ''),
+                    'representative_address': record_data.get('representative_address', ''),
+                    'processing_purpose': record_data.get('processing_purpose', ''),
+                    'legal_basis': record_data.get('legal_basis', ''),
+                    'legitimate_interests': record_data.get('legitimate_interests', ''),
+                    'data_categories': record_data.get('data_categories', ''),
+                    'special_categories': record_data.get('special_categories', ''),
+                    'data_subjects': record_data.get('data_subjects', ''),
+                    'recipients': record_data.get('recipients', ''),
+                    'third_country_transfers': record_data.get('third_country_transfers', ''),
+                    'safeguards': record_data.get('safeguards', ''),
+                    'retention_period': record_data.get('retention_period', ''),
+                    'security_measures': record_data.get('security_measures', ''),
+                    'breach_likelihood': record_data.get('breach_likelihood', ''),
+                    'breach_impact': record_data.get('breach_impact', ''),
+                    'risk_level': record_data.get('risk_level', ''),
+                    'dpia_required': record_data.get('dpia_required', '') == 'Yes',
+                    'dpia_outcome': record_data.get('dpia_outcome', ''),
+                    'status': 'Draft',
+                    'created_by': user.id,
+                    'created_at': datetime.utcnow()
+                }
+
+                # Add any additional dynamic fields from the uploaded data
+                for key, value in record_data.items():
+                    if key not in record_fields and key not in ['id']:
+                        record_fields[key] = value
+
+                # Create record with dynamic fields
+                record = ROPARecord(**record_fields)
 
                 db.session.add(record)
                 db.session.commit()
@@ -285,12 +293,57 @@ def parse_csv_file(uploaded_file):
         print(f"Error reading CSV file: {str(e)}")
         return None
 
+def detect_and_add_new_columns(df):
+    """Detect new columns not in database and add them dynamically"""
+    try:
+        from models import ROPARecord
+        from app import db
+        import sqlalchemy
+        
+        # Get existing column names from the ROPARecord model
+        existing_columns = [column.name for column in ROPARecord.__table__.columns]
+        
+        # Clean uploaded column names
+        df_columns = [str(col).lower().strip().replace(' ', '_').replace('-', '_') for col in df.columns]
+        
+        # Find new columns that don't exist in database
+        new_columns = []
+        for col in df_columns:
+            if col not in existing_columns and col != 'id':
+                new_columns.append(col)
+        
+        # Add new columns to database table if any found
+        if new_columns:
+            print(f"Found {len(new_columns)} new columns to add: {new_columns}")
+            
+            # Add columns to database table dynamically
+            for col_name in new_columns:
+                try:
+                    # Use raw SQL to add column since SQLAlchemy doesn't support dynamic column addition easily
+                    sql = f"ALTER TABLE ropa_records ADD COLUMN {col_name} TEXT"
+                    db.engine.execute(sqlalchemy.text(sql))
+                    print(f"Added new column to database: {col_name}")
+                except Exception as e:
+                    print(f"Column {col_name} might already exist or error: {e}")
+            
+            # Update the DataFrame column names to match what we added
+            df.columns = df_columns
+            
+        return df, new_columns
+        
+    except Exception as e:
+        print(f"Error detecting new columns: {str(e)}")
+        return df, []
+
 def standardize_columns(df):
-    """Standardize column names to match database schema"""
+    """Standardize column names to match database schema and handle new columns"""
 
     # Handle multi-header Excel files by flattening column names
     if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1:
         df.columns = [' '.join(str(col).strip() for col in col_tuple).strip() for col_tuple in df.columns.values]
+
+    # First detect and add any new columns to database
+    df, new_columns = detect_and_add_new_columns(df)
 
     # Column mapping from various formats to our standard
     column_mapping = {
