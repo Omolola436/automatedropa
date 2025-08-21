@@ -19,10 +19,25 @@ def process_uploaded_file(file, user_email):
         else:
             raise ValueError("Unsupported file format")
 
-        # Validate required columns
-        required_columns = ['processing_activity_name']
-        if not all(col in df.columns for col in required_columns):
-            raise ValueError(f"Missing required columns: {required_columns}")
+        print(f"Original columns in uploaded file: {list(df.columns)}")
+
+        # Standardize column names to match our schema
+        df = standardize_columns(df)
+        
+        print(f"Standardized columns: {list(df.columns)}")
+
+        # Validate that we have the essential column after standardization
+        if 'processing_activity_name' not in df.columns:
+            # Try to find a suitable column that could be the processing activity name
+            potential_name_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['name', 'activity', 'process', 'title'])]
+            
+            if potential_name_columns:
+                # Use the first potential column as processing activity name
+                df['processing_activity_name'] = df[potential_name_columns[0]]
+                print(f"Using column '{potential_name_columns[0]}' as processing_activity_name")
+            else:
+                available_columns = list(df.columns)
+                raise ValueError(f"Could not find a suitable column for 'Processing Activity Name'. Available columns: {available_columns}. Please ensure your file has a column with the activity name/title.")
 
         # Process each row and save to database
         records_processed = 0
@@ -76,9 +91,10 @@ def process_uploaded_file(file, user_email):
 
             # Skip empty rows
             if not record_data['processing_activity_name'].strip():
+                print(f"Skipping empty row {index + 1}")
                 continue
 
-            print(f"Processing record: {record_data['processing_activity_name']}")
+            print(f"Processing record {index + 1}: {record_data['processing_activity_name']}")
 
             # Save to database
             record_id = save_ropa_record(record_data, user_email)
@@ -88,7 +104,10 @@ def process_uploaded_file(file, user_email):
             else:
                 print(f"Failed to save record: {record_data['processing_activity_name']}")
 
-        return f"Successfully processed {records_processed} records"
+        if records_processed == 0:
+            return "No valid records found in the file. Please check that your file contains data and the processing activity names are not empty."
+        
+        return f"Successfully processed {records_processed} records from {len(df)} total rows"
 
     except Exception as e:
         print(f"Error in process_uploaded_file: {str(e)}")
@@ -159,13 +178,21 @@ def standardize_columns(df):
 
     # Column mapping from various formats to our standard
     column_mapping = {
-        # Basic Information
+        # Basic Information - Enhanced mapping
         'processing activity name': 'processing_activity_name',
         'activity name': 'processing_activity_name',
         'name': 'processing_activity_name',
         'processing activity': 'processing_activity_name',
         'activity': 'processing_activity_name',
         'record name': 'processing_activity_name',
+        'ropa name': 'processing_activity_name',
+        'title': 'processing_activity_name',
+        'process name': 'processing_activity_name',
+        'processing name': 'processing_activity_name',
+        'name of processing activity': 'processing_activity_name',
+        'name of activity': 'processing_activity_name',
+        'activity title': 'processing_activity_name',
+        'process title': 'processing_activity_name',
         'category': 'category',
         'description': 'description',
         'department': 'department_function',
