@@ -69,3 +69,15 @@ pandas
 plotly
 sqlalchemy
 werkzeug
+flask
+flask-login
+flask-sqlalchemy
+openpyxl
+pandas
+werkzeug
+flask
+flask-login
+flask-sqlalchemy
+openpyxl
+pandas
+werkzeug
