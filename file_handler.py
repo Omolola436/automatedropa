@@ -17,18 +17,18 @@ def process_uploaded_file(file, user_email):
             # Try reading with different header rows to find the actual data
             df = None
             header_row_found = 0
-            
+
             # First, try to read the entire file to understand its structure
             try:
                 full_df = pd.read_excel(file, header=None, engine='openpyxl')
                 print(f"Full file shape: {full_df.shape}")
                 print(f"First few rows of raw data:")
                 print(full_df.head(10))
-                
+
                 # Look for the row that contains the most meaningful headers
                 best_header_row = 0
                 max_meaningful_cols = 0
-                
+
                 for row_idx in range(min(10, len(full_df))):  # Check first 10 rows
                     row_values = full_df.iloc[row_idx].values
                     meaningful_cols = 0
@@ -40,18 +40,18 @@ def process_uploaded_file(file, user_email):
                             if any(term in val_lower for term in ['processing', 'activity', 'controller', 'data', 'purpose', 'legal', 'category', 'subject', 'retention', 'security']) and \
                                not any(exclude in val_lower for exclude in ['register', 'template', 'about']):
                                 meaningful_cols += 1
-                    
+
                     if meaningful_cols > max_meaningful_cols and meaningful_cols >= 2:  # Need at least 2 meaningful columns
                         max_meaningful_cols = meaningful_cols
                         best_header_row = row_idx
-                
+
                 print(f"Best header row found at index: {best_header_row} with {max_meaningful_cols} meaningful columns")
-                
+
                 # Read with the best header row
                 file.seek(0)  # Reset file pointer
                 df = pd.read_excel(file, header=best_header_row, engine='openpyxl')
                 header_row_found = best_header_row
-                
+
             except Exception as e:
                 print(f"Error with smart header detection: {e}")
                 # Fallback to simple reading
@@ -114,7 +114,7 @@ def process_uploaded_file(file, user_email):
             controller_names = []
             controller_addresses = []
             controller_contacts = []
-            
+
             for key, value in row_dict.items():
                 if key.startswith('controller_name') and value.strip():
                     controller_names.append(value.strip())
@@ -122,7 +122,7 @@ def process_uploaded_file(file, user_email):
                     controller_addresses.append(value.strip())
                 elif key.startswith('controller_contact') and value.strip():
                     controller_contacts.append(value.strip())
-            
+
             # If we found multiple controller entries, use the first non-empty one
             if controller_names:
                 row_dict['controller_name'] = controller_names[0]
@@ -223,10 +223,10 @@ def process_uploaded_file(file, user_email):
 
                 # Get valid model columns from ROPARecord class
                 model_columns = [column.name for column in ROPARecord.__table__.columns]
-                
+
                 # Create record with only valid model fields
                 record_fields = {}
-                
+
                 # Add standard fields that exist in the model
                 for field in model_columns:
                     if field not in ['id', 'created_at', 'updated_at', 'reviewed_at']:
@@ -282,7 +282,7 @@ def parse_excel_file(uploaded_file):
         ropa_keywords = ['ropa', 'record', 'processing', 'activities', 'register']
 
         for sheet in sheet_names:
-            if any(keyword in sheet.lower() for keyword in ropa_keywords):
+            if any(keyword in sheet.lower() for keyword in<bos>ropa_keywords):
                 target_sheet = sheet
                 break
 
@@ -330,16 +330,16 @@ def detect_and_add_new_columns(df):
         from models import ROPARecord
         from app import db
         import sqlalchemy
-        
+
         # Get existing column names from the actual database table
         inspector = sqlalchemy.inspect(db.engine)
         existing_columns = [col['name'] for col in inspector.get_columns('ropa_records')]
-        
+
         # Clean uploaded column names - preserve original names but make them database-friendly
         original_columns = list(df.columns)
         df_columns = []
         column_mapping = {}
-        
+
         for col in original_columns:
             # More aggressive cleaning for database compatibility
             clean_col = str(col).lower().strip()
@@ -353,23 +353,23 @@ def detect_and_add_new_columns(df):
             clean_col = clean_col.replace(';', '_').replace('"', '').replace("'", '')
             clean_col = clean_col.replace('<', '_lt_').replace('>', '_gt_').replace(',', '_')
             clean_col = clean_col.replace('.', '_').replace('`', '').replace('~', '_')
-            
+
             # Remove multiple underscores and clean up
             while '__' in clean_col:
                 clean_col = clean_col.replace('__', '_')
             clean_col = clean_col.strip('_')
-            
+
             # Ensure it doesn't start with a number
             if clean_col and clean_col[0].isdigit():
                 clean_col = 'col_' + clean_col
-                
+
             df_columns.append(clean_col)
             column_mapping[col] = clean_col
-        
+
         # Find new columns that don't exist in database
         new_columns = []
         excluded_columns = ['id', 'unnamed_0', 'unnamed_1', 'index', '', 'processing_activities_register']
-        
+
         for col in df_columns:
             if col and col not in existing_columns and col not in excluded_columns:
                 # Don't create duplicate columns for controller data variations
@@ -377,11 +377,11 @@ def detect_and_add_new_columns(df):
                     # Only add columns that look like actual data fields (not header text)
                     if not any(header_word in col.lower() for header_word in ['register', 'template', 'about', 'section', 'activities']):
                         new_columns.append(col)
-        
+
         # Add new columns to database table if any found
         if new_columns:
             print(f"Found {len(new_columns)} new columns to add: {new_columns}")
-            
+
             # Add columns to database table dynamically
             for col_name in new_columns:
                 try:
@@ -392,12 +392,12 @@ def detect_and_add_new_columns(df):
                     print(f"Added new column to database: {col_name}")
                 except Exception as e:
                     print(f"Column {col_name} might already exist or error: {e}")
-            
+
         # Rename DataFrame columns to match database columns
         df = df.rename(columns=column_mapping)
-        
+
         return df, new_columns
-        
+
     except Exception as e:
         print(f"Error detecting new columns: {str(e)}")
         return df, []
@@ -411,7 +411,7 @@ def standardize_columns(df):
 
     # Clean column names first
     df.columns = [str(col).strip() for col in df.columns]
-    
+
     # First detect and add any new columns to database
     df, new_columns = detect_and_add_new_columns(df)
 
@@ -492,12 +492,12 @@ def standardize_columns(df):
         'name & contact details of the controller': 'controller_name',
         'name:': 'controller_name',  # Handle "Name:" column from Excel
         'name': 'controller_name',   # Handle "Name" column
-        
+
         # Controller address mapping
         'controller address': 'controller_address',
         'address:': 'controller_address',  # Handle "Address:" column from Excel
         'address': 'controller_address',   # Handle "Address" column
-        
+
         # Controller contact mapping
         'controller contact': 'controller_contact',
         'contact details:': 'controller_contact',  # Handle "Contact Details:" column from Excel
@@ -655,3 +655,149 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
         "error_count": error_count,
         "total_count": total_records
     }
+
+def extract_ropa_data_from_excel(file_path, user_email):
+    """Extract ROPA data from uploaded Excel file with improved field mapping"""
+    try:
+        print(f"Processing Excel file: {file_path}")
+
+        # Try to read the Controller Processing Activities Register sheet
+        controller_sheet = None
+        try:
+            controller_sheet = pd.read_excel(file_path, sheet_name="Controller Processing Activities Register", header=[0, 1])
+            print("Found 'Controller Processing Activities Register' sheet with multi-level headers")
+        except:
+            try:
+                controller_sheet = pd.read_excel(file_path, sheet_name="Controller Processing Activities Register", header=1)
+                print("Found 'Controller Processing Activities Register' sheet with single header")
+            except:
+                try:
+                    controller_sheet = pd.read_excel(file_path, sheet_name=0, header=1)  # First sheet
+                    print("Using first sheet as controller data")
+                except Exception as e:
+                    print(f"Error reading Excel sheets: {str(e)}")
+                    return []
+
+        if controller_sheet is None or controller_sheet.empty:
+            print("No data found in controller sheet")
+            return []
+
+        print(f"Sheet columns: {list(controller_sheet.columns)}")
+        print(f"Sheet shape: {controller_sheet.shape}")
+
+        # Display first few rows for debugging
+        print("First 3 rows of raw data:")
+        for i in range(min(3, len(controller_sheet))):
+            row_data = controller_sheet.iloc[i]
+            print(f"Row {i}: {dict(zip(controller_sheet.columns, row_data))}")
+
+        extracted_records = []
+
+        for index, row in controller_sheet.iterrows():
+            # Skip completely empty rows
+            if row.isnull().all():
+                continue
+
+            print(f"Processing row {index + 1}")
+
+            # Initialize record with all the row data
+            record_data = {}
+
+            # Get column positions for standard ROPA template
+            # Based on the standard ROPA template structure:
+            # Columns 0-2: Controller Details (Name, Address, Contact)
+            # Columns 3-5: DPO Details (Name, Address, Contact) 
+            # Columns 6-8: Representative Details (Name, Address, Contact)
+            # Columns 9+: Processing Details
+
+            cols = list(controller_sheet.columns)
+
+            # Map by column position (more reliable than column names)
+            if len(cols) > 0:
+                record_data['controller_name'] = str(row.iloc[0]).strip() if pd.notna(row.iloc[0]) and str(row.iloc[0]).strip() != 'nan' else ''
+            if len(cols) > 1:
+                record_data['controller_address'] = str(row.iloc[1]).strip() if pd.notna(row.iloc[1]) and str(row.iloc[1]).strip() != 'nan' else ''
+            if len(cols) > 2:
+                record_data['controller_contact'] = str(row.iloc[2]).strip() if pd.notna(row.iloc[2]) and str(row.iloc[2]).strip() != 'nan' else ''
+            if len(cols) > 3:
+                record_data['dpo_name'] = str(row.iloc[3]).strip() if pd.notna(row.iloc[3]) and str(row.iloc[3]).strip() != 'nan' else ''
+            if len(cols) > 4:
+                record_data['dpo_address'] = str(row.iloc[4]).strip() if pd.notna(row.iloc[4]) and str(row.iloc[4]).strip() != 'nan' else ''
+            if len(cols) > 5:
+                record_data['dpo_contact'] = str(row.iloc[5]).strip() if pd.notna(row.iloc[5]) and str(row.iloc[5]).strip() != 'nan' else ''
+            if len(cols) > 6:
+                record_data['representative_name'] = str(row.iloc[6]).strip() if pd.notna(row.iloc[6]) and str(row.iloc[6]).strip() != 'nan' else ''
+            if len(cols) > 7:
+                record_data['representative_address'] = str(row.iloc[7]).strip() if pd.notna(row.iloc[7]) and str(row.iloc[7]).strip() != 'nan' else ''
+            if len(cols) > 8:
+                record_data['representative_contact'] = str(row.iloc[8]).strip() if pd.notna(row.iloc[8]) and str(row.iloc[8]).strip() != 'nan' else ''
+            if len(cols) > 9:
+                record_data['department_function'] = str(row.iloc[9]).strip() if pd.notna(row.iloc[9]) and str(row.iloc[9]).strip() != 'nan' else ''
+            if len(cols) > 10:
+                record_data['processing_purpose'] = str(row.iloc[10]).strip() if pd.notna(row.iloc[10]) and str(row.iloc[10]).strip() != 'nan' else ''
+            if len(cols) > 11:
+                record_data['data_subjects'] = str(row.iloc[11]).strip() if pd.notna(row.iloc[11]) and str(row.iloc[11]).strip() != 'nan' else ''
+            if len(cols) > 12:
+                record_data['data_categories'] = str(row.iloc[12]).strip() if pd.notna(row.iloc[12]) and str(row.iloc[12]).strip() != 'nan' else ''
+            if len(cols) > 13:
+                record_data['retention_period'] = str(row.iloc[13]).strip() if pd.notna(row.iloc[13]) and str(row.iloc[13]).strip() != 'nan' else ''
+            if len(cols) > 14:
+                record_data['recipients'] = str(row.iloc[14]).strip() if pd.notna(row.iloc[14]) and str(row.iloc[14]).strip() != 'nan' else ''
+            if len(cols) > 15:
+                record_data['security_measures'] = str(row.iloc[15]).strip() if pd.notna(row.iloc[15]) and str(row.iloc[15]).strip() != 'nan' else ''
+            if len(cols) > 16:
+                record_data['legal_basis'] = str(row.iloc[16]).strip() if pd.notna(row.iloc[16]) and str(row.iloc[16]).strip() != 'nan' else ''
+            if len(cols) > 17:
+                dpia_value = str(row.iloc[17]).strip().lower() if pd.notna(row.iloc[17]) else ''
+                record_data['dpia_required'] = 1 if dpia_value in ['yes', 'true', '1'] else 0
+            if len(cols) > 18:
+                record_data['international_transfers'] = str(row.iloc[18]).strip() if pd.notna(row.iloc[18]) and str(row.iloc[18]).strip() != 'nan' else ''
+            if len(cols) > 19:
+                record_data['additional_info'] = str(row.iloc[19]).strip() if pd.notna(row.iloc[19]) and str(row.iloc[19]).strip() != 'nan' else ''
+
+            # Create processing activity name from available data
+            name_parts = []
+            if record_data.get('processing_purpose'):
+                name_parts.append(record_data['processing_purpose'])
+            elif record_data.get('department_function'):
+                name_parts.append(f"{record_data['department_function']} Processing")
+            elif record_data.get('controller_name'):
+                name_parts.append(f"{record_data['controller_name']} Processing")
+
+            record_data['processing_activity_name'] = name_parts[0] if name_parts else f"Processing Activity {index + 1}"
+
+            # Set other defaults
+            record_data.setdefault('category', 'General Processing')
+            record_data.setdefault('description', record_data.get('processing_purpose', ''))
+            record_data.setdefault('status', 'Draft')
+
+            # Check if this row has meaningful data
+            has_data = any(value and value.strip() for value in [
+                record_data.get('controller_name', ''),
+                record_data.get('processing_purpose', ''),
+                record_data.get('data_categories', ''),
+                record_data.get('dpo_name', ''),
+                record_data.get('department_function', '')
+            ])
+
+            if not has_data:
+                print(f"Skipping empty row {index + 1}")
+                continue
+
+            print(f"Final record data for row {index + 1}:")
+            key_fields = ['controller_name', 'controller_address', 'controller_contact', 'dpo_name', 'processing_purpose', 'data_categories']
+            for key in key_fields:
+                value = record_data.get(key, '')
+                if value:
+                    print(f"  {key}: '{value}'")
+
+            extracted_records.append(record_data)
+
+        print(f"Extracted {len(extracted_records)} valid records from Excel file")
+        return extracted_records
+
+    except Exception as e:
+        print(f"Error extracting ROPA data from Excel: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return []
