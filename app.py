@@ -958,20 +958,6 @@ def view_ropa_records():
 
     return render_template('view_ropa.html', records=records_list, status_filter=status_filter)
 
-@app.route('/ropa/<int:record_id>')
-@login_required
-def view_activity(record_id):
-    """View ROPA activity details"""
-    record = models.ROPARecord.query.get_or_404(record_id)
-
-    # Check permissions
-    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
-        abort(403)
-
-    # Get custom tabs for this record
-    custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
-    return render_template('ropa_view.html', record=record, custom_tabs=custom_tabs)
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
