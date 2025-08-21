@@ -2,23 +2,16 @@ import os
 import logging
 import json
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify, abort
-from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
-from sqlalchemy.orm import DeclarativeBase
 import tempfile
 from datetime import datetime
 import pandas as pd
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-
-class Base(DeclarativeBase):
-    pass
-
-db = SQLAlchemy(model_class=Base)
 
 # Create the app
 app = Flask(__name__)
@@ -28,6 +21,10 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 # Configure the database
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///ropa_system.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+
+# Import models and initialize db
+from models import db
+import models
 
 # Initialize extensions
 db.init_app(app)
@@ -41,9 +38,6 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
 
 # Ensure upload folder exists
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-
-# Import models after db initialization
-import models
 
 with app.app_context():
     # Initialize database with proper schema

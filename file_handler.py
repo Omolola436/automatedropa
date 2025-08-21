@@ -230,7 +230,7 @@ def standardize_columns(df):
         'breach impact': 'breach_impact',
         'risk level': 'risk_level',
         'dpia required': 'dpia_required',
-        'dpia outcome': 'dpia_outcome',
+        'dpia_outcome': 'dpia_outcome',
 
         # Additional
         'additional information': 'additional_info',
@@ -352,7 +352,7 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
             db.session.commit()
 
             success_count += 1
-            log_audit_event("ROPA Record Imported", user_email, 
+            log_audit_event("ROPA Record Imported", user_email,
                            f"Imported ROPA record: {record_data.get('processing_activity_name', 'Unknown')}")
 
         except Exception as e:
@@ -361,7 +361,7 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
             print(f"Error importing record {idx + 1}: {str(e)}")
 
     # Log overall import results
-    log_audit_event("ROPA Bulk Import", user_email, 
+    log_audit_event("ROPA Bulk Import", user_email,
                    f"Bulk import completed: {success_count} successful, {error_count} failed")
 
     return {

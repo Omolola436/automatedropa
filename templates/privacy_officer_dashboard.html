@@ -246,22 +246,36 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for record in draft_records %}
-                            <tr>
-                                <td>{{ record.processing_activity_name }}</td>
-                                <td>{{ record.department_function or 'N/A' }}</td>
-                                <td>{{ record.creator.email if record.creator else 'N/A' }}</td>
-                                <td>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</td>
-                                <td>
-                                    <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-info">View</a>
-                                    <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                    <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display: inline;">
-                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Approve this record?')">Approve</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
+                        {% for record in draft_records %}
+                        <tr>
+                            <td>{{ record.processing_activity_name }}</td>
+                            <td>{{ record.category or 'N/A' }}</td>
+                            <td>{{ record.department_function or 'N/A' }}</td>
+                            <td>
+                                {% if record.creator %}
+                                    {{ record.creator.email }}
+                                {% else %}
+                                    Uploaded File
+                                {% endif %}
+                            </td>
+                            <td>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</td>
+                            <td>
+                                <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-info">View</a>
+                                <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Under Review') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-primary">Submit for Review</button>
+                                </form>
+                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center">No draft records found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
                     </table>
                 </div>
                 {% else %}
