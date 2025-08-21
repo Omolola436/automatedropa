@@ -46,12 +46,16 @@ def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_
         # Privacy Officers see all records
         query = ROPARecord.query
     
-    # Status filtering 
-    status_filters = ['Approved', 'Under Review']  # Always include these
+    # Status filtering - be more inclusive for export
+    status_filters = ['Approved', 'Under Review']
     if include_drafts:
         status_filters.append('Draft')
     if include_rejected:
         status_filters.append('Rejected')
+    
+    # For Privacy Officers, if no specific inclusion flags are set, include Draft by default
+    if user_role == 'Privacy Officer' and not include_drafts and not include_rejected:
+        status_filters.append('Draft')
     
     query = query.filter(ROPARecord.status.in_(status_filters))
     query = query.order_by(ROPARecord.created_at.desc())
@@ -59,12 +63,20 @@ def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_
     # Get all records and convert to DataFrame
     records = query.all()
     
+    print(f"DEBUG Export: Found {len(records)} records for export")
+    print(f"DEBUG Export: Status filters: {status_filters}")
+    print(f"DEBUG Export: User role: {user_role}")
+    
     if not records:
         return pd.DataFrame()
     
     # Convert to dictionary list for DataFrame
     data = []
     for record in records:
+        # Get creator info
+        creator = User.query.get(record.created_by)
+        creator_email = creator.email if creator else f'User ID {record.created_by}'
+        
         data.append({
             'id': record.id,
             'processing_activity_name': record.processing_activity_name,
@@ -74,14 +86,17 @@ def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_
             'controller_name': record.controller_name,
             'controller_contact': record.controller_contact,
             'controller_address': record.controller_address,
+            'dpo_name': record.dpo_name,
+            'dpo_contact': record.dpo_contact,
             'processing_purpose': record.processing_purpose,
             'legal_basis': record.legal_basis,
             'data_categories': record.data_categories,
             'data_subjects': record.data_subjects,
+            'recipients': record.recipients,
             'retention_period': record.retention_period,
             'security_measures': record.security_measures,
             'status': record.status,
-            'created_by': record.created_by,
+            'created_by': creator_email,
             'created_at': record.created_at,
             'updated_at': record.updated_at
         })
