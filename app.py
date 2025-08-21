@@ -958,11 +958,7 @@ def view_ropa():
 
     return render_template('view_ropa.html', records=records_list, status_filter=status_filter)
 
-@app.route('/view-ropa')
-@login_required
-def view_ropa_alias():
-    """Alias route that redirects to view-ropa"""
-    return redirect(url_for('view_ropa'))
+
 
 @app.route('/ropa/<int:record_id>')
 @login_required
