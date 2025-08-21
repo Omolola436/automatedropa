@@ -3,12 +3,13 @@ from flask import request
 import json
 import hashlib
 import os
-from app import db
-import models
 
 def log_audit_event(event_type, user_email, description, additional_data=None):
     """Enhanced security audit logging with comprehensive details"""
     try:
+        from flask import current_app
+        from models import db, AuditLog
+        
         # Get comprehensive request information
         ip_address = get_client_ip()
         user_agent = request.headers.get('User-Agent', 'Unknown') if request else 'System'
@@ -34,7 +35,7 @@ def log_audit_event(event_type, user_email, description, additional_data=None):
         }
         
         # Create audit log entry using SQLAlchemy
-        audit_log = models.AuditLog(
+        audit_log = AuditLog(
             event_type=event_type,
             user_email=user_email,
             ip_address=ip_address,
@@ -99,8 +100,10 @@ def is_security_event(event_type):
 def get_audit_logs(limit=100, page=1, per_page=50):
     """Get audit logs with pagination using SQLAlchemy"""
     try:
+        from models import AuditLog
+        
         # Query audit logs with pagination
-        logs_query = models.AuditLog.query.order_by(models.AuditLog.timestamp.desc())
+        logs_query = AuditLog.query.order_by(AuditLog.timestamp.desc())
         paginated_logs = logs_query.paginate(page=page, per_page=per_page, error_out=False)
         
         # Process logs and parse additional data
@@ -157,7 +160,9 @@ def get_audit_logs(limit=100, page=1, per_page=50):
 def get_recent_audit_logs(limit=10):
     """Get recent audit logs for dashboard"""
     try:
-        logs = models.AuditLog.query.order_by(models.AuditLog.timestamp.desc()).limit(limit).all()
+        from models import AuditLog
+        
+        logs = AuditLog.query.order_by(AuditLog.timestamp.desc()).limit(limit).all()
         
         log_list = []
         for log in logs:
@@ -199,23 +204,25 @@ def log_system_event(event_type, description, additional_data=None):
 def get_audit_statistics():
     """Get audit statistics for dashboard"""
     try:
-        total_events = models.AuditLog.query.count()
+        from models import db, AuditLog
+        
+        total_events = AuditLog.query.count()
         
         # Get events by type
         event_counts = db.session.query(
-            models.AuditLog.event_type,
-            db.func.count(models.AuditLog.id).label('count')
-        ).group_by(models.AuditLog.event_type).all()
+            AuditLog.event_type,
+            db.func.count(AuditLog.id).label('count')
+        ).group_by(AuditLog.event_type).all()
         
         # Get recent security events
-        security_events = models.AuditLog.query.filter(
-            models.AuditLog.event_type.in_([
+        security_events = AuditLog.query.filter(
+            AuditLog.event_type.in_([
                 'Login Failed', 'Unauthorized Access', 'Permission Denied',
                 'Account Locked', 'Password Reset', 'Role Changed',
                 'Data Export', 'File Upload', 'System Error',
                 'ROPA Deleted', 'User Deleted'
             ])
-        ).order_by(models.AuditLog.timestamp.desc()).limit(5).all()
+        ).order_by(AuditLog.timestamp.desc()).limit(5).all()
         
         return {
             'total_events': total_events,
