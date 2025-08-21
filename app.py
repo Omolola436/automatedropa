@@ -958,8 +958,6 @@ def view_ropa():
 
     return render_template('view_ropa.html', records=records_list, status_filter=status_filter)
 
-
-
 @app.route('/ropa/<int:record_id>')
 @login_required
 def view_activity(record_id):
