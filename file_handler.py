@@ -106,6 +106,28 @@ def process_uploaded_file(file, user_email):
                 else:
                     row_dict[key] = str(value).strip()
 
+            # Special handling for multi-column controller data
+            # Look for multiple Name, Address, Contact columns and consolidate them
+            controller_names = []
+            controller_addresses = []
+            controller_contacts = []
+            
+            for key, value in row_dict.items():
+                if key.startswith('controller_name') and value.strip():
+                    controller_names.append(value.strip())
+                elif key.startswith('controller_address') and value.strip():
+                    controller_addresses.append(value.strip())
+                elif key.startswith('controller_contact') and value.strip():
+                    controller_contacts.append(value.strip())
+            
+            # If we found multiple controller entries, use the first non-empty one
+            if controller_names:
+                row_dict['controller_name'] = controller_names[0]
+            if controller_addresses:
+                row_dict['controller_address'] = controller_addresses[0]
+            if controller_contacts:
+                row_dict['controller_contact'] = controller_contacts[0]
+
             # Generate a meaningful processing activity name if empty
             processing_name = row_dict.get('processing_activity_name', '').strip()
             if not processing_name or processing_name in ['nan', 'None']:
@@ -342,7 +364,9 @@ def detect_and_add_new_columns(df):
         
         for col in df_columns:
             if col and col not in existing_columns and col not in excluded_columns:
-                new_columns.append(col)
+                # Don't create duplicate columns for controller data variations
+                if not any(col.startswith(base) for base in ['controller_name', 'controller_address', 'controller_contact']):
+                    new_columns.append(col)
         
         # Add new columns to database table if any found
         if new_columns:
@@ -405,17 +429,26 @@ def standardize_columns(df):
         'department': 'department_function',
         'function': 'department_function',
         'business function': 'department_function',
+        'detail the department or function responsible for the processing': 'department_function',
 
         # Purpose mapping
         'purpose': 'processing_purpose',
         'purpose of processing': 'processing_purpose',
         'processing purpose': 'processing_purpose',
+        'purpose?': 'processing_purpose',
+        'describe the purpose of the processing': 'processing_purpose',
 
         # Categories mapping
         'categories of data': 'data_categories',
         'data categories': 'data_categories',
         'personal data': 'data_categories',
         'categories of personal data': 'data_categories',
+        'describe the categories of personal data': 'data_categories',
+
+        # Data subjects mapping
+        'data subjects': 'data_subjects',
+        'categories of data subjects': 'data_subjects',
+        'describe the categories of data subjects': 'data_subjects',
 
         # Special categories mapping
         'categories of personal data (sensitive)': 'special_categories',
@@ -427,23 +460,39 @@ def standardize_columns(df):
         'retention period': 'retention_period',
         'retention': 'retention_period',
         'data retention': 'retention_period',
+        'if possible, envisaged time limits for erasure of different categories of data': 'retention_period',
 
         # Recipients mapping
         'recipients': 'recipients',
         'third parties': 'recipients',
         'data recipients': 'recipients',
+        'categories of recipients to whom personal data has/will be disclosed': 'recipients',
 
         # Security mapping
         'security measures used': 'security_measures',
         'security measures': 'security_measures',
         'technical measures': 'security_measures',
         'organisational measures': 'security_measures',
+        'if possible, description of technical & organisational security measures  (e.g. pseudonymisation, encryption, codes of conduct etc)': 'security_measures',
 
-        # Controller mapping
+        # Controller mapping - Multiple approaches to capture controller info
         'controller': 'controller_name',
         'controller name': 'controller_name',
         'data controller': 'controller_name',
         'name & contact details of the controller': 'controller_name',
+        'name:': 'controller_name',  # Handle "Name:" column from Excel
+        'name': 'controller_name',   # Handle "Name" column
+        
+        # Controller address mapping
+        'controller address': 'controller_address',
+        'address:': 'controller_address',  # Handle "Address:" column from Excel
+        'address': 'controller_address',   # Handle "Address" column
+        
+        # Controller contact mapping
+        'controller contact': 'controller_contact',
+        'contact details:': 'controller_contact',  # Handle "Contact Details:" column from Excel
+        'contact details': 'controller_contact',   # Handle "Contact Details" column
+        'contact': 'controller_contact',
 
         # Legal basis mapping
         'legal basis for processing': 'legal_basis',
