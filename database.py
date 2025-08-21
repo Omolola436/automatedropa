@@ -208,6 +208,10 @@ def save_ropa_record(data, created_by):
     conn = get_db_connection()
     cursor = conn.cursor()
     
+    print(f"DEBUG: Saving ROPA record for user: {created_by}")
+    print(f"DEBUG: Record name: {data.get('processing_activity_name')}")
+    print(f"DEBUG: Record status: {data.get('status', 'Draft')}")
+    
     cursor.execute("""
         INSERT INTO ropa_records (
             processing_activity_name, category, description, department_function,
@@ -266,6 +270,7 @@ def save_ropa_record(data, created_by):
     conn.commit()
     conn.close()
     
+    print(f"DEBUG: Successfully saved record with ID: {record_id}")
     return record_id
 
 def get_ropa_records(user_email=None, role=None, status=None):

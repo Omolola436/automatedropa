@@ -53,7 +53,7 @@ with app.app_context():
 
 # Import utility functions after app context
 from automation import auto_classify_data, suggest_processing_purpose, assess_risk, suggest_security_measures
-from utils import get_predefined_options, validate_required_fields
+from utils import get_predefined_options, validate_required_fields, get_db_connection, get_user_department
 from export_utils import generate_export
 from file_handler import process_uploaded_file
 from template_generator import generate_ropa_template
@@ -883,6 +883,100 @@ def edit_ropa(id):
             flash(f'Error updating record: {str(e)}', 'error')
 
     return render_template('ropa_edit.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
+
+
+@app.route('/view-ropa')
+@login_required
+def view_ropa():
+    # Get filter parameters
+    status_filter = request.args.get('status', 'All')
+
+    # Build query based on user role
+    conn = get_db_connection()
+
+    if current_user.role == "Privacy Champion":
+        # Privacy Champions see their own records AND approved records they can edit (in their department)
+        user_dept = get_user_department(current_user.email)
+        if status_filter == 'All':
+            query = """SELECT * FROM ropa_records 
+                      WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?))
+                      ORDER BY created_at DESC"""
+            params = [current_user.email, user_dept]
+        else:
+            query = """SELECT * FROM ropa_records 
+                      WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?)) 
+                      AND status = ? ORDER BY created_at DESC"""
+            params = [current_user.email, user_dept, status_filter]
+    else:
+        # Privacy Officers and Admins see all records
+        if status_filter == 'All':
+            query = "SELECT * FROM ropa_records ORDER BY created_at DESC"
+            params = []
+        else:
+            query = "SELECT * FROM ropa_records WHERE status = ? ORDER BY created_at DESC"
+            params = [status_filter]
+
+    cursor = conn.cursor()
+
+    # Debug the exact query being executed
+    print(f"DEBUG: Executing query: {query}")
+    print(f"DEBUG: With params: {params}")
+
+    try:
+        cursor.execute(query, params)
+        records = cursor.fetchall()
+
+        # Convert to list of dictionaries
+        columns = [
+            'id', 'processing_activity_name', 'category', 'description', 'department_function',
+            'controller_name', 'controller_contact', 'controller_address', 'dpo_name', 'dpo_contact',
+            'dpo_address', 'processor_name', 'processor_contact', 'processor_address',
+            'representative_name', 'representative_contact', 'representative_address',
+            'processing_purpose', 'legal_basis', 'legitimate_interests', 'data_categories', 'special_categories',
+            'data_subjects', 'recipients', 'third_country_transfers', 'safeguards',
+            'retention_period', 'retention_criteria', 'retention_justification', 'security_measures',
+            'breach_likelihood', 'breach_impact', 'dpia_required', 'additional_info',
+            'international_transfers', 'status', 'created_by', 'created_at', 'updated_at', 'updated_by',
+            'reviewed_by', 'reviewed_at', 'approved_by', 'approved_at'
+        ]
+
+        records_list = []
+        for record in records:
+            record_dict = dict(zip(columns, record))
+            records_list.append(record_dict)
+
+        print(f"DEBUG: Found {len(records_list)} records")
+        for record in records_list:
+            print(f"DEBUG: Record - ID: {record['id']}, Name: {record['processing_activity_name']}, Status: {record['status']}, Created by: {record['created_by']}")
+
+    except Exception as e:
+        print(f"DEBUG: Error executing query: {str(e)}")
+        records_list = []
+    finally:
+        conn.close()
+
+    return render_template('view_ropa.html', records=records_list, status_filter=status_filter)
+
+@app.route('/view-ropa')
+@login_required
+def view_ropa_alias():
+    """Alias route that redirects to view-ropa"""
+    return redirect(url_for('view_ropa'))
+
+@app.route('/ropa/<int:record_id>')
+@login_required
+def view_activity(record_id):
+    """View ROPA activity details"""
+    record = models.ROPARecord.query.get_or_404(record_id)
+
+    # Check permissions
+    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+        abort(403)
+
+    # Get custom tabs for this record
+    custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
+    return render_template('ropa_view.html', record=record, custom_tabs=custom_tabs)
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
