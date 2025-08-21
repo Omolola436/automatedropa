@@ -45,3 +45,11 @@ pandas
 plotly
 sqlalchemy
 werkzeug
+flask
+flask-login
+flask-sqlalchemy
+openpyxl
+pandas
+plotly
+sqlalchemy
+werkzeug
