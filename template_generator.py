@@ -440,6 +440,43 @@ The content of the template has been added to a 'table' which allows for simple 
     for row in range(23, 26):
         ws.row_dimensions[row].height = 25
 
+def generate_populated_ropa_template(export_data_df):
+    """Generate ROPA template populated with specific export data"""
+    try:
+        print(f"Generating populated ROPA template with {len(export_data_df)} records")
+        
+        # Create workbook
+        wb = Workbook()
+        
+        # Remove the default sheet
+        wb.remove(wb.active)
+
+        # Create Introduction sheet first
+        create_introduction_sheet(wb)
+        
+        # Create Controller Processing Activities Register sheet with export data
+        create_controller_sheet(wb, export_data_df)
+        
+        # Create Processor Processing Activity sheet (empty for now)
+        create_processor_sheet(wb)
+
+        # Save to temporary file
+        temp_dir = tempfile.gettempdir()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"ROPA_Export_{timestamp}.xlsx"
+        file_path = os.path.join(temp_dir, filename)
+
+        wb.save(file_path)
+        print(f"Populated ROPA template saved to: {file_path}")
+
+        return file_path
+
+    except Exception as e:
+        print(f"Error during populated template generation: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
+
 def generate_ropa_template():
     """Generate complete ROPA template with Controller, Processor, and Example sheets"""
     try:

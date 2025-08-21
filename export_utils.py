@@ -105,31 +105,44 @@ def get_filtered_ropa_data(user_email, user_role, include_drafts=False, include_
     return df
 
 def generate_excel_export(df):
-    """Generate Excel export with multiple sheets"""
+    """Generate Excel export using the official ROPA template format populated with data"""
     
-    # Create temporary file
-    temp_dir = tempfile.gettempdir()
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"ROPA_Export_{timestamp}.xlsx"
-    file_path = os.path.join(temp_dir, filename)
+    # Use the template generator to create a properly formatted ROPA file
+    from template_generator import generate_populated_ropa_template
     
-    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
-        # Main ROPA data sheet
-        export_df = prepare_export_dataframe(df)
-        export_df.to_excel(writer, sheet_name='ROPA Records', index=False)
+    try:
+        file_path = generate_populated_ropa_template(df)
+        if file_path:
+            # Extract just the filename from the path
+            filename = os.path.basename(file_path)
+            return file_path, filename
+        else:
+            raise Exception("Failed to generate populated ROPA template")
+    except Exception as e:
+        print(f"Error generating populated template: {str(e)}")
+        # Fallback to simple export if template generation fails
+        temp_dir = tempfile.gettempdir()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"ROPA_Export_{timestamp}.xlsx"
+        file_path = os.path.join(temp_dir, filename)
         
-        # Summary sheet
-        summary_data = create_summary_data(df)
-        summary_df = pd.DataFrame(summary_data)
-        summary_df.to_excel(writer, sheet_name='Summary', index=False)
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+            # Main ROPA data sheet
+            export_df = prepare_export_dataframe(df)
+            export_df.to_excel(writer, sheet_name='ROPA Records', index=False)
+            
+            # Summary sheet
+            summary_data = create_summary_data(df)
+            summary_df = pd.DataFrame(summary_data)
+            summary_df.to_excel(writer, sheet_name='Summary', index=False)
+            
+            # Status breakdown sheet
+            if not df.empty:
+                status_breakdown = df['status'].value_counts().reset_index()
+                status_breakdown.columns = ['Status', 'Count']
+                status_breakdown.to_excel(writer, sheet_name='Status Breakdown', index=False)
         
-        # Status breakdown sheet
-        if not df.empty:
-            status_breakdown = df['status'].value_counts().reset_index()
-            status_breakdown.columns = ['Status', 'Count']
-            status_breakdown.to_excel(writer, sheet_name='Status Breakdown', index=False)
-    
-    return file_path, filename
+        return file_path, filename
 
 def generate_csv_export(df):
     """Generate CSV export"""
