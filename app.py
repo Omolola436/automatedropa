@@ -202,19 +202,19 @@ def add_activity():
     if request.method == 'POST':
         # Get all form data
         form_data = request.form.to_dict()
-        
+
         # Build record data dynamically
         record_data = {
             'processing_activity_name': form_data['processing_activity_name'],
             'created_by': current_user.id
         }
-        
+
         # Add all other fields that exist in the model
         model_columns = [column.name for column in models.ROPARecord.__table__.columns]
         for field_name, value in form_data.items():
             if field_name in model_columns and field_name not in ['id', 'created_by', 'created_at', 'updated_at']:
                 record_data[field_name] = value
-        
+
         # Create new ROPA record with dynamic fields
         record = models.ROPARecord(**record_data)
 
@@ -400,7 +400,8 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             try:
-                result = process_uploaded_file(file, current_user.email)
+                # Pass the filename to process_uploaded_file so it can be used for logging/error reporting
+                result = process_uploaded_file(file, filename, current_user.email)
                 log_audit_event('File Uploaded', current_user.email, f'Uploaded and processed file: {filename}')
                 flash(f'File processed successfully: {result}', 'success')
             except Exception as e:

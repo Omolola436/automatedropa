@@ -196,51 +196,27 @@ def process_uploaded_file(file, user_email):
                     db.session.add(user)
                     db.session.commit()
 
-                # Create record with all known fields
-                record_fields = {
-                    'processing_activity_name': record_data['processing_activity_name'],
-                    'category': record_data.get('category', ''),
-                    'description': record_data.get('description', ''),
-                    'department_function': record_data.get('department_function', ''),
-                    'controller_name': record_data.get('controller_name', ''),
-                    'controller_contact': record_data.get('controller_contact', ''),
-                    'controller_address': record_data.get('controller_address', ''),
-                    'dpo_name': record_data.get('dpo_name', ''),
-                    'dpo_contact': record_data.get('dpo_contact', ''),
-                    'dpo_address': record_data.get('dpo_address', ''),
-                    'processor_name': record_data.get('processor_name', ''),
-                    'processor_contact': record_data.get('processor_contact', ''),
-                    'processor_address': record_data.get('processor_address', ''),
-                    'representative_name': record_data.get('representative_name', ''),
-                    'representative_contact': record_data.get('representative_contact', ''),
-                    'representative_address': record_data.get('representative_address', ''),
-                    'processing_purpose': record_data.get('processing_purpose', ''),
-                    'legal_basis': record_data.get('legal_basis', ''),
-                    'legitimate_interests': record_data.get('legitimate_interests', ''),
-                    'data_categories': record_data.get('data_categories', ''),
-                    'special_categories': record_data.get('special_categories', ''),
-                    'data_subjects': record_data.get('data_subjects', ''),
-                    'recipients': record_data.get('recipients', ''),
-                    'third_country_transfers': record_data.get('third_country_transfers', ''),
-                    'safeguards': record_data.get('safeguards', ''),
-                    'retention_period': record_data.get('retention_period', ''),
-                    'security_measures': record_data.get('security_measures', ''),
-                    'breach_likelihood': record_data.get('breach_likelihood', ''),
-                    'breach_impact': record_data.get('breach_impact', ''),
-                    'risk_level': record_data.get('risk_level', ''),
-                    'dpia_required': record_data.get('dpia_required', '') == 'Yes',
-                    'dpia_outcome': record_data.get('dpia_outcome', ''),
-                    'status': 'Draft',
-                    'created_by': user.id,
-                    'created_at': datetime.utcnow()
-                }
+                # Get all valid columns from database
+                import sqlalchemy
+                inspector = sqlalchemy.inspect(db.engine)
+                valid_columns = [col['name'] for col in inspector.get_columns('ropa_records')]
+                
+                # Create record with all valid fields from the data
+                record_fields = {}
+                
+                # Add standard fields
+                for field in valid_columns:
+                    if field not in ['id', 'created_at', 'updated_at']:
+                        if field == 'created_by':
+                            record_fields[field] = user.id
+                        elif field == 'status':
+                            record_fields[field] = 'Draft'
+                        elif field == 'dpia_required':
+                            record_fields[field] = record_data.get(field, '') == 'Yes'
+                        else:
+                            record_fields[field] = record_data.get(field, '')
 
-                # Add any additional dynamic fields from the uploaded data
-                for key, value in record_data.items():
-                    if key not in record_fields and key not in ['id']:
-                        record_fields[key] = value
-
-                # Create record with dynamic fields
+                # Create record with all fields
                 record = ROPARecord(**record_fields)
 
                 db.session.add(record)
@@ -325,8 +301,9 @@ def detect_and_add_new_columns(df):
         from app import db
         import sqlalchemy
         
-        # Get existing column names from the ROPARecord model
-        existing_columns = [column.name for column in ROPARecord.__table__.columns]
+        # Get existing column names from the actual database table
+        inspector = sqlalchemy.inspect(db.engine)
+        existing_columns = [col['name'] for col in inspector.get_columns('ropa_records')]
         
         # Clean uploaded column names - preserve original names but make them database-friendly
         original_columns = list(df.columns)
@@ -334,14 +311,37 @@ def detect_and_add_new_columns(df):
         column_mapping = {}
         
         for col in original_columns:
-            clean_col = str(col).lower().strip().replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '').replace('/', '_')
+            # More aggressive cleaning for database compatibility
+            clean_col = str(col).lower().strip()
+            clean_col = clean_col.replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '')
+            clean_col = clean_col.replace('/', '_').replace('&', '_and_').replace('%', '_percent_')
+            clean_col = clean_col.replace('?', '').replace('!', '').replace('@', '_at_')
+            clean_col = clean_col.replace('#', '_hash_').replace('$', '_dollar_').replace('^', '_')
+            clean_col = clean_col.replace('*', '_star_').replace('+', '_plus_').replace('=', '_equals_')
+            clean_col = clean_col.replace('[', '').replace(']', '').replace('{', '').replace('}', '')
+            clean_col = clean_col.replace('|', '_or_').replace('\\', '_').replace(':', '_')
+            clean_col = clean_col.replace(';', '_').replace('"', '').replace("'", '')
+            clean_col = clean_col.replace('<', '_lt_').replace('>', '_gt_').replace(',', '_')
+            clean_col = clean_col.replace('.', '_').replace('`', '').replace('~', '_')
+            
+            # Remove multiple underscores and clean up
+            while '__' in clean_col:
+                clean_col = clean_col.replace('__', '_')
+            clean_col = clean_col.strip('_')
+            
+            # Ensure it doesn't start with a number
+            if clean_col and clean_col[0].isdigit():
+                clean_col = 'col_' + clean_col
+                
             df_columns.append(clean_col)
             column_mapping[col] = clean_col
         
         # Find new columns that don't exist in database
         new_columns = []
+        excluded_columns = ['id', 'unnamed_0', 'unnamed_1', 'index', '']
+        
         for col in df_columns:
-            if col not in existing_columns and col != 'id' and col not in ['unnamed:_0', 'unnamed:_1']:
+            if col and col not in existing_columns and col not in excluded_columns:
                 new_columns.append(col)
         
         # Add new columns to database table if any found
@@ -353,15 +353,15 @@ def detect_and_add_new_columns(df):
                 try:
                     # Use proper SQLAlchemy syntax for newer versions
                     with db.engine.connect() as conn:
-                        conn.execute(sqlalchemy.text(f"ALTER TABLE ropa_records ADD COLUMN {col_name} TEXT"))
+                        conn.execute(sqlalchemy.text(f"ALTER TABLE ropa_records ADD COLUMN `{col_name}` TEXT"))
                         conn.commit()
                     print(f"Added new column to database: {col_name}")
                 except Exception as e:
                     print(f"Column {col_name} might already exist or error: {e}")
             
-            # Rename DataFrame columns to match database columns
-            df = df.rename(columns=column_mapping)
-            
+        # Rename DataFrame columns to match database columns
+        df = df.rename(columns=column_mapping)
+        
         return df, new_columns
         
     except Exception as e:
@@ -375,6 +375,9 @@ def standardize_columns(df):
     if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1:
         df.columns = [' '.join(str(col).strip() for col in col_tuple).strip() for col_tuple in df.columns.values]
 
+    # Clean column names first
+    df.columns = [str(col).strip() for col in df.columns]
+    
     # First detect and add any new columns to database
     df, new_columns = detect_and_add_new_columns(df)
 
