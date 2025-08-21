@@ -445,8 +445,8 @@ def upload_file():
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
             try:
-                # Pass the filename to process_uploaded_file so it can be used for logging/error reporting
-                result = process_uploaded_file(file, filename, current_user.email)
+                # Process the uploaded file
+                result = process_uploaded_file(file, current_user.email)
                 log_audit_event('File Uploaded', current_user.email, f'Uploaded and processed file: {filename}')
                 flash(f'File processed successfully: {result}', 'success')
             except Exception as e:
