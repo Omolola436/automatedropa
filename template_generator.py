@@ -201,51 +201,8 @@ def create_controller_sheet(wb, existing_data):
     for i, width in enumerate(column_widths[:len(columns_structure)], 1):
         ws.column_dimensions[get_column_letter(i)].width = width
 
-    # Add sample data row (Row 3) exactly as shown in the uploaded file
-    sample_data = [
-        "Trinity Pharmacy", "109 Josiah Chinamano Avenue, Harare", "",  # Controller
-        "Tendai F Mataba", "13 Meadow Bank, Northwood, Mt Pleasant", "2.63775E+11",  # DPO
-        "", "", "",  # Representative
-        "SALES", "Processing Medication", "Customer", "Identity Data", "6", "marketing dep", "Access Control",  # Processing details
-        "", "", "", ""  # Additional fields
-    ]
-    
-    # Trim sample data to match actual columns
-    sample_data = sample_data[:len(columns_structure)]
-    
-    for col_idx, value in enumerate(sample_data, 1):
-        if col_idx <= len(columns_structure):
-            cell = ws.cell(row=3, column=col_idx, value=value)
-            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-            cell.alignment = Alignment(wrap_text=True, vertical='top')
-            cell.font = Font(name="Calibri", size=10)
-            cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
-
-    # Add second sample row (Row 4) exactly as shown
-    sample_data_2 = [
-        "", "", "",  # Controller (empty in sample)
-        "", "", "",  # DPO (empty in sample)
-        "", "", "",  # Representative (empty in sample)
-        "HR", "Staff Information", "Staff", "Identity Data, Financial Data", "5", "HR Dep", "Access Control, Data Minimization, Encryption",  # Processing details
-        "", "", "", ""  # Additional fields
-    ]
-    
-    # Trim sample data to match actual columns
-    sample_data_2 = sample_data_2[:len(columns_structure)]
-    
-    for col_idx, value in enumerate(sample_data_2, 1):
-        if col_idx <= len(columns_structure):
-            cell = ws.cell(row=4, column=col_idx, value=value)
-            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-            cell.alignment = Alignment(wrap_text=True, vertical='top')
-            cell.font = Font(name="Calibri", size=10)
-            cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
-
-    ws.row_dimensions[3].height = 30
-    ws.row_dimensions[4].height = 30
-
-    # Add existing database data starting from row 5
-    start_row = 5
+    # Add existing database data starting from row 3 (no sample data)
+    start_row = 3
     if not existing_data.empty:
         print(f"Populating controller sheet with {len(existing_data)} existing records")
         
@@ -289,8 +246,8 @@ def create_controller_sheet(wb, existing_data):
         ws.row_dimensions[row_idx].height = 30
 
 def create_processor_sheet(wb):
-    """Create the Processor sheet exactly as shown in the uploaded file"""
-    ws = wb.create_sheet("Processor")
+    """Create the Processor Processing Activity sheet exactly as shown in the uploaded file"""
+    ws = wb.create_sheet("Processor Processing Activity")
     
     # Define the processor column structure
     processor_columns = [
@@ -390,69 +347,98 @@ def create_processor_sheet(wb):
             cell.alignment = Alignment(wrap_text=True, vertical='top')
         ws.row_dimensions[row_idx].height = 30
 
-def create_example_sheet(wb):
-    """Create the Example sheet with sample data"""
-    ws = wb.create_sheet("Example")
+def create_introduction_sheet(wb):
+    """Create the Introduction sheet with GDPR ROPA information"""
+    ws = wb.create_sheet("Introduction")
     
     # Add title
-    ws['A1'] = 'ROPA Examples and Guidelines'
-    ws['A1'].font = Font(bold=True, size=16, color="366092")
-    ws['A1'].alignment = Alignment(horizontal="center")
-    ws.merge_cells('A1:E1')
+    ws.merge_cells('A1:I1')
+    ws['A1'] = 'PROCESSING ACTIVITIES REGISTER'
+    ws['A1'].font = Font(bold=True, size=16, color="000000")
+    ws['A1'].alignment = Alignment(horizontal="center", vertical="center")
+    ws['A1'].fill = PatternFill(start_color="92D050", end_color="92D050", fill_type="solid")
+    ws['A1'].border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    ws.row_dimensions[1].height = 30
     
-    # Add content starting from row 3
-    examples = [
-        ["Field", "Example", "Description", "", ""],
-        ["Processing Activity Name", "Customer Database Management", "Clear, descriptive name of the processing activity", "", ""],
-        ["Legal Basis", "Contract (Article 6(1)(b))", "Specific GDPR article and basis", "", ""],
-        ["Data Categories", "Identity Data, Contact Data", "Types of personal data being processed", "", ""],
-        ["Data Subjects", "Customers, Prospects", "Categories of individuals whose data is processed", "", ""],
-        ["Retention Period", "5 years after contract termination", "How long data is kept and when it's deleted", "", ""],
-        ["Security Measures", "Access Control, Encryption, Audit Logs", "Technical and organisational measures in place", "", ""],
-        ["Recipients", "Marketing Department, External Auditors", "Who data is shared with internally/externally", "", ""],
-        ["International Transfers", "None / EU-US Data Privacy Framework", "Any transfers outside the EU/EEA", "", ""],
-        ["DPIA Required", "Yes / No", "Whether a Data Protection Impact Assessment is needed", "", ""],
-        ["", "", "", "", ""],
-        ["Legal Basis Options:", "", "", "", ""],
-        ["• Consent (Article 6(1)(a))", "", "", "", ""],
-        ["• Contract (Article 6(1)(b))", "", "", "", ""],
-        ["• Legal Obligation (Article 6(1)(c))", "", "", "", ""],
-        ["• Vital Interests (Article 6(1)(d))", "", "", "", ""],
-        ["• Public Task (Article 6(1)(e))", "", "", "", ""],
-        ["• Legitimate Interests (Article 6(1)(f))", "", "", "", ""],
-        ["", "", "", "", ""],
-        ["Common Data Categories:", "", "", "", ""],
-        ["• Identity Data (name, ID numbers)", "", "", "", ""],
-        ["• Contact Data (email, phone, address)", "", "", "", ""],
-        ["• Financial Data (payment info, bank details)", "", "", "", ""],
-        ["• Transaction Data (purchase history)", "", "", "", ""],
-        ["• Technical Data (IP address, login data)", "", "", "", ""],
-        ["• Profile Data (preferences, interests)", "", "", "", ""],
-        ["• Usage Data (how you use our services)", "", "", "", ""],
-        ["• Marketing Data (preferences, responses)", "", "", "", ""]
-    ]
+    # ABOUT THE TEMPLATE section
+    ws['A3'] = 'ABOUT THE TEMPLATE'
+    ws['A3'].font = Font(bold=True, size=12)
+    ws.row_dimensions[3].height = 20
     
-    for row_idx, row_data in enumerate(examples, 3):
-        for col_idx, value in enumerate(row_data, 1):
-            cell = ws.cell(row=row_idx, column=col_idx, value=value)
-            if row_idx == 3:  # Header row
-                cell.font = Font(bold=True, color="FFFFFF")
-                cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
-            elif value.startswith("•") or value.endswith(":"):
-                cell.font = Font(bold=True)
-            cell.alignment = Alignment(wrap_text=True, vertical='top')
-            cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
+    about_text = """Section 10 (1) (2) (a) of the Cyber and Data Protection Regulations [SI 155 of 2024] requires that a data controller shall notify the Authority of all its processing activities carried out on personal information. As you also process some EU citizens data, Article 30 of the GDPR requires that certain organisations maintain records of their processing activities. The specific requirements are noted in our GDPR Policy & Procedure document, and are a mandatory requirement for firms with more than 250 employees and also in certain instances, for firms with less than 250 employees.
 
-    # Set column widths
-    ws.column_dimensions['A'].width = 25
-    ws.column_dimensions['B'].width = 35
-    ws.column_dimensions['C'].width = 50
-    ws.column_dimensions['D'].width = 15
-    ws.column_dimensions['E'].width = 15
+The aim of keeping a record of the processing activities is to document the purposes of processing, describe the categories involved, detail disclosures and transfers, and note any time limits for erasing the personal data."""
     
-    # Set row heights
-    for row in range(1, len(examples) + 3):
-        ws.row_dimensions[row].height = 20
+    ws.merge_cells('A4:I10')
+    ws['A4'] = about_text
+    ws['A4'].font = Font(size=10)
+    ws['A4'].alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+    ws['A4'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+    ws['A4'].border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # USING THE TEMPLATES section
+    ws['A12'] = 'USING THE TEMPLATES'
+    ws['A12'].font = Font(bold=True, size=12)
+    ws.row_dimensions[12].height = 20
+    
+    using_text = """We have created the Processing Activities Registers in Excel for ease of use and filtering and as with all of our documents, you are free to corporate brand, edit and customise the content. It is important to make the fields and entries relevant to your business and sector. We have not used dropdown menus in this register, as many of the fields require bespoke entries. However, you are free to add data validation menus if you have repeated entry requirements that are consistent.
+
+There are 2 registers, one for controllers and one for processors. If you act in the capacity as both, complete both tabs as applicable (i.e. the controller register for your controller processing (e.g. employee records), and the processor register for your processing activities (e.g. CRB checks).
+
+The content of the template has been added to a 'table' which allows for simple filtering and sorting of the columns. This is done by using the arrows in the heading fields. Once you have completed the registers, you can then sort by heading title to access select sections. (See the sample screenshot to the right)"""
+    
+    ws.merge_cells('A13:I20')
+    ws['A13'] = using_text
+    ws['A13'].font = Font(size=10)
+    ws['A13'].alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+    ws['A13'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+    ws['A13'].border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # EXAMPLES section
+    ws['A22'] = 'EXAMPLES'
+    ws['A22'].font = Font(bold=True, size=12)
+    ws.row_dimensions[22].height = 20
+    
+    examples_text = """We have added an example completed register on tab 3 which is for guidance only. If should delete this tab once read to avoid mixing up the completed sheets."""
+    
+    ws.merge_cells('A23:I25')
+    ws['A23'] = examples_text
+    ws['A23'].font = Font(size=10, italic=True)
+    ws['A23'].alignment = Alignment(wrap_text=True, vertical='top', horizontal='left')
+    ws['A23'].fill = PatternFill(start_color="E7E6E6", end_color="E7E6E6", fill_type="solid")
+    ws['A23'].border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+    
+    # Set column widths
+    for col in range(1, 10):
+        ws.column_dimensions[get_column_letter(col)].width = 15
+    
+    # Set row heights for text blocks
+    for row in range(4, 11):
+        ws.row_dimensions[row].height = 25
+    for row in range(13, 21):
+        ws.row_dimensions[row].height = 25
+    for row in range(23, 26):
+        ws.row_dimensions[row].height = 25
 
 def generate_ropa_template():
     """Generate complete ROPA template with Controller, Processor, and Example sheets"""
@@ -475,14 +461,14 @@ def generate_ropa_template():
         # Remove the default sheet
         wb.remove(wb.active)
 
+        # Create Introduction sheet first
+        create_introduction_sheet(wb)
+        
         # Create Controller Processing Activities Register sheet
         create_controller_sheet(wb, existing_data)
         
-        # Create Processor sheet
+        # Create Processor Processing Activity sheet
         create_processor_sheet(wb)
-        
-        # Create Example sheet
-        create_example_sheet(wb)
 
         # Save to temporary file
         temp_dir = tempfile.mkdtemp()
