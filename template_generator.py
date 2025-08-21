@@ -40,23 +40,63 @@ def get_all_ropa_data_for_template():
         import sqlite3
 
         conn = get_db_connection()
-        
-        # Get all records directly from database using raw SQL with all possible columns
-        # Use PRAGMA table_info to get all columns dynamically
         cursor = conn.cursor()
-        cursor.execute("PRAGMA table_info(ropa_records)")
-        columns_info = cursor.fetchall()
-        column_names = [col[1] for col in columns_info]  # Column names are at index 1
         
-        # Build query to select all columns
-        query = f"""
-        SELECT r.*, u.email as created_by_email 
+        # Get all records with explicit field selection to ensure we get the data
+        query = """
+        SELECT 
+            r.id,
+            r.processing_activity_name,
+            r.category,
+            r.description,
+            r.department_function,
+            r.controller_name,
+            r.controller_contact,
+            r.controller_address,
+            r.dpo_name,
+            r.dpo_contact,
+            r.dpo_address,
+            r.processor_name,
+            r.processor_contact,
+            r.processor_address,
+            r.representative_name,
+            r.representative_contact,
+            r.representative_address,
+            r.processing_purpose,
+            r.legal_basis,
+            r.legitimate_interests,
+            r.data_categories,
+            r.special_categories,
+            r.data_subjects,
+            r.recipients,
+            r.third_country_transfers as international_transfers,
+            r.safeguards,
+            r.retention_period,
+            r.retention_criteria,
+            r.retention_justification,
+            r.security_measures,
+            r.breach_likelihood,
+            r.breach_impact,
+            r.dpia_required,
+            r.additional_info,
+            r.status,
+            r.created_by,
+            r.created_at,
+            r.updated_at,
+            u.email as created_by_email
         FROM ropa_records r 
         LEFT JOIN users u ON r.created_by = u.id 
         ORDER BY r.created_at DESC
         """
         
-        df = pd.read_sql_query(query, conn)
+        cursor.execute(query)
+        rows = cursor.fetchall()
+        
+        # Get column names
+        columns = [description[0] for description in cursor.description]
+        
+        # Create DataFrame
+        df = pd.DataFrame(rows, columns=columns)
         conn.close()
         
         print(f"Found {len(df)} ROPA records for template")
@@ -65,15 +105,16 @@ def get_all_ropa_data_for_template():
         if df.empty:
             return pd.DataFrame()
 
-        # Debug: Print sample data to see what we actually have
-        print("Sample record data from database:")
-        for col in df.columns:
-            sample_value = df[col].iloc[0] if len(df) > 0 else 'No data'
-            # Only print non-empty values to reduce noise
-            if sample_value and str(sample_value).strip() and str(sample_value) not in ['nan', 'None', 'NaT']:
-                print(f"  {col}: {sample_value}")
+        # Debug: Print all data from first record to see what we actually have
+        if len(df) > 0:
+            print("Complete first record data from database:")
+            first_record = df.iloc[0]
+            for col in df.columns:
+                value = first_record[col]
+                if value and str(value).strip() and str(value) not in ['nan', 'None', 'NaT', 'NULL']:
+                    print(f"  {col}: '{value}'")
         
-        # Clean up the data more thoroughly
+        # Clean up the data
         for col in df.columns:
             if col in ['created_at', 'updated_at', 'reviewed_at', 'approved_at']:
                 # Keep datetime columns as strings if they're already formatted
@@ -88,6 +129,15 @@ def get_all_ropa_data_for_template():
                 df[col] = df[col].replace(['nan', 'None', 'NaT', 'NULL'], '')
 
         print(f"DataFrame created with {len(df)} rows and {len(df.columns)} columns")
+        
+        # Debug: Show cleaned data for first record
+        if len(df) > 0:
+            print("First record after cleaning:")
+            first_record = df.iloc[0]
+            for col in ['controller_name', 'controller_contact', 'controller_address', 'dpo_name', 'processing_purpose']:
+                value = first_record[col]
+                print(f"  {col}: '{value}'")
+        
         return df
 
     except Exception as e:
