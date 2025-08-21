@@ -23,14 +23,14 @@ def process_uploaded_file(file, user_email):
 
         # Standardize column names to match our schema
         df = standardize_columns(df)
-        
+
         print(f"Standardized columns: {list(df.columns)}")
 
         # Validate that we have the essential column after standardization
         if 'processing_activity_name' not in df.columns:
             # Try to find a suitable column that could be the processing activity name
             potential_name_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['name', 'activity', 'process', 'title'])]
-            
+
             if potential_name_columns:
                 # Use the first potential column as processing activity name
                 df['processing_activity_name'] = df[potential_name_columns[0]]
@@ -106,7 +106,7 @@ def process_uploaded_file(file, user_email):
 
         if records_processed == 0:
             return "No valid records found in the file. Please check that your file contains data and the processing activity names are not empty."
-        
+
         return f"Successfully processed {records_processed} records from {len(df)} total rows"
 
     except Exception as e:
@@ -193,11 +193,13 @@ def standardize_columns(df):
         'name of activity': 'processing_activity_name',
         'activity title': 'processing_activity_name',
         'process title': 'processing_activity_name',
+        'department/function': 'processing_activity_name',  # Add this mapping
+        'department function': 'processing_activity_name',   # Add this mapping
         'category': 'category',
         'description': 'description',
         'department': 'department_function',
-        'department function': 'department_function',
         'department/function': 'department_function',
+        'department function': 'department_function',
         'function': 'department_function',
         'business function': 'department_function',
 
