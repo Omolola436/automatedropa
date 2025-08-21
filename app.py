@@ -166,8 +166,33 @@ def privacy_officer_dashboard():
             print(f"Error getting recent records: {str(e)}")
             recent_records = []
 
-        # Get pending reviews count
-        pending_count = status_counts.get('Under Review', 0)
+        # Get records by status for template sections
+        draft_records = [r for r in all_records if r.status == 'Draft']
+        pending_records = [r for r in all_records if r.status == 'Under Review']
+        rejected_records = [r for r in all_records if r.status == 'Rejected']
+
+        # Get counts
+        pending_count = len(pending_records)
+        draft_count = len(draft_records)
+        rejected_count = len(rejected_records)
+
+        # Convert all records to list of dicts for template
+        records_list = []
+        for record in all_records:
+            creator = models.User.query.get(record.created_by)
+            creator_email = creator.email if creator else f'User ID {record.created_by}'
+            
+            records_list.append({
+                'id': record.id,
+                'processing_activity_name': record.processing_activity_name,
+                'category': record.category,
+                'description': record.description,
+                'department_function': record.department_function,
+                'status': record.status,
+                'created_by': creator_email,
+                'created_at': record.created_at,
+                'creator': creator
+            })
 
         print(f"DEBUG: Privacy Officer Dashboard - Total records: {len(all_records)}")
         print(f"DEBUG: Status counts: {status_counts}")
@@ -176,9 +201,14 @@ def privacy_officer_dashboard():
         return render_template('privacy_officer_dashboard.html',
                              total_records=len(all_records),
                              pending_reviews=pending_count,
+                             pending_records=pending_records,
+                             pending_count=pending_count,
                              approved_records=status_counts.get('Approved', 0),
-                             draft_records=status_counts.get('Draft', 0),
+                             draft_records=draft_records,
+                             draft_count=draft_count,
+                             rejected_records=rejected_count,
                              recent_records=recent_records,
+                             records=records_list,
                              status_counts=status_counts)
 
     except Exception as e:
@@ -189,9 +219,14 @@ def privacy_officer_dashboard():
         return render_template('privacy_officer_dashboard.html',
                              total_records=0,
                              pending_reviews=0,
+                             pending_records=[],
+                             pending_count=0,
                              approved_records=0,
-                             draft_records=0,
+                             draft_records=[],
+                             draft_count=0,
+                             rejected_records=0,
                              recent_records=[],
+                             records=[],
                              status_counts={})
 
 
