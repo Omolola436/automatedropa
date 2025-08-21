@@ -4,6 +4,7 @@ from database import save_ropa_record
 from audit_logger import log_audit_event
 import openpyxl
 from werkzeug.utils import secure_filename
+from datetime import datetime
 
 def process_uploaded_file(file, user_email):
     """Process uploaded Excel or CSV file containing ROPA data"""
@@ -228,15 +229,22 @@ def process_uploaded_file(file, user_email):
                 
                 # Add standard fields that exist in the model
                 for field in model_columns:
-                    if field not in ['id', 'created_at', 'updated_at']:
+                    if field not in ['id', 'created_at', 'updated_at', 'reviewed_at']:
                         if field == 'created_by':
                             record_fields[field] = user.id
                         elif field == 'status':
                             record_fields[field] = 'Draft'
                         elif field == 'dpia_required':
                             record_fields[field] = record_data.get(field, '') == 'Yes'
+                        elif field in ['reviewed_by'] and not record_data.get(field, ''):
+                            # Skip empty foreign key fields
+                            continue
                         else:
                             record_fields[field] = record_data.get(field, '')
+
+                # Set datetime fields explicitly
+                record_fields['created_at'] = datetime.utcnow()
+                record_fields['updated_at'] = datetime.utcnow()
 
                 # Create record with valid model fields only
                 record = ROPARecord(**record_fields)
