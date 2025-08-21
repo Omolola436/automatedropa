@@ -11,18 +11,21 @@ def process_uploaded_file(file, user_email):
         # Parse the file based on extension
         if file.filename.lower().endswith('.xlsx'):
             df = parse_excel_file(file)
-        else:
+        elif file.filename.lower().endswith('.csv'):
             df = parse_csv_file(file)
+        else:
+            return {"success_count": 0, "error_count": 1, "message": "Unsupported file format"}
 
         if df is not None and not df.empty:
             # Import records
             results = import_ropa_records(df, user_email, overwrite_existing=False)
-            return results
+            return f"Successfully imported {results['success_count']} records. {results['error_count']} errors occurred."
         else:
-            return {"success_count": 0, "error_count": 1, "message": "No valid data found in file"}
+            return "No valid data found in file"
 
     except Exception as e:
-        return {"success_count": 0, "error_count": 1, "message": str(e)}
+        print(f"Error processing uploaded file: {str(e)}")
+        return f"Error processing file: {str(e)}"
 
 def parse_excel_file(uploaded_file):
     """Parse Excel file and extract ROPA data"""
@@ -188,10 +191,23 @@ def standardize_columns(df):
 
 def import_ropa_records(df, user_email, overwrite_existing=False):
     """Import ROPA records into the database"""
+    from models import User, ROPARecord
+    from app import db
+    from datetime import datetime
 
     success_count = 0
     error_count = 0
     total_records = len(df)
+
+    # Get the user ID from email
+    user = User.query.filter_by(email=user_email).first()
+    if not user:
+        return {
+            "success_count": 0,
+            "error_count": total_records,
+            "total_count": total_records,
+            "message": "User not found"
+        }
 
     for idx, row in df.iterrows():
         try:
@@ -215,25 +231,61 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
                     default_name = f"{record_data['department_function']} - Activity {idx + 1}"
                 record_data['processing_activity_name'] = default_name
 
-            # Set status as Draft so records are visible
-            record_data['status'] = 'Draft'
-            
-            # Save record
-            record_id = save_ropa_record(record_data, user_email)
+            # Create new ROPA record using SQLAlchemy model
+            record = ROPARecord(
+                processing_activity_name=record_data.get('processing_activity_name', ''),
+                category=record_data.get('category', ''),
+                description=record_data.get('description', ''),
+                department_function=record_data.get('department_function', ''),
+                controller_name=record_data.get('controller_name', ''),
+                controller_contact=record_data.get('controller_contact', ''),
+                controller_address=record_data.get('controller_address', ''),
+                dpo_name=record_data.get('dpo_name', ''),
+                dpo_contact=record_data.get('dpo_contact', ''),
+                dpo_address=record_data.get('dpo_address', ''),
+                processor_name=record_data.get('processor_name', ''),
+                processor_contact=record_data.get('processor_contact', ''),
+                processor_address=record_data.get('processor_address', ''),
+                representative_name=record_data.get('representative_name', ''),
+                representative_contact=record_data.get('representative_contact', ''),
+                representative_address=record_data.get('representative_address', ''),
+                processing_purpose=record_data.get('processing_purpose', ''),
+                legal_basis=record_data.get('legal_basis', ''),
+                legitimate_interests=record_data.get('legitimate_interests', ''),
+                data_categories=record_data.get('data_categories', ''),
+                special_categories=record_data.get('special_categories', ''),
+                data_subjects=record_data.get('data_subjects', ''),
+                recipients=record_data.get('recipients', ''),
+                third_country_transfers=record_data.get('third_country_transfers', ''),
+                safeguards=record_data.get('safeguards', ''),
+                retention_period=record_data.get('retention_period', ''),
+                retention_criteria=record_data.get('retention_criteria', ''),
+                retention_justification=record_data.get('retention_justification', ''),
+                security_measures=record_data.get('security_measures', ''),
+                breach_likelihood=record_data.get('breach_likelihood', ''),
+                breach_impact=record_data.get('breach_impact', ''),
+                dpia_required=record_data.get('dpia_required', ''),
+                additional_info=record_data.get('additional_info', ''),
+                international_transfers=record_data.get('international_transfers', ''),
+                status='Draft',  # Set as Draft so it shows in Privacy Champion dashboard
+                created_by=user.id,  # Use user ID, not email
+                created_at=datetime.utcnow()
+            )
 
-            if record_id:
-                success_count += 1
-                log_audit_event("ROPA Record Imported", user_email, "",
-                               f"Imported ROPA record: {record_data.get('processing_activity_name', 'Unknown')}")
-            else:
-                error_count += 1
+            db.session.add(record)
+            db.session.commit()
+
+            success_count += 1
+            log_audit_event("ROPA Record Imported", user_email, 
+                           f"Imported ROPA record: {record_data.get('processing_activity_name', 'Unknown')}")
 
         except Exception as e:
+            db.session.rollback()
             error_count += 1
             print(f"Error importing record {idx + 1}: {str(e)}")
 
     # Log overall import results
-    log_audit_event("ROPA Bulk Import", user_email, "",
+    log_audit_event("ROPA Bulk Import", user_email, 
                    f"Bulk import completed: {success_count} successful, {error_count} failed")
 
     return {
