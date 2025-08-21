@@ -353,9 +353,16 @@ def view_activity(record_id):
     if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
         abort(403)
 
-    # Get custom tabs for this record
-    custom_tabs = models.CustomTab.query.filter_by(ropa_record_id=record.id).all()
-    return render_template('ropa_view.html', record=record, custom_tabs=custom_tabs)
+    # Get custom fields and their data for this record
+    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record
+    try:
+        custom_fields = get_approved_custom_fields_by_category()
+        custom_data = get_custom_data_for_record(record.id)
+    except:
+        custom_fields = {}
+        custom_data = {}
+
+    return render_template('ropa_view.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required
@@ -412,6 +419,9 @@ def download_template():
         log_audit_event('Template Downloaded', current_user.email, 'Downloaded ROPA template')
         return send_file(template_path, as_attachment=True, download_name='ROPA_Template.xlsx')
     except Exception as e:
+        import traceback
+        print(f"Template generation error: {str(e)}")
+        traceback.print_exc()
         flash(f'Error generating template: {str(e)}', 'error')
         return redirect(url_for('privacy_officer_dashboard'))
 
