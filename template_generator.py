@@ -47,7 +47,6 @@ def get_existing_ropa_records():
                 'third_country_transfers': record.third_country_transfers or '',
                 'safeguards': record.safeguards or '',
                 'retention_period': record.retention_period or '',
-                'retention_criteria': record.retention_criteria or '',
                 'security_measures': record.security_measures or '',
                 'breach_likelihood': record.breach_likelihood or '',
                 'breach_impact': record.breach_impact or '',
@@ -291,7 +290,6 @@ def generate_ropa_template():
         ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
         ("Safeguards", "Protective measures for international transfers"),
         ("Retention Period *", "How long data is retained"),
-        ("Retention Criteria", "Criteria used to determine retention period"),
         ("Security Measures *", "Technical and organizational security measures"),
         ("Status", "Current status (Draft/Under Review/Approved)"),
         ("Notes", "Additional comments or special considerations")
@@ -353,7 +351,6 @@ def generate_ropa_template():
         ("Third Country Transfers", "Details of any transfers outside EU/EEA"),
         ("Safeguards", "Protective measures for international transfers"),
         ("Retention Period *", "Data retention period as per controller instructions"),
-        ("Retention Criteria", "Controller's criteria for determining retention"),
         ("Security Measures *", "Technical and organizational security measures"),
         ("Processing Instructions", "Specific instructions received from controller"),
         ("Sub-processors", "Details of any sub-processors engaged"),
@@ -393,8 +390,8 @@ def generate_ropa_template():
     processor_ws.row_dimensions[3].height = 40
     
     # Set optimized column widths
-    controller_column_widths = [28, 18, 40, 22, 28, 28, 35, 22, 28, 40, 25, 35, 35, 28, 28, 35, 30, 35, 25, 30, 40, 18, 35]
-    processor_column_widths = [28, 18, 40, 22, 28, 28, 35, 28, 28, 22, 28, 40, 25, 35, 28, 28, 35, 30, 35, 25, 30, 40, 35, 35, 18, 35]
+    controller_column_widths = [28, 18, 40, 22, 28, 28, 35, 22, 28, 40, 25, 35, 35, 28, 28, 35, 30, 35, 25, 40, 18, 35]
+    processor_column_widths = [28, 18, 40, 22, 28, 28, 35, 28, 28, 22, 28, 40, 25, 35, 28, 28, 35, 30, 35, 25, 40, 35, 35, 18, 35]
     
     for i, width in enumerate(controller_column_widths, 1):
         controller_ws.column_dimensions[get_column_letter(i)].width = width
@@ -409,7 +406,7 @@ def generate_ropa_template():
         "Jane Smith", "dpo@company.com", "Employment administration, payroll processing, performance evaluation, training management, and compliance monitoring",
         "Contract (Art. 6(1)(b)) - Employment", "N/A", "Name, address, phone, email, employee ID, salary, bank details, performance data, training records",
         "", "Current employees, former employees, contractors", "Payroll provider, benefits administrator, training providers", "",
-        "Adequate Decision (UK)", "7 years after employment termination", "Legal retention requirements and business needs",
+        "Adequate Decision (UK)", "7 years after employment termination",
         "Access controls, data encryption, regular security audits, incident response procedures", "Approved", "Regular review scheduled quarterly"
     ]
     
@@ -420,7 +417,7 @@ def generate_ropa_template():
         "Calculate monthly salaries, process tax deductions, generate payslips, and facilitate payment transfers", "Contract (Art. 6(1)(b)) - Employment",
         "Name, employee ID, salary, tax code, bank details, National Insurance number", "",
         "Employees of client companies", "HMRC, client company management", "", "Standard Contractual Clauses",
-        "As specified by client contract (typically 7 years)", "Client retention policy and legal requirements",
+        "As specified by client contract (typically 7 years)",
         "ISO 27001 certified systems, encrypted data transmission, segregated client environments", "Monthly payroll processing as per detailed client instructions and service agreement",
         "Cloud hosting provider (Microsoft Azure EU)", "Approved", "SLA guarantees 99.9% uptime with 24/7 monitoring"
     ]
@@ -468,7 +465,6 @@ def generate_ropa_template():
                 record['third_country_transfers'],
                 record['safeguards'],
                 record['retention_period'],
-                record['retention_criteria'],
                 record['security_measures'],
                 record['status'],
                 f"Existing record - Created by {record['created_by']} on {record['created_at']}"

@@ -145,23 +145,26 @@ def privacy_officer_dashboard():
             status_counts[record.status] = status_counts.get(record.status, 0) + 1
 
         # Get recent records (last 10)
-        recent_records_query = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
-        recent_records = []
+        try:
+            recent_records_query = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
+            recent_records = []
 
-        # Process recent records
-        for record in recent_records_query:
-            try:
-                creator = models.User.query.get(record.created_by)
-                creator_email = creator.email if creator else f'User ID {record.created_by}'
-                recent_records.append({
-                    'processing_activity_name': record.processing_activity_name,
-                    'status': record.status,
-                    'created_at': record.created_at,
-                    'created_by': creator_email
-                })
-            except Exception as e:
-                print(f"Error processing record {record.id}: {str(e)}")
-                continue
+            for record in recent_records_query:
+                try:
+                    creator = models.User.query.get(record.created_by)
+                    creator_email = creator.email if creator else f'User ID {record.created_by}'
+                    recent_records.append({
+                        'processing_activity_name': record.processing_activity_name,
+                        'status': record.status,
+                        'created_at': record.created_at,
+                        'created_by': creator_email
+                    })
+                except Exception as e:
+                    print(f"Error processing record {record.id}: {str(e)}")
+                    continue
+        except Exception as e:
+            print(f"Error getting recent records: {str(e)}")
+            recent_records = []
 
         # Get pending reviews count
         pending_count = status_counts.get('Pending Review', 0)
