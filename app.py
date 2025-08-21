@@ -145,11 +145,11 @@ def privacy_officer_dashboard():
             status_counts[record.status] = status_counts.get(record.status, 0) + 1
 
         # Get recent records (last 10)
+        recent_records = []
         try:
-            recent_records_query = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
-            recent_records = []
+            recent_records_list = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
 
-            for record in recent_records_query:
+            for record in recent_records_list:
                 try:
                     creator = models.User.query.get(record.created_by)
                     creator_email = creator.email if creator else f'User ID {record.created_by}'
@@ -166,10 +166,8 @@ def privacy_officer_dashboard():
             print(f"Error getting recent records: {str(e)}")
             recent_records = []
 
-        # Get pending reviews count - make sure we're not trying to iterate over an integer
+        # Get pending reviews count
         pending_count = status_counts.get('Under Review', 0)
-        if not isinstance(pending_count, int):
-            pending_count = 0
 
         print(f"DEBUG: Privacy Officer Dashboard - Total records: {len(all_records)}")
         print(f"DEBUG: Status counts: {status_counts}")
@@ -185,6 +183,8 @@ def privacy_officer_dashboard():
 
     except Exception as e:
         print(f"Error in privacy_officer_dashboard: {str(e)}")
+        import traceback
+        traceback.print_exc()
         flash(f'Error loading dashboard: {str(e)}', 'error')
         return render_template('privacy_officer_dashboard.html',
                              total_records=0,
