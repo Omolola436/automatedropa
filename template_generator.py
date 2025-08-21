@@ -10,48 +10,78 @@ from openpyxl.utils import get_column_letter
 def get_all_database_columns():
     """Get all columns from the ROPARecord table dynamically"""
     try:
-        from models import ROPARecord
+        from app import db
+        import sqlalchemy
         
-        # Get all column names from the model
-        columns = [column.name for column in ROPARecord.__table__.columns]
+        # Use inspector to get actual database columns (including dynamically added ones)
+        inspector = sqlalchemy.inspect(db.engine)
+        table_columns = inspector.get_columns('ropa_records')
+        columns = [col['name'] for col in table_columns]
         
         # Filter out system columns
         excluded_columns = ['id', 'created_by', 'reviewed_by']
         return [col for col in columns if col not in excluded_columns]
     except Exception as e:
         print(f"Error getting database columns: {str(e)}")
-        return []
+        # Fallback to model columns if inspector fails
+        try:
+            from models import ROPARecord
+            columns = [column.name for column in ROPARecord.__table__.columns]
+            excluded_columns = ['id', 'created_by', 'reviewed_by']
+            return [col for col in columns if col not in excluded_columns]
+        except:
+            return []
 
 def get_existing_ropa_records():
     """Get all existing ROPA records for template population with all dynamic fields"""
     try:
         from models import ROPARecord, User
         from app import db
+        import sqlalchemy
         
         records = ROPARecord.query.order_by(ROPARecord.created_at.desc()).all()
         records_data = []
         
-        # Get all possible columns dynamically
-        all_columns = get_all_database_columns()
+        # Get all possible columns dynamically by inspecting the actual database table
+        inspector = sqlalchemy.inspect(db.engine)
+        table_columns = inspector.get_columns('ropa_records')
+        all_columns = [col['name'] for col in table_columns if col['name'] not in ['id']]
+        
+        print(f"Found database columns: {all_columns}")
         
         for record in records:
-            creator = User.query.get(record.created_by)
+            creator = User.query.get(record.created_by) if record.created_by else None
             creator_email = creator.email if creator else 'Unknown'
             
             record_dict = {}
             
-            # Add all column values dynamically
-            for col in all_columns:
-                if hasattr(record, col):
-                    value = getattr(record, col)
-                    if col == 'dpia_required':
-                        record_dict[col] = 'Yes' if value else 'No'
-                    elif col in ['created_at', 'updated_at', 'reviewed_at']:
-                        record_dict[col] = value.strftime('%Y-%m-%d %H:%M:%S') if value else ''
-                    else:
-                        record_dict[col] = str(value) if value is not None else ''
-                else:
-                    record_dict[col] = ''
+            # Add all column values dynamically using direct SQL query to get all columns
+            with db.engine.connect() as conn:
+                result = conn.execute(sqlalchemy.text(f"SELECT * FROM ropa_records WHERE id = {record.id}"))
+                row = result.fetchone()
+                
+                if row:
+                    # Get column names from the result
+                    columns = result.keys()
+                    row_dict = dict(zip(columns, row))
+                    
+                    for col in all_columns:
+                        if col in row_dict:
+                            value = row_dict[col]
+                            if col == 'dpia_required':
+                                record_dict[col] = 'Yes' if value else 'No'
+                            elif col in ['created_at', 'updated_at', 'reviewed_at'] and value:
+                                try:
+                                    if isinstance(value, str):
+                                        record_dict[col] = value
+                                    else:
+                                        record_dict[col] = value.strftime('%Y-%m-%d %H:%M:%S') if value else ''
+                                except:
+                                    record_dict[col] = str(value) if value else ''
+                            else:
+                                record_dict[col] = str(value) if value is not None else ''
+                        else:
+                            record_dict[col] = ''
             
             # Add creator info
             record_dict['created_by'] = creator_email

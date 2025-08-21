@@ -15,19 +15,44 @@ def process_uploaded_file(file, user_email):
         if file_extension in ['xlsx', 'xls']:
             # Try reading with different header rows to find the actual data
             df = None
-            for header_row in [0, 1, 2, 3, 4]:
-                try:
-                    test_df = pd.read_excel(file, engine='openpyxl', header=header_row)
-                    # Check if this row contains meaningful column headers
-                    if len([col for col in test_df.columns if isinstance(col, str) and len(col.strip()) > 2]) >= 3:
-                        df = test_df
-                        print(f"Found meaningful headers at row {header_row}")
-                        break
-                except Exception as e:
-                    print(f"Error reading with header={header_row}: {e}")
-                    continue
-
-            if df is None:
+            header_row_found = 0
+            
+            # First, try to read the entire file to understand its structure
+            try:
+                full_df = pd.read_excel(file, header=None, engine='openpyxl')
+                print(f"Full file shape: {full_df.shape}")
+                print(f"First few rows of raw data:")
+                print(full_df.head(10))
+                
+                # Look for the row that contains the most meaningful headers
+                best_header_row = 0
+                max_meaningful_cols = 0
+                
+                for row_idx in range(min(10, len(full_df))):  # Check first 10 rows
+                    row_values = full_df.iloc[row_idx].values
+                    meaningful_cols = 0
+                    for val in row_values:
+                        if pd.notna(val) and isinstance(val, str) and len(val.strip()) > 2:
+                            # Check if it looks like a header (contains common ROPA terms)
+                            val_lower = val.lower()
+                            if any(term in val_lower for term in ['processing', 'activity', 'controller', 'data', 'purpose', 'legal', 'category', 'subject', 'retention', 'security']):
+                                meaningful_cols += 1
+                    
+                    if meaningful_cols > max_meaningful_cols:
+                        max_meaningful_cols = meaningful_cols
+                        best_header_row = row_idx
+                
+                print(f"Best header row found at index: {best_header_row} with {max_meaningful_cols} meaningful columns")
+                
+                # Read with the best header row
+                file.seek(0)  # Reset file pointer
+                df = pd.read_excel(file, header=best_header_row, engine='openpyxl')
+                header_row_found = best_header_row
+                
+            except Exception as e:
+                print(f"Error with smart header detection: {e}")
+                # Fallback to simple reading
+                file.seek(0)
                 df = pd.read_excel(file, engine='openpyxl')
         elif file_extension == 'csv':
             df = pd.read_csv(file)
@@ -303,13 +328,20 @@ def detect_and_add_new_columns(df):
         # Get existing column names from the ROPARecord model
         existing_columns = [column.name for column in ROPARecord.__table__.columns]
         
-        # Clean uploaded column names
-        df_columns = [str(col).lower().strip().replace(' ', '_').replace('-', '_') for col in df.columns]
+        # Clean uploaded column names - preserve original names but make them database-friendly
+        original_columns = list(df.columns)
+        df_columns = []
+        column_mapping = {}
+        
+        for col in original_columns:
+            clean_col = str(col).lower().strip().replace(' ', '_').replace('-', '_').replace('(', '').replace(')', '').replace('/', '_')
+            df_columns.append(clean_col)
+            column_mapping[col] = clean_col
         
         # Find new columns that don't exist in database
         new_columns = []
         for col in df_columns:
-            if col not in existing_columns and col != 'id':
+            if col not in existing_columns and col != 'id' and col not in ['unnamed:_0', 'unnamed:_1']:
                 new_columns.append(col)
         
         # Add new columns to database table if any found
@@ -319,15 +351,16 @@ def detect_and_add_new_columns(df):
             # Add columns to database table dynamically
             for col_name in new_columns:
                 try:
-                    # Use raw SQL to add column since SQLAlchemy doesn't support dynamic column addition easily
-                    sql = f"ALTER TABLE ropa_records ADD COLUMN {col_name} TEXT"
-                    db.engine.execute(sqlalchemy.text(sql))
+                    # Use proper SQLAlchemy syntax for newer versions
+                    with db.engine.connect() as conn:
+                        conn.execute(sqlalchemy.text(f"ALTER TABLE ropa_records ADD COLUMN {col_name} TEXT"))
+                        conn.commit()
                     print(f"Added new column to database: {col_name}")
                 except Exception as e:
                     print(f"Column {col_name} might already exist or error: {e}")
             
-            # Update the DataFrame column names to match what we added
-            df.columns = df_columns
+            # Rename DataFrame columns to match database columns
+            df = df.rename(columns=column_mapping)
             
         return df, new_columns
         

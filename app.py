@@ -166,11 +166,14 @@ def privacy_officer_dashboard():
             print(f"Error getting recent records: {str(e)}")
             recent_records = []
 
-        # Get pending reviews count
-        pending_count = status_counts.get('Under Review', 0)  # Changed from 'Pending Review' to 'Under Review'
+        # Get pending reviews count - make sure we're not trying to iterate over an integer
+        pending_count = status_counts.get('Under Review', 0)
+        if not isinstance(pending_count, int):
+            pending_count = 0
 
         print(f"DEBUG: Privacy Officer Dashboard - Total records: {len(all_records)}")
         print(f"DEBUG: Status counts: {status_counts}")
+        print(f"DEBUG: Pending count: {pending_count} (type: {type(pending_count)})")
 
         return render_template('privacy_officer_dashboard.html',
                              total_records=len(all_records),
