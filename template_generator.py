@@ -41,8 +41,15 @@ def get_all_ropa_data_for_template():
 
         conn = get_db_connection()
         
-        # Get all records directly from database using raw SQL
-        query = """
+        # Get all records directly from database using raw SQL with all possible columns
+        # Use PRAGMA table_info to get all columns dynamically
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(ropa_records)")
+        columns_info = cursor.fetchall()
+        column_names = [col[1] for col in columns_info]  # Column names are at index 1
+        
+        # Build query to select all columns
+        query = f"""
         SELECT r.*, u.email as created_by_email 
         FROM ropa_records r 
         LEFT JOIN users u ON r.created_by = u.id 
@@ -53,6 +60,7 @@ def get_all_ropa_data_for_template():
         conn.close()
         
         print(f"Found {len(df)} ROPA records for template")
+        print(f"Database columns found: {list(df.columns)}")
         
         if df.empty:
             return pd.DataFrame()
@@ -61,9 +69,11 @@ def get_all_ropa_data_for_template():
         print("Sample record data from database:")
         for col in df.columns:
             sample_value = df[col].iloc[0] if len(df) > 0 else 'No data'
-            print(f"  {col}: {sample_value}")
+            # Only print non-empty values to reduce noise
+            if sample_value and str(sample_value).strip() and str(sample_value) not in ['nan', 'None', 'NaT']:
+                print(f"  {col}: {sample_value}")
         
-        # Clean up the data
+        # Clean up the data more thoroughly
         for col in df.columns:
             if col in ['created_at', 'updated_at', 'reviewed_at', 'approved_at']:
                 # Keep datetime columns as strings if they're already formatted
@@ -74,10 +84,10 @@ def get_all_ropa_data_for_template():
             else:
                 # Fill NaN values with empty strings and convert to string
                 df[col] = df[col].fillna('').astype(str)
-                # Clean up 'nan' strings
-                df[col] = df[col].replace('nan', '')
+                # Clean up 'nan' strings and other null representations
+                df[col] = df[col].replace(['nan', 'None', 'NaT', 'NULL'], '')
 
-        print(f"DataFrame created with {len(df)} rows and columns: {list(df.columns)}")
+        print(f"DataFrame created with {len(df)} rows and {len(df.columns)} columns")
         return df
 
     except Exception as e:
@@ -132,7 +142,7 @@ def create_controller_sheet(wb, existing_data):
         ("Address", "representative_address"),
         ("Contact Details", "representative_contact"),
         
-        # Processing Details (11 columns to match the image exactly)
+        # Processing Details - map to actual database fields
         ("Detail the department or function responsible for the processing", "department_function"),
         ("Describe the purpose of the processing", "processing_purpose"),
         ("Describe the categories of data subjects", "data_subjects"),
@@ -205,17 +215,45 @@ def create_controller_sheet(wb, existing_data):
     start_row = 3
     if not existing_data.empty:
         print(f"Populating controller sheet with {len(existing_data)} existing records")
+        print(f"Available columns in data: {list(existing_data.columns)}")
         
         for row_idx, (_, row) in enumerate(existing_data.iterrows(), start_row):
+            print(f"Processing row {row_idx - start_row + 1}")
             for col_idx, (header, db_field) in enumerate(columns_structure, 1):
-                # Get value from existing data, default to empty string
-                value = row.get(db_field, '') if db_field else ''
-
+                # Get value from existing data, with better field mapping
+                value = ''
+                
+                # Try direct field mapping first
+                if db_field and db_field in row:
+                    value = row[db_field]
+                # Handle special cases and alternative field names
+                elif db_field == 'international_transfers':
+                    # Try alternative field names
+                    value = row.get('third_country_transfers', '') or row.get('international_transfers', '')
+                elif db_field == 'additional_info':
+                    # Try alternative field names
+                    value = row.get('additional_info', '') or row.get('other_relevant_information', '') or row.get('any_other_relevant_information', '')
+                elif db_field == 'dpia_required':
+                    # Handle boolean DPIA field
+                    dpia_val = row.get('dpia_required', '')
+                    if isinstance(dpia_val, bool):
+                        value = 'Yes' if dpia_val else 'No'
+                    elif str(dpia_val).lower() in ['true', '1', 'yes']:
+                        value = 'Yes'
+                    elif str(dpia_val).lower() in ['false', '0', 'no']:
+                        value = 'No'
+                    else:
+                        value = str(dpia_val) if dpia_val else ''
+                
                 # Handle None values and convert to string
                 if value is None or str(value).lower() in ['nan', 'none']:
                     value = ''
                 else:
                     value = str(value).strip()
+
+                # Debug print for first record
+                if row_idx == start_row:
+                    print(f"  {header} ({db_field}): '{value}'")
 
                 cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
