@@ -11,33 +11,62 @@ def process_uploaded_file(file, user_email):
         filename = secure_filename(file.filename)
         file_extension = filename.rsplit('.', 1)[1].lower()
 
-        # Read the file based on extension
+        # Read the file based on extension with improved header detection
         if file_extension in ['xlsx', 'xls']:
-            df = pd.read_excel(file, engine='openpyxl')
+            # Try reading with different header rows to find the actual data
+            df = None
+            for header_row in [0, 1, 2, 3, 4]:
+                try:
+                    test_df = pd.read_excel(file, engine='openpyxl', header=header_row)
+                    # Check if this row contains meaningful column headers
+                    if len([col for col in test_df.columns if isinstance(col, str) and len(col.strip()) > 2]) >= 3:
+                        df = test_df
+                        print(f"Found meaningful headers at row {header_row}")
+                        break
+                except Exception as e:
+                    print(f"Error reading with header={header_row}: {e}")
+                    continue
+
+            if df is None:
+                df = pd.read_excel(file, engine='openpyxl')
         elif file_extension == 'csv':
             df = pd.read_csv(file)
         else:
             raise ValueError("Unsupported file format")
 
         print(f"Original columns in uploaded file: {list(df.columns)}")
+        print(f"DataFrame shape: {df.shape}")
+        print(f"First few rows preview:")
+        print(df.head())
+
+        # Clean the dataframe - remove completely empty rows
+        df = df.dropna(how='all')
 
         # Standardize column names to match our schema
         df = standardize_columns(df)
 
         print(f"Standardized columns: {list(df.columns)}")
 
-        # Validate that we have the essential column after standardization
+        # Smart detection of processing activity name
         if 'processing_activity_name' not in df.columns:
             # Try to find a suitable column that could be the processing activity name
-            potential_name_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['name', 'activity', 'process', 'title'])]
+            potential_name_columns = [col for col in df.columns if any(keyword in col.lower() for keyword in ['name', 'activity', 'process', 'title', 'function', 'department'])]
 
             if potential_name_columns:
                 # Use the first potential column as processing activity name
                 df['processing_activity_name'] = df[potential_name_columns[0]]
                 print(f"Using column '{potential_name_columns[0]}' as processing_activity_name")
             else:
-                available_columns = list(df.columns)
-                raise ValueError(f"Could not find a suitable column for 'Processing Activity Name'. Available columns: {available_columns}. Please ensure your file has a column with the activity name/title.")
+                # If no clear name column, create one from department + purpose or similar
+                if 'department_function' in df.columns and 'processing_purpose' in df.columns:
+                    df['processing_activity_name'] = df['department_function'].astype(str) + ' - ' + df['processing_purpose'].astype(str)
+                    print("Created processing_activity_name from department_function and processing_purpose")
+                elif 'department_function' in df.columns:
+                    df['processing_activity_name'] = df['department_function']
+                    print("Using department_function as processing_activity_name")
+                else:
+                    available_columns = list(df.columns)
+                    raise ValueError(f"Could not find a suitable column for 'Processing Activity Name'. Available columns: {available_columns}. Please ensure your file has a column with the activity name/title.")
 
         # Process each row and save to database
         records_processed = 0
@@ -52,8 +81,27 @@ def process_uploaded_file(file, user_email):
                 else:
                     row_dict[key] = str(value).strip()
 
+            # Generate a meaningful processing activity name if empty
+            processing_name = row_dict.get('processing_activity_name', '').strip()
+            if not processing_name or processing_name in ['nan', 'None']:
+                # Try to create from other fields
+                dept = row_dict.get('department_function', '').strip()
+                purpose = row_dict.get('processing_purpose', '').strip()
+                category = row_dict.get('category', '').strip()
+
+                if dept and purpose:
+                    processing_name = f"{dept} - {purpose}"
+                elif dept:
+                    processing_name = f"{dept} Processing Activity"
+                elif purpose:
+                    processing_name = purpose
+                elif category:
+                    processing_name = f"{category} Processing"
+                else:
+                    processing_name = f"Processing Activity {index + 1}"
+
             record_data = {
-                'processing_activity_name': row_dict.get('processing_activity_name', ''),
+                'processing_activity_name': processing_name,
                 'category': row_dict.get('category', ''),
                 'description': row_dict.get('description', ''),
                 'department_function': row_dict.get('department_function', ''),
@@ -89,8 +137,16 @@ def process_uploaded_file(file, user_email):
                 'status': 'Draft'  # Always set uploaded records as Draft
             }
 
-            # Skip empty rows
-            if not record_data['processing_activity_name'].strip():
+            # Skip rows that have no meaningful data
+            has_data = any(value.strip() for value in [
+                record_data['processing_activity_name'],
+                record_data['department_function'],
+                record_data['processing_purpose'],
+                record_data['controller_name'],
+                record_data['data_categories']
+            ])
+
+            if not has_data:
                 print(f"Skipping empty row {index + 1}")
                 continue
 
@@ -105,7 +161,7 @@ def process_uploaded_file(file, user_email):
                 print(f"Failed to save record: {record_data['processing_activity_name']}")
 
         if records_processed == 0:
-            return "No valid records found in the file. Please check that your file contains data and the processing activity names are not empty."
+            return "No valid records found in the file. Please check that your file contains data in the correct format."
 
         return f"Successfully processed {records_processed} records from {len(df)} total rows"
 
@@ -174,7 +230,7 @@ def standardize_columns(df):
 
     # Handle multi-header Excel files by flattening column names
     if hasattr(df.columns, 'nlevels') and df.columns.nlevels > 1:
-        df.columns = [' '.join(col).strip() for col in df.columns.values]
+        df.columns = [' '.join(str(col).strip() for col in col_tuple).strip() for col_tuple in df.columns.values]
 
     # Column mapping from various formats to our standard
     column_mapping = {
@@ -193,78 +249,71 @@ def standardize_columns(df):
         'name of activity': 'processing_activity_name',
         'activity title': 'processing_activity_name',
         'process title': 'processing_activity_name',
-        'department/function': 'processing_activity_name',  # Add this mapping
-        'department function': 'processing_activity_name',   # Add this mapping
-        'category': 'category',
-        'description': 'description',
-        'department': 'department_function',
+
+        # Department/Function mapping
         'department/function': 'department_function',
         'department function': 'department_function',
+        'department': 'department_function',
         'function': 'department_function',
         'business function': 'department_function',
 
-        # Controller Details - Enhanced mapping for various formats
-        'controller name': 'controller_name',
-        'controller': 'controller_name',
-        'data controller': 'controller_name',
-        'controller details name': 'controller_name',
-        'controller contact': 'controller_contact',
-        'controller address': 'controller_address',
-        'address': 'controller_address',
-        'controller details address': 'controller_address',
-        'contact details': 'controller_contact',
-        'controller details contact details': 'controller_contact',
-
-        # DPO Details
-        'dpo name': 'dpo_name',
-        'data protection officer': 'dpo_name',
-        'data protection officer name': 'dpo_name',
-        'dpo contact': 'dpo_contact',
-        'dpo address': 'dpo_address',
-
-        # Processing Details
+        # Purpose mapping
         'purpose': 'processing_purpose',
         'purpose of processing': 'processing_purpose',
-        'legal basis': 'legal_basis',
-        'lawful basis': 'legal_basis',
-        'legitimate interests': 'legitimate_interests',
+        'processing purpose': 'processing_purpose',
 
-        # Data Categories
-        'data categories': 'data_categories',
+        # Categories mapping
         'categories of data': 'data_categories',
+        'data categories': 'data_categories',
         'personal data': 'data_categories',
+        'categories of personal data': 'data_categories',
+
+        # Special categories mapping
+        'categories of personal data (sensitive)': 'special_categories',
+        'special categories of personal data': 'special_categories',
         'special categories': 'special_categories',
-        'data subjects': 'data_subjects',
-        'categories of data subjects': 'data_subjects',
+        'sensitive data': 'special_categories',
 
-        # Recipients and Transfers
-        'recipients': 'recipients',
-        'third country transfers': 'third_country_transfers',
-        'international transfers': 'third_country_transfers',
-        'safeguards': 'safeguards',
-
-        # Retention
+        # Retention mapping
         'retention period': 'retention_period',
         'retention': 'retention_period',
-        'retention criteria': 'retention_criteria',
-        'deletion procedures': 'deletion_procedures',
+        'data retention': 'retention_period',
 
-        # Security
+        # Recipients mapping
+        'recipients': 'recipients',
+        'third parties': 'recipients',
+        'data recipients': 'recipients',
+
+        # Security mapping
+        'security measures used': 'security_measures',
         'security measures': 'security_measures',
         'technical measures': 'security_measures',
         'organisational measures': 'security_measures',
 
-        # Risk Assessment
-        'breach likelihood': 'breach_likelihood',
-        'breach impact': 'breach_impact',
-        'risk level': 'risk_level',
-        'dpia required': 'dpia_required',
-        'dpia_outcome': 'dpia_outcome',
+        # Controller mapping
+        'controller': 'controller_name',
+        'controller name': 'controller_name',
+        'data controller': 'controller_name',
+        'name & contact details of the controller': 'controller_name',
 
-        # Additional
-        'additional information': 'additional_info',
-        'notes': 'additional_info',
-        'comments': 'additional_info'
+        # Legal basis mapping
+        'legal basis for processing': 'legal_basis',
+        'legal basis': 'legal_basis',
+        'lawful basis': 'legal_basis',
+
+        # DPIA mapping
+        'is data protection impact assessment (dpia) required?': 'dpia_required',
+        'dpia required': 'dpia_required',
+        'data protection impact assessment': 'dpia_required',
+
+        # Safeguards mapping
+        'safeguards & measures': 'safeguards',
+        'safeguards': 'safeguards',
+        'protection measures': 'safeguards',
+
+        # Category (general)
+        'category': 'category',
+        'description': 'description',
     }
 
     # Normalize column names (lowercase, remove extra spaces)
@@ -276,7 +325,7 @@ def standardize_columns(df):
     # Fill missing columns with empty strings
     required_columns = [
         'processing_activity_name', 'category', 'description',
-        'controller_name', 'controller_contact', 'controller_address',
+        'department_function', 'controller_name', 'controller_contact', 'controller_address',
         'dpo_name', 'dpo_contact', 'dpo_address',
         'processor_name', 'processor_contact', 'processor_address',
         'representative_name', 'representative_contact', 'representative_address',
