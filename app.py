@@ -53,7 +53,8 @@ with app.app_context():
 
 # Import utility functions after app context
 from automation import auto_classify_data, suggest_processing_purpose, assess_risk, suggest_security_measures
-from utils import get_predefined_options, validate_required_fields, get_db_connection, get_user_department
+from utils import get_predefined_options, validate_required_fields
+from database import get_db_connection, get_user_department
 from export_utils import generate_export
 from file_handler import process_uploaded_file
 from template_generator import generate_ropa_template

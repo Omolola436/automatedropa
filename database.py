@@ -13,7 +13,7 @@ def init_database():
     """Initialize database with all required tables"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Users table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS users (
@@ -26,7 +26,7 @@ def init_database():
             last_login DATETIME
         )
     """)
-    
+
     # ROPA records table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ropa_records (
@@ -76,7 +76,7 @@ def init_database():
             approved_at DATETIME
         )
     """)
-    
+
     # Audit logs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (
@@ -89,7 +89,7 @@ def init_database():
             additional_data TEXT
         )
     """)
-    
+
     # Custom tabs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS custom_tabs (
@@ -108,10 +108,10 @@ def init_database():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (created_by) REFERENCES users (id),
-            FOREIGN KEY (reviewed_by) REFERENCES users (id)
+            FOREIGNKEY (reviewed_by) REFERENCES users (id)
         )
     """)
-    
+
     # Approved custom fields table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS approved_custom_fields (
@@ -126,7 +126,7 @@ def init_database():
             FOREIGN KEY (custom_tab_id) REFERENCES custom_tabs (id)
         )
     """)
-    
+
     # ROPA custom data table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ropa_custom_data (
@@ -140,27 +140,27 @@ def init_database():
             FOREIGN KEY (custom_field_id) REFERENCES approved_custom_fields (id)
         )
     """)
-    
+
     conn.commit()
-    
+
     # Database initialization complete - users must register to access the system
-    
+
     conn.close()
 
 def authenticate_user(email, password):
     """Authenticate user login"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     password_hash = hashlib.sha256(password.encode()).hexdigest()
     cursor.execute("SELECT * FROM users WHERE email = ? AND password_hash = ?", (email, password_hash))
     user = cursor.fetchone()
-    
+
     if user:
         # Update last login
         cursor.execute("UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE email = ?", (email,))
         conn.commit()
-    
+
     conn.close()
     return user is not None
 
@@ -168,11 +168,11 @@ def get_user_role(email):
     """Get user role by email"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT role FROM users WHERE email = ?", (email,))
     result = cursor.fetchone()
     conn.close()
-    
+
     return result[0] if result else None
 
 def create_user(email, password, role, department):
@@ -180,13 +180,13 @@ def create_user(email, password, role, department):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        
+
         password_hash = hashlib.sha256(password.encode()).hexdigest()
         cursor.execute("""
             INSERT INTO users (email, password_hash, role, department)
             VALUES (?, ?, ?, ?)
         """, (email, password_hash, role, department))
-        
+
         conn.commit()
         conn.close()
         return True
@@ -207,11 +207,11 @@ def save_ropa_record(data, created_by):
     """Save ROPA record to database"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     print(f"DEBUG: Saving ROPA record for user: {created_by}")
     print(f"DEBUG: Record name: {data.get('processing_activity_name')}")
     print(f"DEBUG: Record status: {data.get('status', 'Draft')}")
-    
+
     cursor.execute("""
         INSERT INTO ropa_records (
             processing_activity_name, category, description, department_function,
@@ -220,66 +220,65 @@ def save_ropa_record(data, created_by):
             processor_name, processor_contact, processor_address,
             representative_name, representative_contact, representative_address,
             processing_purpose, legal_basis, legitimate_interests,
-            data_categories, special_categories, data_subjects,
-            recipients, third_country_transfers, safeguards,
-            retention_period, retention_criteria, retention_justification,
-            security_measures, breach_likelihood, breach_impact,
+            data_categories, special_categories, data_subjects, recipients,
+            third_country_transfers, safeguards, retention_period, retention_criteria,
+            retention_justification, security_measures, breach_likelihood, breach_impact,
             dpia_required, additional_info, international_transfers,
-            status, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            status, created_by, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
     """, (
-        data.get('processing_activity_name'),
-        data.get('category'),
-        data.get('description'),
-        data.get('department_function'),
-        data.get('controller_name'),
-        data.get('controller_contact'),
-        data.get('controller_address'),
-        data.get('dpo_name'),
-        data.get('dpo_contact'),
-        data.get('dpo_address'),
-        data.get('processor_name'),
-        data.get('processor_contact'),
-        data.get('processor_address'),
-        data.get('representative_name'),
-        data.get('representative_contact'),
-        data.get('representative_address'),
-        data.get('processing_purpose'),
-        data.get('legal_basis'),
-        data.get('legitimate_interests'),
-        data.get('data_categories'),
-        data.get('special_categories'),
-        data.get('data_subjects'),
-        data.get('recipients'),
-        data.get('third_country_transfers'),
-        data.get('safeguards'),
-        data.get('retention_period'),
-        data.get('retention_criteria'),
-        data.get('retention_justification'),
-        data.get('security_measures'),
-        data.get('breach_likelihood'),
-        data.get('breach_impact'),
-        data.get('dpia_required'),
-        data.get('additional_info'),
-        data.get('international_transfers'),
+        data.get('processing_activity_name', ''),
+        data.get('category', ''),
+        data.get('description', ''),
+        data.get('department_function', ''),
+        data.get('controller_name', ''),
+        data.get('controller_contact', ''),
+        data.get('controller_address', ''),
+        data.get('dpo_name', ''),
+        data.get('dpo_contact', ''),
+        data.get('dpo_address', ''),
+        data.get('processor_name', ''),
+        data.get('processor_contact', ''),
+        data.get('processor_address', ''),
+        data.get('representative_name', ''),
+        data.get('representative_contact', ''),
+        data.get('representative_address', ''),
+        data.get('processing_purpose', ''),
+        data.get('legal_basis', ''),
+        data.get('legitimate_interests', ''),
+        data.get('data_categories', ''),
+        data.get('special_categories', ''),
+        data.get('data_subjects', ''),
+        data.get('recipients', ''),
+        data.get('third_country_transfers', ''),
+        data.get('safeguards', ''),
+        data.get('retention_period', ''),
+        data.get('retention_criteria', ''),
+        data.get('retention_justification', ''),
+        data.get('security_measures', ''),
+        data.get('breach_likelihood', ''),
+        data.get('breach_impact', ''),
+        data.get('dpia_required', ''),
+        data.get('additional_info', ''),
+        data.get('international_transfers', ''),
         data.get('status', 'Draft'),
         created_by
     ))
-    
+
     record_id = cursor.lastrowid
     conn.commit()
     conn.close()
-    
+
     print(f"DEBUG: Successfully saved record with ID: {record_id}")
     return record_id
 
 def get_ropa_records(user_email=None, role=None, status=None):
     """Get ROPA records based on user role and filters"""
     engine = create_engine('sqlite:///ropa_system.db')
-    
+
     query = "SELECT * FROM ropa_records WHERE 1=1"
     params = {}
-    
+
     # Role-based filtering
     if role == "Privacy Champion":
         # Get user's department to filter records
@@ -294,9 +293,9 @@ def get_ropa_records(user_email=None, role=None, status=None):
     elif status:
         query += " AND status = :status"
         params['status'] = status
-    
+
     query += " ORDER BY created_at DESC"
-    
+
     df = pd.read_sql_query(query, engine, params=params)
     return df
 
@@ -304,18 +303,18 @@ def get_user_department(user_email):
     """Get user's department"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT department FROM users WHERE email = ?", (user_email,))
     result = cursor.fetchone()
     conn.close()
-    
+
     return result[0] if result else None
 
 def get_ropa_record_by_id(record_id, user_email=None, role=None):
     """Get specific ROPA record by ID with access control"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     # Check access permissions
     if role == "Privacy Champion":
         user_dept = get_user_department(user_email)
@@ -325,9 +324,9 @@ def get_ropa_record_by_id(record_id, user_email=None, role=None):
         """, (record_id, user_email, user_dept))
     else:
         cursor.execute("SELECT * FROM ropa_records WHERE id = ?", (record_id,))
-    
+
     record = cursor.fetchone()
-    
+
     if record:
         columns = [
             'id', 'processing_activity_name', 'category', 'description', 'department_function',
@@ -343,7 +342,7 @@ def get_ropa_record_by_id(record_id, user_email=None, role=None):
         ]
         conn.close()
         return dict(zip(columns, record))
-    
+
     conn.close()
     return None
 
@@ -351,7 +350,7 @@ def update_ropa_record(record_id, data, updated_by):
     """Update existing ROPA record"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         cursor.execute("""
             UPDATE ropa_records SET
@@ -428,11 +427,11 @@ def update_ropa_record(record_id, data, updated_by):
             updated_by,
             record_id
         ))
-        
+
         conn.commit()
         conn.close()
         return True
-        
+
     except Exception as e:
         conn.close()
         raise e
@@ -441,7 +440,7 @@ def update_ropa_status(record_id, status, updated_by):
     """Update ROPA record status"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         if status == 'Approved':
             cursor.execute("""
@@ -461,11 +460,11 @@ def update_ropa_status(record_id, status, updated_by):
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
             """, (status, updated_by, record_id))
-        
+
         conn.commit()
         conn.close()
         return True
-        
+
     except Exception as e:
         conn.close()
         raise e
@@ -474,14 +473,14 @@ def delete_ropa_record(record_id):
     """Delete ROPA record"""
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         cursor.execute("DELETE FROM ropa_records WHERE id = ?", (record_id,))
         conn.commit()
         result = cursor.rowcount > 0
         conn.close()
         return result
-        
+
     except Exception as e:
         conn.close()
         raise e
