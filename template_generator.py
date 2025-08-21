@@ -35,54 +35,48 @@ def get_all_database_columns():
 def get_all_ropa_data_for_template():
     """Get all existing ROPA records as a pandas DataFrame for template population"""
     try:
-        from models import ROPARecord, User
-        from app import db
-        import sqlalchemy
+        from database import get_db_connection
+        import sqlite3
 
-        # Get all possible columns dynamically by inspecting the actual database table
-        inspector = sqlalchemy.inspect(db.engine)
-        table_columns = inspector.get_columns('ropa_records')
-        all_columns = [col['name'] for col in table_columns if col['name'] not in ['id']]
-
-        # Fetch all records from the database
-        records = ROPARecord.query.order_by(ROPARecord.created_at.desc()).all()
-        print(f"Found {len(records)} ROPA records for template")
-
-        if not records:
+        conn = get_db_connection()
+        
+        # Get all records directly from database using raw SQL
+        query = """
+        SELECT r.*, u.email as created_by_email 
+        FROM ropa_records r 
+        LEFT JOIN users u ON r.created_by = u.id 
+        ORDER BY r.created_at DESC
+        """
+        
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+        
+        print(f"Found {len(df)} ROPA records for template")
+        
+        if df.empty:
             return pd.DataFrame()
 
-        data_list = []
-        for record in records:
-            creator = User.query.get(record.created_by) if record.created_by else None
-            creator_email = creator.email if creator else 'Unknown'
+        # Debug: Print sample data to see what we actually have
+        print("Sample record data from database:")
+        for col in df.columns:
+            sample_value = df[col].iloc[0] if len(df) > 0 else 'No data'
+            print(f"  {col}: {sample_value}")
+        
+        # Clean up the data
+        for col in df.columns:
+            if col in ['created_at', 'updated_at', 'reviewed_at', 'approved_at']:
+                # Keep datetime columns as strings if they're already formatted
+                df[col] = df[col].fillna('')
+            elif col == 'dpia_required':
+                # Convert boolean/int to Yes/No
+                df[col] = df[col].apply(lambda x: 'Yes' if x in [1, True, 'Yes', 'yes'] else 'No' if x in [0, False, 'No', 'no'] else str(x) if pd.notna(x) else '')
+            else:
+                # Fill NaN values with empty strings and convert to string
+                df[col] = df[col].fillna('').astype(str)
+                # Clean up 'nan' strings
+                df[col] = df[col].replace('nan', '')
 
-            record_dict = {}
-            # Use record attributes directly, but ensure all dynamic columns are present
-            for col in all_columns:
-                value = getattr(record, col, None)
-                # Convert None to empty string and handle different data types
-                if value is None:
-                    record_dict[col] = ''
-                elif col in ['created_at', 'updated_at', 'reviewed_at']:
-                    # Format datetime objects
-                    record_dict[col] = value.strftime('%Y-%m-%d %H:%M:%S') if value else ''
-                elif col == 'dpia_required':
-                    # Convert boolean to Yes/No
-                    record_dict[col] = 'Yes' if value else 'No'
-                else:
-                    record_dict[col] = str(value) if value else ''
-
-            record_dict['created_by_email'] = creator_email
-            data_list.append(record_dict)
-
-            # Debug: Print first record data
-            if len(data_list) == 1:
-                print(f"Sample record data: {record_dict}")
-
-        # Convert to DataFrame
-        df = pd.DataFrame(data_list)
         print(f"DataFrame created with {len(df)} rows and columns: {list(df.columns)}")
-
         return df
 
     except Exception as e:
@@ -237,18 +231,24 @@ def generate_ropa_template():
     # Add existing data if available
     start_row = 3  # Start populating data from the third row
     if not existing_data.empty:
+        print(f"Populating template with {len(existing_data)} existing records")
+        
         for row_idx, (_, row) in enumerate(existing_data.iterrows(), start_row):
             for col_idx, col_name in enumerate(columns, 1):
                 # Get value from existing data, default to empty string
                 value = row.get(col_name, '')
 
                 # Handle None values and convert to string
-                if value is None or str(value).lower() == 'nan':
+                if value is None or str(value).lower() in ['nan', 'none']:
                     value = ''
                 else:
-                    value = str(value)
+                    value = str(value).strip()
 
-                cell = ws.cell(row=row_idx, column=col_idx, value=value) # Directly assign value, openpyxl handles writing
+                # Debug: Print first record's controller data to verify it's being read correctly
+                if row_idx == start_row and col_name in ['controller_name', 'controller_contact', 'controller_address']:
+                    print(f"DEBUG Template: {col_name} = '{value}'")
+
+                cell = ws.cell(row=row_idx, column=col_idx, value=value)
                 cell.border = Border(
                     left=Side(style='thin'),
                     right=Side(style='thin'),
