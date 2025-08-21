@@ -152,22 +152,78 @@ def process_uploaded_file(file, user_email):
 
             print(f"Processing record {index + 1}: {record_data['processing_activity_name']}")
 
-            # Save to database
-            record_id = save_ropa_record(record_data, user_email)
-            if record_id:
+            # Save to database using SQLAlchemy models
+            try:
+                from models import ROPARecord, User
+                from app import db
+                from datetime import datetime
+
+                # Get user
+                user = User.query.filter_by(email=user_email).first()
+                if not user:
+                    print(f"User not found: {user_email}, creating system user")
+                    user = User(
+                        email=user_email,
+                        password_hash='system_upload',
+                        role='Privacy Officer',
+                        department='System'
+                    )
+                    db.session.add(user)
+                    db.session.commit()
+
+                # Create record
+                record = ROPARecord(
+                    processing_activity_name=record_data['processing_activity_name'],
+                    category=record_data.get('category', ''),
+                    description=record_data.get('description', ''),
+                    department_function=record_data.get('department_function', ''),
+                    controller_name=record_data.get('controller_name', ''),
+                    controller_contact=record_data.get('controller_contact', ''),
+                    controller_address=record_data.get('controller_address', ''),
+                    dpo_name=record_data.get('dpo_name', ''),
+                    dpo_contact=record_data.get('dpo_contact', ''),
+                    dpo_address=record_data.get('dpo_address', ''),
+                    processor_name=record_data.get('processor_name', ''),
+                    processor_contact=record_data.get('processor_contact', ''),
+                    processor_address=record_data.get('processor_address', ''),
+                    representative_name=record_data.get('representative_name', ''),
+                    representative_contact=record_data.get('representative_contact', ''),
+                    representative_address=record_data.get('representative_address', ''),
+                    processing_purpose=record_data.get('processing_purpose', ''),
+                    legal_basis=record_data.get('legal_basis', ''),
+                    legitimate_interests=record_data.get('legitimate_interests', ''),
+                    data_categories=record_data.get('data_categories', ''),
+                    special_categories=record_data.get('special_categories', ''),
+                    data_subjects=record_data.get('data_subjects', ''),
+                    recipients=record_data.get('recipients', ''),
+                    third_country_transfers=record_data.get('third_country_transfers', ''),
+                    safeguards=record_data.get('safeguards', ''),
+                    retention_period=record_data.get('retention_period', ''),
+                    security_measures=record_data.get('security_measures', ''),
+                    breach_likelihood=record_data.get('breach_likelihood', ''),
+                    breach_impact=record_data.get('breach_impact', ''),
+                    risk_level=record_data.get('risk_level', ''),
+                    dpia_required=record_data.get('dpia_required', '') == 'Yes',
+                    dpia_outcome=record_data.get('dpia_outcome', ''),
+                    status='Draft',
+                    created_by=user.id,
+                    created_at=datetime.utcnow()
+                )
+
+                db.session.add(record)
+                db.session.commit()
+
                 records_processed += 1
-                print(f"Saved record with ID: {record_id}")
-            else:
-                print(f"Failed to save record: {record_data['processing_activity_name']}")
+                print(f"Saved record with ID: {record.id}")
 
-        if records_processed == 0:
-            return "No valid records found in the file. Please check that your file contains data in the correct format."
+            except Exception as e:
+                db.session.rollback()
+                print(f"Failed to save record: {record_data['processing_activity_name']} - Error: {str(e)}")
 
-        return f"Successfully processed {records_processed} records from {len(df)} total rows"
+    if records_processed == 0:
+        return "No valid records found in the file. Please check that your file contains data in the correct format."
 
-    except Exception as e:
-        print(f"Error in process_uploaded_file: {str(e)}")
-        raise Exception(f"Error processing file: {str(e)}")
+    return f"Successfully processed {records_processed} records from {len(df)} total rows"
 
 def parse_excel_file(uploaded_file):
     """Parse Excel file and extract ROPA data"""

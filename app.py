@@ -132,29 +132,56 @@ def privacy_champion_dashboard():
 @app.route('/privacy-officer-dashboard')
 @login_required
 def privacy_officer_dashboard():
-    """Privacy Officer dashboard"""
     if current_user.role != 'Privacy Officer':
         abort(403)
 
-    # Get all ROPA records
-    all_records = models.ROPARecord.query.all()
-    pending_records = models.ROPARecord.query.filter_by(status='Under Review').all()
-    draft_records = models.ROPARecord.query.filter_by(status='Draft').all()
+    try:
+        # Get all records
+        all_records = models.ROPARecord.query.all()
 
-    # Statistics
-    total_records = len(all_records)
-    pending_count = len(pending_records)
-    draft_count = len(draft_records)
-    approved_records = len([r for r in all_records if r.status == 'Approved'])
+        # Calculate status counts
+        status_counts = {}
+        for record in all_records:
+            status_counts[record.status] = status_counts.get(record.status, 0) + 1
 
-    return render_template('privacy_officer_dashboard.html',
-                         all_records=all_records,
-                         pending_records=pending_records,
-                         draft_records=draft_records,
-                         total_records=total_records,
-                         pending_count=pending_count,
-                         draft_count=draft_count,
-                         approved_records=approved_records)
+        # Get recent records (last 10)
+        recent_records_query = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
+        recent_records = []
+        for record in recent_records_query:
+            creator = models.User.query.get(record.created_by)
+            creator_email = creator.email if creator else 'Unknown'
+            recent_records.append({
+                'processing_activity_name': record.processing_activity_name,
+                'status': record.status,
+                'created_at': record.created_at,
+                'created_by': creator_email
+            })
+
+        # Get pending reviews count
+        pending_count = status_counts.get('Pending Review', 0)
+
+        print(f"DEBUG: Privacy Officer Dashboard - Total records: {len(all_records)}")
+        print(f"DEBUG: Status counts: {status_counts}")
+
+        return render_template('privacy_officer_dashboard.html',
+                             total_records=len(all_records),
+                             pending_reviews=pending_count,
+                             approved_records=status_counts.get('Approved', 0),
+                             draft_records=status_counts.get('Draft', 0),
+                             recent_records=recent_records,
+                             status_counts=status_counts)
+
+    except Exception as e:
+        print(f"Error in privacy_officer_dashboard: {str(e)}")
+        flash(f'Error loading dashboard: {str(e)}', 'error')
+        return render_template('privacy_officer_dashboard.html',
+                             total_records=0,
+                             pending_reviews=0,
+                             approved_records=0,
+                             draft_records=0,
+                             recent_records=[],
+                             status_counts={})
+
 
 @app.route('/add-activity', methods=['GET', 'POST'])
 @login_required
@@ -887,75 +914,98 @@ def edit_ropa(id):
 
 @app.route('/view-ropa')
 @login_required
-def view_ropa_records():
+def view_ropa():
     # Get filter parameters
     status_filter = request.args.get('status', 'All')
 
-    # Build query based on user role
-    conn = get_db_connection()
-
+    # Build query based on user role using SQLAlchemy models
     if current_user.role == "Privacy Champion":
         # Privacy Champions see their own records AND approved records they can edit (in their department)
-        user_dept = get_user_department(current_user.email)
         if status_filter == 'All':
-            query = """SELECT * FROM ropa_records 
-                      WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?))
-                      ORDER BY created_at DESC"""
-            params = [current_user.id, user_dept]
+            query = models.ROPARecord.query.filter(
+                db.or_(
+                    models.ROPARecord.created_by == current_user.id,
+                    db.and_(
+                        models.ROPARecord.status == 'Approved',
+                        models.ROPARecord.department_function == current_user.department
+                    )
+                )
+            )
         else:
-            query = """SELECT * FROM ropa_records 
-                      WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?)) 
-                      AND status = ? ORDER BY created_at DESC"""
-            params = [current_user.id, user_dept, status_filter]
+            query = models.ROPARecord.query.filter(
+                db.and_(
+                    db.or_(
+                        models.ROPARecord.created_by == current_user.id,
+                        db.and_(
+                            models.ROPARecord.status == 'Approved',
+                            models.ROPARecord.department_function == current_user.department
+                        )
+                    ),
+                    models.ROPARecord.status == status_filter
+                )
+            )
     else:
         # Privacy Officers and Admins see all records
         if status_filter == 'All':
-            query = "SELECT * FROM ropa_records ORDER BY created_at DESC"
-            params = []
+            query = models.ROPARecord.query
         else:
-            query = "SELECT * FROM ropa_records WHERE status = ? ORDER BY created_at DESC"
-            params = [status_filter]
+            query = models.ROPARecord.query.filter(models.ROPARecord.status == status_filter)
 
-    cursor = conn.cursor()
+    records = query.order_by(models.ROPARecord.created_at.desc()).all()
 
-    # Debug the exact query being executed
-    print(f"DEBUG: Executing query: {query}")
-    print(f"DEBUG: With params: {params}")
+    print(f"DEBUG: Found {len(records)} records for user {current_user.email} (role: {current_user.role})")
 
-    try:
-        cursor.execute(query, params)
-        records = cursor.fetchall()
+    # Convert to list of dictionaries for template compatibility
+    records_list = []
+    for record in records:
+        creator = models.User.query.get(record.created_by)
+        creator_email = creator.email if creator else 'Unknown'
 
-        # Convert to list of dictionaries
-        columns = [
-            'id', 'processing_activity_name', 'category', 'description', 'department_function',
-            'controller_name', 'controller_contact', 'controller_address', 'dpo_name', 'dpo_contact',
-            'dpo_address', 'processor_name', 'processor_contact', 'processor_address',
-            'representative_name', 'representative_contact', 'representative_address',
-            'processing_purpose', 'legal_basis', 'legitimate_interests', 'data_categories', 'special_categories',
-            'data_subjects', 'recipients', 'third_country_transfers', 'safeguards',
-            'retention_period', 'retention_criteria', 'retention_justification', 'security_measures',
-            'breach_likelihood', 'breach_impact', 'dpia_required', 'additional_info',
-            'international_transfers', 'status', 'created_by', 'created_at', 'updated_at', 'updated_by',
-            'reviewed_by', 'reviewed_at', 'approved_by', 'approved_at'
-        ]
+        record_dict = {
+            'id': record.id,
+            'processing_activity_name': record.processing_activity_name,
+            'category': record.category,
+            'description': record.description,
+            'department_function': record.department_function,
+            'controller_name': record.controller_name,
+            'controller_contact': record.controller_contact,
+            'controller_address': record.controller_address,
+            'dpo_name': record.dpo_name,
+            'dpo_contact': record.dpo_contact,
+            'dpo_address': record.dpo_address,
+            'processor_name': record.processor_name,
+            'processor_contact': record.processor_contact,
+            'processor_address': record.processor_address,
+            'representative_name': record.representative_name,
+            'representative_contact': record.representative_contact,
+            'representative_address': record.representative_address,
+            'processing_purpose': record.processing_purpose,
+            'legal_basis': record.legal_basis,
+            'legitimate_interests': record.legitimate_interests,
+            'data_categories': record.data_categories,
+            'special_categories': record.special_categories,
+            'data_subjects': record.data_subjects,
+            'recipients': record.recipients,
+            'third_country_transfers': record.third_country_transfers,
+            'safeguards': record.safeguards,
+            'retention_period': record.retention_period,
+            'security_measures': record.security_measures,
+            'breach_likelihood': record.breach_likelihood,
+            'breach_impact': record.breach_impact,
+            'risk_level': record.risk_level,
+            'dpia_required': record.dpia_required,
+            'dpia_outcome': record.dpia_outcome,
+            'status': record.status,
+            'created_by': creator_email,
+            'created_at': record.created_at,
+            'updated_at': record.updated_at
+        }
+        records_list.append(record_dict)
 
-        records_list = []
-        for record in records:
-            record_dict = dict(zip(columns, record))
-            records_list.append(record_dict)
-
-        print(f"DEBUG: Found {len(records_list)} records")
-        for record in records_list:
-            print(f"DEBUG: Record - ID: {record['id']}, Name: {record['processing_activity_name']}, Status: {record['status']}, Created by: {record['created_by']}")
-
-    except Exception as e:
-        print(f"DEBUG: Error executing query: {str(e)}")
-        records_list = []
-    finally:
-        conn.close()
-
-    return render_template('view_ropa.html', records=records_list, status_filter=status_filter)
+    return render_template('ropa_view.html', 
+                         records=records_list, 
+                         current_status=status_filter,
+                         user_role=current_user.role)
 
 
 if __name__ == '__main__':
