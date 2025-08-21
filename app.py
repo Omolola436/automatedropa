@@ -147,7 +147,10 @@ def privacy_officer_dashboard():
         # Get recent records (last 10)
         recent_records_query = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
         recent_records = []
-        for record in recent_records_query:
+        
+        # Ensure we have a list to iterate over
+        if recent_records_query and hasattr(recent_records_query, '__iter__'):
+            for record in recent_records_query:
             try:
                 creator = models.User.query.get(record.created_by)
                 creator_email = creator.email if creator else f'User ID {record.created_by}'
@@ -160,6 +163,8 @@ def privacy_officer_dashboard():
             except Exception as e:
                 print(f"Error processing record {record.id}: {str(e)}")
                 continue
+        else:
+            print("DEBUG: No recent records found or invalid query result")
 
         # Get pending reviews count
         pending_count = status_counts.get('Pending Review', 0)
