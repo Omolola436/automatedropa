@@ -215,6 +215,9 @@ def import_ropa_records(df, user_email, overwrite_existing=False):
                     default_name = f"{record_data['department_function']} - Activity {idx + 1}"
                 record_data['processing_activity_name'] = default_name
 
+            # Set status as Draft so records are visible
+            record_data['status'] = 'Draft'
+            
             # Save record
             record_id = save_ropa_record(record_data, user_email)
 

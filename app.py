@@ -902,12 +902,12 @@ def view_ropa_records():
             query = """SELECT * FROM ropa_records 
                       WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?))
                       ORDER BY created_at DESC"""
-            params = [current_user.email, user_dept]
+            params = [current_user.id, user_dept]
         else:
             query = """SELECT * FROM ropa_records 
                       WHERE (created_by = ? OR (status = 'Approved' AND department_function = ?)) 
                       AND status = ? ORDER BY created_at DESC"""
-            params = [current_user.email, user_dept, status_filter]
+            params = [current_user.id, user_dept, status_filter]
     else:
         # Privacy Officers and Admins see all records
         if status_filter == 'All':

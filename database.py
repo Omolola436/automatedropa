@@ -221,8 +221,17 @@ def save_ropa_record(record_data, user_email):
             user_id = user_result[0]
         else:
             print(f"DEBUG: User not found for email: {user_email}")
-            # Create a default user or handle this case
-            return None
+            # For uploaded files, create a system user entry if needed
+            cursor.execute("""
+                INSERT OR IGNORE INTO users (email, password_hash, role, department) 
+                VALUES (?, 'system', 'Privacy Officer', 'System')
+            """, (user_email,))
+            cursor.execute("SELECT id FROM users WHERE email = ?", (user_email,))
+            user_result = cursor.fetchone()
+            if user_result:
+                user_id = user_result[0]
+            else:
+                return None
 
         # Insert into ropa_records table - match exact column count
         insert_query = """
