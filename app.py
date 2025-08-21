@@ -888,7 +888,7 @@ def edit_ropa(id):
 
 @app.route('/view-ropa')
 @login_required
-def view_ropa():
+def view_ropa_records():
     # Get filter parameters
     status_filter = request.args.get('status', 'All')
 
