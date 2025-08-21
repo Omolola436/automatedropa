@@ -220,14 +220,14 @@ def process_uploaded_file(file, user_email):
                 db.session.rollback()
                 print(f"Failed to save record: {record_data['processing_activity_name']} - Error: {str(e)}")
 
-        except Exception as e:
-            print(f"Error processing file: {str(e)}")
-            return f"Error processing file: {str(e)}"
-
         if records_processed == 0:
             return "No valid records found in the file. Please check that your file contains data in the correct format."
 
         return f"Successfully processed {records_processed} records from {len(df)} total rows"
+
+    except Exception as e:
+        print(f"Error processing file: {str(e)}")
+        return f"Error processing file: {str(e)}"
 
 def parse_excel_file(uploaded_file):
     """Parse Excel file and extract ROPA data"""
