@@ -1,0 +1,21 @@
+modules = ["web", "python-3.11", "nodejs-20"]
+run = "python app.py"
+
+[nix]
+channel = "stable-25_05"
+packages = ["glibcLocales", "openssl", "postgresql"]
+
+[deployment]
+run = ["sh", "-c", "python app.py"]
+
+[workflows]
+runButton = "Run Flask App"
+
+[[workflows.workflow]]
+name = "Run Flask App"
+author = 35916452
+mode = "sequential"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python main.py"
