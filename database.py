@@ -233,7 +233,7 @@ def save_ropa_record(record_data, user_email):
             else:
                 return None
 
-        # Insert into ropa_records table - match exact column count
+        # Insert into ropa_records table - match exact column count from models.py
         insert_query = """
         INSERT INTO ropa_records (
             processing_activity_name, category, description, department_function,
@@ -283,7 +283,7 @@ def save_ropa_record(record_data, user_email):
             record_data.get('breach_likelihood', ''),
             record_data.get('breach_impact', ''),
             record_data.get('risk_level', ''),
-            record_data.get('dpia_required', False),
+            record_data.get('dpia_required', 0),  # Use 0 instead of False for SQLite
             record_data.get('dpia_outcome', ''),
             record_data.get('status', 'Draft'),
             user_id
