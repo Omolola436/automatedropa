@@ -306,12 +306,12 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
 
             # Track all processed sheets globally to prevent duplicates across files
             global_processed_sheets = set()
-            
+
             # Process each uploaded Excel file
             for excel_file in excel_files:
                 # Get all sheets for this file, ordered by original sheet order
                 sheets = ExcelSheetData.query.filter_by(excel_file_id=excel_file.id).all()
-                
+
                 # Sort sheets to maintain original order if possible
                 original_sheet_names = json.loads(excel_file.sheet_names)
                 sheets_dict = {sheet.sheet_name: sheet for sheet in sheets}
@@ -319,11 +319,11 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                 for original_name in original_sheet_names:
                     # Create unique identifier for this sheet
                     sheet_identifier = f"{original_name}_{excel_file.id}"
-                    
+
                     # Skip if we've already processed this exact sheet
                     if sheet_identifier in global_processed_sheets:
                         continue
-                        
+
                     if original_name in sheets_dict:
                         sheet = sheets_dict[original_name]
                         try:
@@ -335,7 +335,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 if sheet_data and len(sheet_data) > 0:
                                     # Create DataFrame from the stored data
                                     df = pd.DataFrame(sheet_data)
-                                    
+
                                     # Remove any completely empty rows but keep original column structure
                                     df = df.dropna(how='all')
                                 else:
@@ -343,7 +343,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
 
                                 # Clean sheet name for Excel compatibility
                                 sheet_name = str(original_name).strip()
-                                
+
                                 # Remove any problematic characters but keep the original name
                                 invalid_chars = ['[', ']', '*', '?', ':', '/', '\\']
                                 for char in invalid_chars:
@@ -368,7 +368,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 # Write sheet with formatting - ensure sheet_name is valid
                                 if not sheet_name or sheet_name.isspace():
                                     sheet_name = f"Sheet_{sheets_written + 1}"
-                                
+
                                 # Use header=False to preserve exact structure
                                 df.to_excel(writer, sheet_name=sheet_name, index=False, header=True)
                                 worksheet = workbook[sheet_name]
@@ -402,7 +402,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
             try:
                 from custom_tab_automation import get_approved_custom_fields_by_category
                 custom_fields = get_approved_custom_fields_by_category()
-                
+
                 # Get custom field data for integration
                 custom_field_values = {}
                 if custom_fields:
@@ -412,21 +412,21 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                             field_values = db.session.query(ROPACustomData, ROPARecord).join(
                                 ROPARecord, ROPACustomData.ropa_record_id == ROPARecord.id
                             ).filter(ROPACustomData.custom_field_id == field['id']).all()
-                            
+
                             for custom_data, ropa_record in field_values:
                                 if user_role != 'Privacy Officer' and ropa_record.created_by != user.id:
                                     continue
-                                
+
                                 record_key = ropa_record.processing_activity_name or f"Record_{ropa_record.id}"
                                 if record_key not in custom_field_values:
                                     custom_field_values[record_key] = {}
-                                
+
                                 custom_field_values[record_key][field['field_name']] = custom_data.field_value or ''
-                
+
                 # Now enhance existing sheets with custom field columns
                 if custom_field_values:
                     enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, custom_fields)
-                            
+
             except Exception as e:
                 print(f"Error integrating custom fields: {str(e)}")
 
@@ -457,7 +457,7 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
     try:
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
-        
+
         # Enhanced vibrant color schemes for maximum visual appeal
         if is_original_sheet:
             header_color = "1F4E79"  # Deep royal blue for original sheets
@@ -491,22 +491,22 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
         num_cols = len(df.columns)
         for col_num in range(1, num_cols + 1):
             cell = worksheet.cell(row=1, column=col_num)
-            
+
             # Set header value with proper formatting
             if col_num <= len(df.columns):
                 header_value = str(df.columns[col_num - 1])
-                
+
                 # If header is empty or unnamed, provide a meaningful default
                 if not header_value or header_value.strip() == '' or header_value.lower() in ['unnamed', 'nan', 'none']:
                     header_value = f"Column {col_num}"
-                
+
                 # Clean up header text while preserving original meaning
                 header_value = header_value.strip()
                 if len(header_value) > 50:  # Truncate very long headers
                     header_value = header_value[:47] + "..."
-                
+
                 cell.value = header_value
-            
+
             # Apply professional header styling
             cell.font = header_font
             cell.fill = header_fill
@@ -528,37 +528,31 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
         for row_num in range(2, num_rows + 1):
             for col_num in range(1, num_cols + 1):
                 cell = worksheet.cell(row=row_num, column=col_num)
-                
+
                 # Ensure cell has a value (handle None/NaN)
                 if cell.value is None or str(cell.value).lower() in ['nan', 'none']:
                     cell.value = ''
-                
+
                 cell.font = data_font
                 cell.alignment = data_alignment
                 cell.border = data_border
 
-                # Apply vibrant alternating row colors for better readability
+                # Apply light blue and white alternating row colors
                 if row_num % 2 == 0:
-                    # Even rows get the alternate color
-                    cell.fill = PatternFill(start_color=alt_row_color, end_color=alt_row_color, fill_type="solid")
+                    # Even rows get light blue
+                    cell.fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")
                 else:
-                    # Odd rows get a lighter shade for contrast
-                    if is_original_sheet:
-                        light_color = "F0F8FF"  # Very light blue for original sheets
-                    elif is_ropa_sheet:
-                        light_color = "F8FFF8"  # Very light green for ROPA sheets
-                    else:
-                        light_color = "FFFAF0"  # Very light orange for other sheets
-                    cell.fill = PatternFill(start_color=light_color, end_color=light_color, fill_type="solid")
+                    # Odd rows get white
+                    cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
         # Intelligent column width calculation for better readability
         for col_num in range(1, num_cols + 1):
             column_letter = get_column_letter(col_num)
-            
+
             # Calculate optimal width based on content
             header_length = len(str(worksheet.cell(row=1, column=col_num).value or ''))
             max_length = max(header_length, 15)  # Minimum readable width
-            
+
             # Sample data to determine optimal width (check more rows for accuracy)
             sample_size = min(num_rows, 100)  # Check up to 100 rows
             for row_num in range(2, sample_size + 1):
@@ -577,7 +571,7 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                 adjusted_width = max_length + 2
             else:
                 adjusted_width = 45  # Cap very wide columns
-            
+
             # Ensure minimum and maximum bounds
             adjusted_width = min(max(adjusted_width, 12), 55)
             worksheet.column_dimensions[column_letter].width = adjusted_width
@@ -591,7 +585,7 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
 
         # Enable gridlines for better structure visibility
         worksheet.sheet_view.showGridLines = True
-        
+
         # Freeze the header row for better navigation
         worksheet.freeze_panes = 'A2'
 
@@ -613,16 +607,16 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                         top=Side(style='medium'),
                         bottom=Side(style='medium')
                     )
-                    
+
                     # Set column width
                     column_letter = get_column_letter(col_num)
                     worksheet.column_dimensions[column_letter].width = 20
-                    
+
                 # Set row heights
                 worksheet.row_dimensions[1].height = 40
                 for row in range(2, min(len(df) + 2, 100)):
                     worksheet.row_dimensions[row].height = 25
-                    
+
         except Exception as fallback_error:
             print(f"Even fallback formatting failed: {str(fallback_error)}")
 
@@ -699,7 +693,7 @@ def create_export_summary(excel_files, ropa_records):
         custom_fields = get_approved_custom_fields_by_category()
         total_custom_fields = sum(len(fields) for fields in custom_fields.values())
         summary.append({"Category": "Approved Custom Fields", "Information": str(total_custom_fields)})
-        
+
         for category, fields in custom_fields.items():
             if fields:
                 summary.append({"Category": f"Custom Fields - {category}", "Information": str(len(fields))})
@@ -714,29 +708,29 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
     try:
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
-        
+
         # Get all approved custom field names
         all_custom_fields = []
         for category, fields in custom_fields.items():
             for field in fields:
                 all_custom_fields.append(field['field_name'])
-        
+
         if not all_custom_fields:
             return
-        
+
         # Process each worksheet
         for sheet_name in workbook.sheetnames:
             worksheet = workbook[sheet_name]
-            
+
             # Skip summary and system sheets
             if sheet_name in ['Export_Summary', 'System_ROPA_Records']:
                 continue
-            
+
             # Find the insertion position based on sheet type
             insert_position = None
             notes_column = None
             max_col = 1
-            
+
             # Get all header values to find the right position
             headers = []
             for col in range(1, worksheet.max_column + 50):  # Check more columns
@@ -748,14 +742,14 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                     headers.append((col, ''))
                 else:
                     break
-            
+
             # Find Notes/Comments column first
             for col_num, header_text in headers:
                 if any(keyword in header_text for keyword in ['notes', 'comments', 'note', 'comment']):
                     notes_column = col_num
                     insert_position = col_num  # Insert before Notes/Comments
                     break
-            
+
             # If Notes/Comments not found, determine insertion position based on sheet content
             if insert_position is None:
                 for col_num, header_text in headers:
@@ -767,11 +761,11 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                     elif any(keyword in header_text for keyword in ['safeguards', 'safeguards & measures', 'safeguards and measures']):
                         insert_position = col_num + 1
                         break
-                
+
                 # If still not found, insert at the end
                 if insert_position is None:
                     insert_position = max_col + 1
-            
+
             # If Notes/Comments column exists, move it to after custom fields
             if notes_column is not None:
                 # Move the Notes/Comments column to after custom fields
@@ -789,11 +783,11 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                     old_cell.fill = PatternFill()
                     old_cell.alignment = Alignment()
                     old_cell.border = Border()
-            
+
             # Add custom field headers
             for idx, field_name in enumerate(all_custom_fields):
                 col_num = insert_position + idx
-                
+
                 # Set colorful header styling for custom fields
                 header_cell = worksheet.cell(row=1, column=col_num)
                 header_cell.value = field_name
@@ -806,7 +800,7 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                     top=Side(style='thick', color="FFFFFF"),
                     bottom=Side(style='thick', color="FFFFFF")
                 )
-                
+
                 # If there's a second header row, add field name there too
                 if worksheet.max_row >= 2 and worksheet.cell(row=2, column=1).value:
                     subheader_cell = worksheet.cell(row=2, column=col_num)
@@ -820,14 +814,14 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                         top=Side(style='thin'),
                         bottom=Side(style='thin')
                     )
-                
+
                 # Set column width
                 column_letter = get_column_letter(col_num)
                 worksheet.column_dimensions[column_letter].width = 25
-            
+
             # Fill in custom field data for existing rows
             data_start_row = 3 if worksheet.max_row >= 2 and worksheet.cell(row=2, column=1).value else 2
-            
+
             for row_num in range(data_start_row, worksheet.max_row + 1):
                 # Try to identify the record by looking at the first few columns for activity name
                 record_identifier = None
@@ -838,12 +832,12 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                         if str(cell_value).strip() in custom_field_values:
                             record_identifier = str(cell_value).strip()
                             break
-                
+
                 # Fill custom field values
                 for idx, field_name in enumerate(all_custom_fields):
                     col_num = insert_position + idx
                     data_cell = worksheet.cell(row=row_num, column=col_num)
-                    
+
                     # Set default styling
                     data_cell.font = Font(name="Arial", size=10, color="333333")
                     data_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
@@ -853,13 +847,13 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                         top=Side(style='thin', color="CCCCCC"),
                         bottom=Side(style='thin', color="CCCCCC")
                     )
-                    
+
                     # Enhanced colorful alternating row colors for custom fields
                     if row_num % 2 == 0:
                         data_cell.fill = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")  # Stronger light purple
                     else:
                         data_cell.fill = PatternFill(start_color="F4ECF7", end_color="F4ECF7", fill_type="solid")  # Very light purple with more saturation
-                    
+
                     # Set the value if we found a matching record
                     if record_identifier and record_identifier in custom_field_values:
                         if field_name in custom_field_values[record_identifier]:
@@ -868,8 +862,8 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                             data_cell.value = ""
                     else:
                         data_cell.value = ""
-            
+
             print(f"Enhanced sheet '{sheet_name}' with {len(all_custom_fields)} custom field columns")
-    
+
     except Exception as e:
         print(f"Error enhancing sheets with custom fields: {str(e)}")
