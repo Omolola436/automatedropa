@@ -322,36 +322,54 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                             if sheet_data:
                                 df = pd.DataFrame(sheet_data)
 
-                                # Use original sheet name exactly as user named it
-                                sheet_name = original_name
+                                # Use original sheet name exactly as user named it - clean it up first
+                                sheet_name = str(original_name).strip()
+                                
+                                # Remove any problematic characters but keep the original name
+                                invalid_chars = ['[', ']', '*', '?', ':', '/', '\\']
+                                for char in invalid_chars:
+                                    sheet_name = sheet_name.replace(char, '_')
 
                                 # Handle Excel sheet name length limit (31 chars)
                                 if len(sheet_name) > 31:
-                                    sheet_name = sheet_name[:28] + "..."
+                                    sheet_name = sheet_name[:31].rstrip('_')
 
                                 # Ensure unique sheet names if multiple files
-                                if len(excel_files) > 1:
-                                    base_name = sheet_name
-                                    counter = 1
-                                    while sheet_name in [ws.title for ws in workbook.worksheets]:
-                                        sheet_name = f"{base_name}_{counter}"
-                                        if len(sheet_name) > 31:
-                                            sheet_name = f"{base_name[:25]}_{counter}"
-                                        sheet_name = sheet_name[:31] # Ensure final name is within limit
-                                        counter += 1
+                                original_sheet_name = sheet_name
+                                counter = 1
+                                while sheet_name in [ws.title for ws in workbook.worksheets]:
+                                    suffix = f"_{counter}"
+                                    max_base_length = 31 - len(suffix)
+                                    sheet_name = original_sheet_name[:max_base_length] + suffix
+                                    counter += 1
 
-                                # Write sheet with formatting
+                                # Write sheet with formatting - ensure sheet_name is valid
+                                if not sheet_name or sheet_name.isspace():
+                                    sheet_name = f"Sheet_{sheets_written + 1}"
+                                
                                 df.to_excel(writer, sheet_name=sheet_name, index=False)
                                 worksheet = workbook[sheet_name]
 
-                                # Apply beautiful formatting
-                                format_excel_sheet(worksheet, df)
+                                # Apply beautiful formatting with colors
+                                format_excel_sheet(worksheet, df, is_original_sheet=True)
                                 sheets_written += 1
 
                                 print(f"Exported sheet: '{original_name}' as '{sheet_name}'")
 
                         except Exception as e:
                             print(f"Error writing sheet {original_name}: {str(e)}")
+                            # Try with a simple fallback name
+                            try:
+                                fallback_name = f"Sheet_{sheets_written + 1}"
+                                if sheet_data:
+                                    df = pd.DataFrame(sheet_data)
+                                    df.to_excel(writer, sheet_name=fallback_name, index=False)
+                                    worksheet = workbook[fallback_name]
+                                    format_excel_sheet(worksheet, df, is_original_sheet=True)
+                                    sheets_written += 1
+                                    print(f"Used fallback name: '{fallback_name}' for sheet '{original_name}'")
+                            except Exception as fallback_error:
+                                print(f"Fallback also failed for {original_name}: {str(fallback_error)}")
 
             # Add updated ROPA records sheet if there are any updates
             if include_updates:
@@ -418,76 +436,113 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
         print(f"Error exporting Excel with all sheets: {str(e)}")
         raise e
 
-def format_excel_sheet(worksheet, df, is_ropa_sheet=False):
-    """Apply beautiful formatting to Excel sheet"""
+def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=False):
+    """Apply beautiful formatting to Excel sheet with enhanced colors"""
     try:
-        # Header formatting
-        header_font = Font(bold=True, color="FFFFFF", size=11)
-        header_fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        
+        # Different color schemes for different sheet types
+        if is_original_sheet:
+            header_color = "366092"  # Darker blue for original sheets
+            alt_row_color = "E8F4FD"  # Light blue
+        elif is_ropa_sheet:
+            header_color = "4472C4"  # Standard blue for ROPA sheets  
+            alt_row_color = "F2F2F2"  # Light gray
+        else:
+            header_color = "70AD47"  # Green for other sheets
+            alt_row_color = "E2EFDA"  # Light green
+
+        # Header formatting with enhanced colors
+        header_font = Font(bold=True, color="FFFFFF", size=11, name="Arial")
+        header_fill = PatternFill(start_color=header_color, end_color=header_color, fill_type="solid")
         header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         header_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+            left=Side(style='thin', color="000000"),
+            right=Side(style='thin', color="000000"),
+            top=Side(style='thin', color="000000"),
+            bottom=Side(style='thin', color="000000")
         )
 
-        # Apply header formatting
+        # Apply header formatting with force
         for col_num in range(1, len(df.columns) + 1):
             cell = worksheet.cell(row=1, column=col_num)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_alignment
             cell.border = header_border
+            # Force the value to ensure the cell exists
+            if cell.value is None:
+                cell.value = str(df.columns[col_num - 1])
 
-        # Data cell formatting
+        # Data cell formatting with enhanced styling
+        data_font = Font(name="Arial", size=10)
         data_alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         data_border = Border(
-            left=Side(style='thin'),
-            right=Side(style='thin'),
-            top=Side(style='thin'),
-            bottom=Side(style='thin')
+            left=Side(style='thin', color="808080"),
+            right=Side(style='thin', color="808080"),
+            top=Side(style='thin', color="808080"),
+            bottom=Side(style='thin', color="808080")
         )
 
-        # Apply data formatting
+        # Apply data formatting with alternating colors
         for row_num in range(2, len(df) + 2):
             for col_num in range(1, len(df.columns) + 1):
                 cell = worksheet.cell(row=row_num, column=col_num)
+                cell.font = data_font
                 cell.alignment = data_alignment
                 cell.border = data_border
 
-                # Alternate row coloring
+                # Enhanced alternating row coloring
                 if row_num % 2 == 0:
-                    cell.fill = PatternFill(start_color="F2F2F2", end_color="F2F2F2", fill_type="solid")
+                    cell.fill = PatternFill(start_color=alt_row_color, end_color=alt_row_color, fill_type="solid")
+                else:
+                    cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
-        # Auto-adjust column widths
+        # Enhanced column width calculation
         for col_num in range(1, len(df.columns) + 1):
             column_letter = get_column_letter(col_num)
-            column_cells = [worksheet[f"{column_letter}{row}"] for row in range(1, min(len(df) + 2, 100))]
+            
+            # Calculate max length including header
+            max_length = len(str(df.columns[col_num - 1])) if col_num <= len(df.columns) else 10
+            
+            # Check data in column
+            for row_num in range(2, min(len(df) + 2, 50)):  # Sample first 50 rows for performance
+                cell = worksheet.cell(row=row_num, column=col_num)
+                if cell.value:
+                    try:
+                        cell_length = len(str(cell.value))
+                        max_length = max(max_length, cell_length)
+                    except:
+                        pass
 
-            # Calculate max length
-            max_length = 0
-            for cell in column_cells:
-                try:
-                    if cell.value:
-                        max_length = max(max_length, len(str(cell.value)))
-                except:
-                    pass
-
-            # Set column width with reasonable limits
-            adjusted_width = min(max(max_length + 2, 12), 50)
+            # Set column width with better limits
+            adjusted_width = min(max(max_length + 3, 15), 60)
             worksheet.column_dimensions[column_letter].width = adjusted_width
 
-        # Set row height for header
-        worksheet.row_dimensions[1].height = 30
+        # Enhanced row heights
+        worksheet.row_dimensions[1].height = 35  # Taller header
 
-        # Set row height for data rows (if ROPA sheet, make rows taller for better readability)
-        if is_ropa_sheet:
-            for row_num in range(2, min(len(df) + 2, 100)):
-                worksheet.row_dimensions[row_num].height = 25
+        # Set row height for data rows
+        row_height = 30 if is_ropa_sheet else 25
+        for row_num in range(2, min(len(df) + 2, 100)):
+            worksheet.row_dimensions[row_num].height = row_height
+
+        # Add a title if it's an original sheet
+        if is_original_sheet and hasattr(worksheet, 'title'):
+            # You could add additional styling here for original sheets
+            pass
 
     except Exception as e:
         print(f"Error formatting Excel sheet: {str(e)}")
+        # Fallback minimal formatting
+        try:
+            for col_num in range(1, len(df.columns) + 1):
+                cell = worksheet.cell(row=1, column=col_num)
+                cell.font = Font(bold=True)
+                cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+        except:
+            pass
 
 def format_summary_sheet(worksheet, df):
     """Format the summary sheet with special styling"""
