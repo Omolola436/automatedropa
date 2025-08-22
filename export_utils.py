@@ -417,54 +417,11 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
             except Exception as e:
                 print(f"Error integrating custom fields: {str(e)}")
 
-            # Add updated ROPA records sheet if there are any updates
-            if include_updates:
-                try:
-                    if user_role == 'Privacy Officer':
-                        ropa_records = ROPARecord.query.all()
-                    else:
-                        ropa_records = ROPARecord.query.filter_by(created_by=user.id).all()
-
-                    if ropa_records:
-                        ropa_data = []
-                        for record in ropa_records:
-                            record_dict = {
-                                'Processing Activity Name': record.processing_activity_name or '',
-                                'Category': record.category or '',
-                                'Description': record.description or '',
-                                'Department/Function': record.department_function or '',
-                                'Controller Name': record.controller_name or '',
-                                'Controller Contact': record.controller_contact or '',
-                                'Controller Address': record.controller_address or '',
-                                'DPO Name': record.dpo_name or '',
-                                'DPO Contact': record.dpo_contact or '',
-                                'Processing Purpose': record.processing_purpose or '',
-                                'Legal Basis': record.legal_basis or '',
-                                'Data Categories': record.data_categories or '',
-                                'Data Subjects': record.data_subjects or '',
-                                'Recipients': record.recipients or '',
-                                'Retention Period': record.retention_period or '',
-                                'Security Measures': record.security_measures or '',
-                                'Status': record.status or '',
-                                'Created Date': record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '',
-                                'Updated Date': record.updated_at.strftime('%Y-%m-%d %H:%M:%S') if record.updated_at else ''
-                            }
-                            ropa_data.append(record_dict)
-
-                        ropa_df = pd.DataFrame(ropa_data)
-                        ropa_df.to_excel(writer, sheet_name='System_ROPA_Records', index=False)
-
-                        # Format the system ROPA records sheet
-                        worksheet = workbook['System_ROPA_Records']
-                        format_excel_sheet(worksheet, ropa_df, is_ropa_sheet=True)
-                        sheets_written += 1
-
-                except Exception as e:
-                    print(f"Error adding ROPA records sheet: {str(e)}")
+            # Custom field integration is handled in enhance_existing_sheets_with_custom_fields
 
             # Add export summary sheet
             try:
-                summary_data = create_export_summary(excel_files, ropa_records if include_updates else [])
+                summary_data = create_export_summary(excel_files, [])
                 summary_df = pd.DataFrame(summary_data)
                 summary_df.to_excel(writer, sheet_name='Export_Summary', index=False)
 
