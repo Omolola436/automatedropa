@@ -385,51 +385,37 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                             except Exception as fallback_error:
                                 print(f"Fallback also failed for {original_name}: {str(fallback_error)}")
 
-            # Add approved custom fields as separate tabs
+            # Integrate approved custom fields into original sheets
             try:
                 from custom_tab_automation import get_approved_custom_fields_by_category
                 custom_fields = get_approved_custom_fields_by_category()
                 
-                for category, fields in custom_fields.items():
-                    if fields:  # Only create tabs for categories that have approved fields
-                        custom_field_data = []
+                # Get custom field data for integration
+                custom_field_values = {}
+                if custom_fields:
+                    from models import ROPACustomData, ROPARecord
+                    for category, fields in custom_fields.items():
                         for field in fields:
-                            # Get all ROPA records and their custom field values for this field
-                            from models import ROPACustomData, ROPARecord
                             field_values = db.session.query(ROPACustomData, ROPARecord).join(
                                 ROPARecord, ROPACustomData.ropa_record_id == ROPARecord.id
                             ).filter(ROPACustomData.custom_field_id == field['id']).all()
                             
                             for custom_data, ropa_record in field_values:
                                 if user_role != 'Privacy Officer' and ropa_record.created_by != user.id:
-                                    continue  # Skip records user doesn't have access to
-                                    
-                                custom_field_data.append({
-                                    'ROPA Record': ropa_record.processing_activity_name or '',
-                                    'Field Name': field['field_name'],
-                                    'Field Value': custom_data.field_value or '',
-                                    'Field Type': field['field_type'],
-                                    'Is Required': 'Yes' if field['is_required'] else 'No',
-                                    'Record Status': ropa_record.status or '',
-                                    'Created Date': custom_data.created_at.strftime('%Y-%m-%d %H:%M:%S') if custom_data.created_at else '',
-                                    'Updated Date': custom_data.updated_at.strftime('%Y-%m-%d %H:%M:%S') if custom_data.updated_at else ''
-                                })
-                        
-                        if custom_field_data:
-                            custom_df = pd.DataFrame(custom_field_data)
-                            # Clean category name for sheet name
-                            sheet_name = f"Custom_{category.replace(' ', '_').replace('/', '_')}"
-                            if len(sheet_name) > 31:
-                                sheet_name = sheet_name[:31]
-                            
-                            custom_df.to_excel(writer, sheet_name=sheet_name, index=False)
-                            worksheet = workbook[sheet_name]
-                            format_excel_sheet(worksheet, custom_df, is_original_sheet=False)
-                            sheets_written += 1
-                            print(f"Added custom fields tab: {sheet_name} with {len(custom_field_data)} entries")
+                                    continue
+                                
+                                record_key = ropa_record.processing_activity_name or f"Record_{ropa_record.id}"
+                                if record_key not in custom_field_values:
+                                    custom_field_values[record_key] = {}
+                                
+                                custom_field_values[record_key][field['field_name']] = custom_data.field_value or ''
+                
+                # Now enhance existing sheets with custom field columns
+                if custom_field_values:
+                    enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, custom_fields)
                             
             except Exception as e:
-                print(f"Error adding custom fields tabs: {str(e)}")
+                print(f"Error integrating custom fields: {str(e)}")
 
             # Add updated ROPA records sheet if there are any updates
             if include_updates:
@@ -696,3 +682,133 @@ def create_export_summary(excel_files, ropa_records):
         summary.append({"Category": "Custom Fields", "Information": f"Error retrieving: {str(e)}"})
 
     return summary
+
+
+def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, custom_fields):
+    """Enhance existing sheets by adding custom field columns before Notes/Comments"""
+    try:
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+        from openpyxl.utils import get_column_letter
+        
+        # Get all approved custom field names
+        all_custom_fields = []
+        for category, fields in custom_fields.items():
+            for field in fields:
+                all_custom_fields.append(field['field_name'])
+        
+        if not all_custom_fields:
+            return
+        
+        # Process each worksheet
+        for sheet_name in workbook.sheetnames:
+            worksheet = workbook[sheet_name]
+            
+            # Skip summary and system sheets
+            if sheet_name in ['Export_Summary', 'System_ROPA_Records']:
+                continue
+            
+            # Find the last column with data in the header row
+            max_col = 1
+            for col in range(1, worksheet.max_column + 1):
+                if worksheet.cell(row=1, col=col).value or worksheet.cell(row=2, col=col).value:
+                    max_col = col
+            
+            # Insert custom field columns before the last column (assuming it's Notes/Comments)
+            insert_position = max_col
+            
+            # First, shift existing last column to make room for custom fields
+            if max_col > 0:
+                # Move the last column (Notes/Comments) to after custom fields
+                for row_num in range(1, worksheet.max_row + 1):
+                    old_cell = worksheet.cell(row=row_num, column=max_col)
+                    new_cell = worksheet.cell(row=row_num, column=max_col + len(all_custom_fields))
+                    new_cell.value = old_cell.value
+                    new_cell.font = old_cell.font
+                    new_cell.fill = old_cell.fill
+                    new_cell.alignment = old_cell.alignment
+                    new_cell.border = old_cell.border
+                    old_cell.value = None
+            
+            # Add custom field headers
+            for idx, field_name in enumerate(all_custom_fields):
+                col_num = insert_position + idx
+                
+                # Set header styling to match existing headers
+                header_cell = worksheet.cell(row=1, column=col_num)
+                header_cell.value = field_name
+                header_cell.font = Font(bold=True, color="FFFFFF", size=11, name="Arial")
+                header_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                header_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                header_cell.border = Border(
+                    left=Side(style='thick', color="FFFFFF"),
+                    right=Side(style='thick', color="FFFFFF"),
+                    top=Side(style='thick', color="FFFFFF"),
+                    bottom=Side(style='thick', color="FFFFFF")
+                )
+                
+                # If there's a second header row, add field name there too
+                if worksheet.max_row >= 2 and worksheet.cell(row=2, column=1).value:
+                    subheader_cell = worksheet.cell(row=2, column=col_num)
+                    subheader_cell.value = field_name
+                    subheader_cell.font = Font(bold=True, color="FFFFFF", size=9)
+                    subheader_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                    subheader_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+                    subheader_cell.border = Border(
+                        left=Side(style='thin'),
+                        right=Side(style='thin'),
+                        top=Side(style='thin'),
+                        bottom=Side(style='thin')
+                    )
+                
+                # Set column width
+                column_letter = get_column_letter(col_num)
+                worksheet.column_dimensions[column_letter].width = 25
+            
+            # Fill in custom field data for existing rows
+            data_start_row = 3 if worksheet.max_row >= 2 and worksheet.cell(row=2, column=1).value else 2
+            
+            for row_num in range(data_start_row, worksheet.max_row + 1):
+                # Try to identify the record by looking at the first few columns for activity name
+                record_identifier = None
+                for col in range(1, min(5, max_col)):  # Check first few columns
+                    cell_value = worksheet.cell(row=row_num, column=col).value
+                    if cell_value and str(cell_value).strip():
+                        # Try to match with custom field values
+                        if str(cell_value).strip() in custom_field_values:
+                            record_identifier = str(cell_value).strip()
+                            break
+                
+                # Fill custom field values
+                for idx, field_name in enumerate(all_custom_fields):
+                    col_num = insert_position + idx
+                    data_cell = worksheet.cell(row=row_num, column=col_num)
+                    
+                    # Set default styling
+                    data_cell.font = Font(name="Arial", size=10, color="333333")
+                    data_cell.alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
+                    data_cell.border = Border(
+                        left=Side(style='thin', color="CCCCCC"),
+                        right=Side(style='thin', color="CCCCCC"),
+                        top=Side(style='thin', color="CCCCCC"),
+                        bottom=Side(style='thin', color="CCCCCC")
+                    )
+                    
+                    # Alternating row colors
+                    if row_num % 2 == 0:
+                        data_cell.fill = PatternFill(start_color="E8F4FD", end_color="E8F4FD", fill_type="solid")
+                    else:
+                        data_cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+                    
+                    # Set the value if we found a matching record
+                    if record_identifier and record_identifier in custom_field_values:
+                        if field_name in custom_field_values[record_identifier]:
+                            data_cell.value = custom_field_values[record_identifier][field_name]
+                        else:
+                            data_cell.value = ""
+                    else:
+                        data_cell.value = ""
+            
+            print(f"Enhanced sheet '{sheet_name}' with {len(all_custom_fields)} custom field columns")
+    
+    except Exception as e:
+        print(f"Error enhancing sheets with custom fields: {str(e)}")
