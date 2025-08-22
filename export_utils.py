@@ -440,56 +440,68 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
         raise e
 
 def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=False, original_sheet_name=None):
-    """Apply beautiful formatting to Excel sheet with enhanced colors"""
+    """Apply professional formatting to Excel sheet with enhanced visual appeal"""
     try:
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         
-        # Different color schemes for different sheet types
+        # Professional color schemes matching uploaded ROPA style
         if is_original_sheet:
-            header_color = "366092"  # Darker blue for original sheets
-            alt_row_color = "E8F4FD"  # Light blue
+            header_color = "2F4F7F"  # Professional dark blue for original sheets
+            alt_row_color = "E8F1FF"  # Very light blue
+            accent_color = "B4D7FF"  # Medium blue for emphasis
         elif is_ropa_sheet:
-            header_color = "4472C4"  # Standard blue for ROPA sheets  
-            alt_row_color = "F2F2F2"  # Light gray
+            header_color = "1F497D"  # Deep blue for ROPA sheets  
+            alt_row_color = "F0F4F8"  # Light gray-blue
+            accent_color = "DDEEFF"  # Light blue accent
         else:
-            header_color = "70AD47"  # Green for other sheets
-            alt_row_color = "E2EFDA"  # Light green
+            header_color = "4F6228"  # Professional dark green
+            alt_row_color = "F2F8E8"  # Light green
+            accent_color = "E8F4D0"  # Medium green
 
-        # Header formatting with enhanced colors
-        header_font = Font(bold=True, color="FFFFFF", size=11, name="Arial")
+        # Enhanced header formatting with professional styling
+        header_font = Font(bold=True, color="FFFFFF", size=12, name="Calibri")
         header_fill = PatternFill(start_color=header_color, end_color=header_color, fill_type="solid")
         header_alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
         header_border = Border(
-            left=Side(style='thick', color="FFFFFF"),
-            right=Side(style='thick', color="FFFFFF"),
-            top=Side(style='thick', color="FFFFFF"),
-            bottom=Side(style='thick', color="FFFFFF")
+            left=Side(style='medium', color="FFFFFF"),
+            right=Side(style='medium', color="FFFFFF"),
+            top=Side(style='medium', color="FFFFFF"),
+            bottom=Side(style='medium', color="FFFFFF")
         )
 
         # Ensure we have actual data to format
         if df.empty:
             return
 
-        # Apply header formatting - preserve EXACT original column names
+        # Apply professional header formatting
         num_cols = len(df.columns)
         for col_num in range(1, num_cols + 1):
             cell = worksheet.cell(row=1, column=col_num)
             
-            # Set the header value EXACTLY as it was in the original file
+            # Set header value with proper formatting
             if col_num <= len(df.columns):
                 header_value = str(df.columns[col_num - 1])
-                # Keep the EXACT original header name - no modifications
+                
+                # If header is empty or unnamed, provide a meaningful default
+                if not header_value or header_value.strip() == '' or header_value.lower() in ['unnamed', 'nan', 'none']:
+                    header_value = f"Column {col_num}"
+                
+                # Clean up header text while preserving original meaning
+                header_value = header_value.strip()
+                if len(header_value) > 50:  # Truncate very long headers
+                    header_value = header_value[:47] + "..."
+                
                 cell.value = header_value
             
-            # Apply formatting
+            # Apply professional header styling
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_alignment
             cell.border = header_border
 
-        # Data cell formatting with enhanced styling
-        data_font = Font(name="Arial", size=10, color="333333")
+        # Enhanced data cell formatting with professional styling
+        data_font = Font(name="Calibri", size=11, color="2C2C2C")
         data_alignment = Alignment(horizontal="left", vertical="top", wrap_text=True)
         data_border = Border(
             left=Side(style='thin', color="CCCCCC"),
@@ -498,31 +510,37 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
             bottom=Side(style='thin', color="CCCCCC")
         )
 
-        # Apply data formatting with alternating colors
+        # Apply data formatting with professional alternating colors
         num_rows = len(df) + 1  # +1 for header
         for row_num in range(2, num_rows + 1):
             for col_num in range(1, num_cols + 1):
                 cell = worksheet.cell(row=row_num, column=col_num)
+                
+                # Ensure cell has a value (handle None/NaN)
+                if cell.value is None or str(cell.value).lower() in ['nan', 'none']:
+                    cell.value = ''
+                
                 cell.font = data_font
                 cell.alignment = data_alignment
                 cell.border = data_border
 
-                # Enhanced alternating row coloring with better contrast
+                # Professional alternating row coloring with better contrast
                 if row_num % 2 == 0:
                     cell.fill = PatternFill(start_color=alt_row_color, end_color=alt_row_color, fill_type="solid")
                 else:
                     cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
 
-        # Enhanced column width calculation
+        # Intelligent column width calculation for better readability
         for col_num in range(1, num_cols + 1):
             column_letter = get_column_letter(col_num)
             
-            # Calculate max length including header
-            header_length = len(str(df.columns[col_num - 1])) if col_num <= len(df.columns) else 10
-            max_length = max(header_length, 12)  # Minimum width
+            # Calculate optimal width based on content
+            header_length = len(str(worksheet.cell(row=1, column=col_num).value or ''))
+            max_length = max(header_length, 15)  # Minimum readable width
             
-            # Check data in column for width calculation
-            for row_num in range(2, min(num_rows + 1, 50)):  # Sample first 50 rows for performance
+            # Sample data to determine optimal width (check more rows for accuracy)
+            sample_size = min(num_rows, 100)  # Check up to 100 rows
+            for row_num in range(2, sample_size + 1):
                 cell = worksheet.cell(row=row_num, column=col_num)
                 if cell.value is not None:
                     try:
@@ -531,30 +549,59 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                     except:
                         pass
 
-            # Set column width with sensible limits
-            adjusted_width = min(max(max_length + 2, 15), 50)  # Between 15 and 50
+            # Set optimal column width with professional limits
+            if max_length <= 20:
+                adjusted_width = max_length + 3
+            elif max_length <= 40:
+                adjusted_width = max_length + 2
+            else:
+                adjusted_width = 45  # Cap very wide columns
+            
+            # Ensure minimum and maximum bounds
+            adjusted_width = min(max(adjusted_width, 12), 55)
             worksheet.column_dimensions[column_letter].width = adjusted_width
 
-        # Enhanced row heights
-        worksheet.row_dimensions[1].height = 40  # Taller header for better visibility
+        # Professional row height settings
+        worksheet.row_dimensions[1].height = 45  # Generous header height for readability
 
-        # Set row height for data rows
-        row_height = 25
-        for row_num in range(2, min(num_rows + 1, 200)):  # Format up to 200 rows
-            worksheet.row_dimensions[row_num].height = row_height
+        # Set comfortable row height for data rows
+        for row_num in range(2, min(num_rows + 1, 500)):  # Format up to 500 rows
+            worksheet.row_dimensions[row_num].height = 30  # Comfortable reading height
 
-        # Force Excel to recalculate
+        # Enable gridlines for better structure visibility
         worksheet.sheet_view.showGridLines = True
+        
+        # Freeze the header row for better navigation
+        worksheet.freeze_panes = 'A2'
+
+        print(f"Applied professional formatting to sheet '{original_sheet_name or 'Unknown'}' with {num_cols} columns and {num_rows-1} data rows")
 
     except Exception as e:
         print(f"Error formatting Excel sheet {original_sheet_name or 'Unknown'}: {str(e)}")
-        # Fallback minimal formatting that should always work
+        # Enhanced fallback formatting
         try:
             if not df.empty:
                 for col_num in range(1, len(df.columns) + 1):
                     cell = worksheet.cell(row=1, column=col_num)
-                    cell.font = Font(bold=True, color="FFFFFF")
-                    cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                    cell.font = Font(bold=True, color="FFFFFF", size=11, name="Calibri")
+                    cell.fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+                    cell.alignment = Alignment(horizontal="center", vertical="center")
+                    cell.border = Border(
+                        left=Side(style='medium'),
+                        right=Side(style='medium'),
+                        top=Side(style='medium'),
+                        bottom=Side(style='medium')
+                    )
+                    
+                    # Set column width
+                    column_letter = get_column_letter(col_num)
+                    worksheet.column_dimensions[column_letter].width = 20
+                    
+                # Set row heights
+                worksheet.row_dimensions[1].height = 40
+                for row in range(2, min(len(df) + 2, 100)):
+                    worksheet.row_dimensions[row].height = 25
+                    
         except Exception as fallback_error:
             print(f"Even fallback formatting failed: {str(fallback_error)}")
 
