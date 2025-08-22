@@ -98,6 +98,82 @@ def register():
     flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
     return redirect(url_for('login'))
 
+@app.route('/forgot-password', methods=['GET', 'POST'])
+def forgot_password():
+    """Handle forgot password requests"""
+    if request.method == 'POST':
+        email = request.form['email']
+        user = models.User.query.filter_by(email=email).first()
+        
+        if user:
+            # Generate reset token
+            import secrets
+            import hashlib
+            token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            
+            # Set token expiry (24 hours from now)
+            from datetime import datetime, timedelta
+            user.reset_token = token_hash
+            user.reset_token_expires = datetime.utcnow() + timedelta(hours=24)
+            db.session.commit()
+            
+            # In a production app, you would send an email here
+            # For now, we'll flash the reset link
+            reset_url = url_for('reset_password', token=token, _external=True)
+            
+            log_audit_event('Password Reset Requested', email, 'User requested password reset')
+            flash(f'Password reset instructions would be sent to {email}. For development: {reset_url}', 'info')
+        else:
+            # Don't reveal whether email exists or not for security
+            flash('If an account with that email exists, password reset instructions will be sent.', 'info')
+            log_audit_event('Password Reset Failed', email, 'Password reset requested for non-existent email')
+        
+        return redirect(url_for('login'))
+    
+    return render_template('forgot_password.html')
+
+@app.route('/reset-password/<token>', methods=['GET', 'POST'])
+def reset_password(token):
+    """Handle password reset with token"""
+    import hashlib
+    from datetime import datetime
+    
+    # Hash the token to match what's stored in database
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    
+    # Find user with valid token
+    user = models.User.query.filter_by(reset_token=token_hash).first()
+    
+    if not user or not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
+        flash('Invalid or expired reset token. Please request a new password reset.', 'error')
+        return redirect(url_for('forgot_password'))
+    
+    if request.method == 'POST':
+        password = request.form['password']
+        confirm_password = request.form['confirm_password']
+        
+        # Validation
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('reset_password.html')
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('reset_password.html')
+        
+        # Update password and clear reset token
+        user.password_hash = generate_password_hash(password)
+        user.reset_token = None
+        user.reset_token_expires = None
+        db.session.commit()
+        
+        log_audit_event('Password Reset Completed', user.email, 'User successfully reset password')
+        flash('Your password has been reset successfully. You can now log in with your new password.', 'success')
+        return redirect(url_for('login'))
+    
+    return render_template('reset_password.html')
+
 @app.route('/logout')
 @login_required
 def logout():

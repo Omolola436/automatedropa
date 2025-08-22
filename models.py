@@ -16,6 +16,8 @@ class User(UserMixin, db.Model):
     department = db.Column(String(100))
     created_at = db.Column(DateTime, default=datetime.utcnow)
     last_login = db.Column(DateTime)
+    reset_token = db.Column(String(256), nullable=True)
+    reset_token_expires = db.Column(DateTime, nullable=True)
     
     # Relationship
     ropa_records = db.relationship('ROPARecord', foreign_keys='ROPARecord.created_by', backref='creator', lazy=True)
