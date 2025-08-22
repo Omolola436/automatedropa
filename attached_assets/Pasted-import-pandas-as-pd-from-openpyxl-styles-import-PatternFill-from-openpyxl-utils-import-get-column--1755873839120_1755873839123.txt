@@ -1,0 +1,61 @@
+import pandas as pd
+from openpyxl.styles import PatternFill
+from openpyxl.utils import get_column_letter
+
+def apply_blue_white_style(writer, sheet_name):
+    """Apply blue and white alternating row background colors."""
+    ws = writer.sheets[sheet_name]
+    blue_fill = PatternFill(start_color="ADD8E6", end_color="ADD8E6", fill_type="solid")  # Light blue
+    white_fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+
+    for row_idx, row in enumerate(ws.iter_rows(min_row=2), start=2):  # Skip header row
+        fill = blue_fill if row_idx % 2 == 0 else white_fill
+        for cell in row:
+            cell.fill = fill
+
+def generate_excel_export_enhanced(user_email, user_role, include_drafts=False, include_rejected=False):
+    from models import ExcelFileData, ExcelSheetData, User
+    from app import db
+    import tempfile, os, json
+    from datetime import datetime
+
+    try:
+        user = User.query.filter_by(email=user_email).first()
+        if not user:
+            raise Exception("User not found")
+
+        temp_dir = tempfile.gettempdir()
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"ROPA_Enhanced_Export_{timestamp}.xlsx"
+        file_path = os.path.join(temp_dir, filename)
+
+        with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+            # Export current ROPA records
+            records_df = get_filtered_ropa_data(user_email, user_role, include_drafts, include_rejected)
+            if not records_df.empty:
+                export_df = prepare_export_dataframe(records_df)
+                export_df.to_excel(writer, sheet_name='Current_ROPA_Records', index=False)
+                apply_blue_white_style(writer, 'Current_ROPA_Records')
+
+            # Export original Excel sheets
+            if user_role == 'Privacy Officer':
+                excel_files = ExcelFileData.query.all()
+            else:
+                excel_files = ExcelFileData.query.filter_by(uploaded_by=user.id).all()
+
+            for excel_file in excel_files:
+                sheets = ExcelSheetData.query.filter_by(excel_file_id=excel_file.id).all()
+                for sheet in sheets:
+                    try:
+                        sheet_data = json.loads(sheet.sheet_data)
+                        if sheet_data:
+                            df = pd.DataFrame(sheet_data)
+                            sheet_name = f"Original_{sheet.sheet_name}"[:31]
+                            df.to_excel(writer, sheet_name=sheet_name, index=False)
+                            apply_blue_white_style(writer, sheet_name)
+                    except Exception as e:
+                        print(f"Error exporting sheet {sheet.sheet_name}: {str(e)}")
+
+        return file_path
+    except Exception as e:
+        raise e
