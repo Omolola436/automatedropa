@@ -347,15 +347,6 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 if len(sheet_name) > 31:
                                     sheet_name = sheet_name[:31].rstrip('_')
 
-                                # Ensure unique sheet names if multiple files
-                                original_sheet_name = sheet_name
-                                counter = 1
-                                while sheet_name in [ws.title for ws in workbook.worksheets]:
-                                    suffix = f"_{counter}"
-                                    max_base_length = 31 - len(suffix)
-                                    sheet_name = original_sheet_name[:max_base_length] + suffix
-                                    counter += 1
-
                                 # Write sheet with formatting - ensure sheet_name is valid
                                 if not sheet_name or sheet_name.isspace():
                                     sheet_name = f"Sheet_{sheets_written + 1}"
@@ -445,19 +436,19 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         
-        # Colorful vibrant color schemes for visually appealing exports
+        # Enhanced vibrant color schemes for maximum visual appeal
         if is_original_sheet:
-            header_color = "4472C4"  # Vibrant royal blue for original sheets
-            alt_row_color = "E7F3FF"  # Bright light blue
-            accent_color = "9FC5E8"  # Bright medium blue for emphasis
+            header_color = "1F4E79"  # Deep royal blue for original sheets
+            alt_row_color = "D9E2F3"  # Strong light blue background
+            accent_color = "8DB4E2"  # Medium blue for emphasis
         elif is_ropa_sheet:
-            header_color = "70AD47"  # Vibrant green for ROPA sheets  
-            alt_row_color = "E8F5E0"  # Light fresh green
-            accent_color = "C5E0B4"  # Bright light green accent
+            header_color = "548235"  # Deep green for ROPA sheets  
+            alt_row_color = "E2EFDA"  # Strong light green background
+            accent_color = "A9D18E"  # Medium green accent
         else:
-            header_color = "FF6D01"  # Vibrant orange
-            alt_row_color = "FFF2E8"  # Light peach
-            accent_color = "FFD5B4"  # Bright light orange
+            header_color = "C65911"  # Deep orange
+            alt_row_color = "FCE4D6"  # Strong light orange background
+            accent_color = "F4B183"  # Medium orange accent
 
         # Enhanced header formatting with professional styling
         header_font = Font(bold=True, color="FFFFFF", size=12, name="Calibri")
@@ -524,13 +515,19 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                 cell.alignment = data_alignment
                 cell.border = data_border
 
-                # Colorful alternating row coloring with vibrant contrasts
+                # Apply vibrant alternating row colors for better readability
                 if row_num % 2 == 0:
+                    # Even rows get the alternate color
                     cell.fill = PatternFill(start_color=alt_row_color, end_color=alt_row_color, fill_type="solid")
                 else:
-                    # Use a very light version of accent color instead of plain white
-                    light_accent = accent_color if accent_color else "F8FCFF"
-                    cell.fill = PatternFill(start_color=light_accent, end_color=light_accent, fill_type="solid")
+                    # Odd rows get a lighter shade for contrast
+                    if is_original_sheet:
+                        light_color = "F0F8FF"  # Very light blue for original sheets
+                    elif is_ropa_sheet:
+                        light_color = "F8FFF8"  # Very light green for ROPA sheets
+                    else:
+                        light_color = "FFFAF0"  # Very light orange for other sheets
+                    cell.fill = PatternFill(start_color=light_color, end_color=light_color, fill_type="solid")
 
         # Intelligent column width calculation for better readability
         for col_num in range(1, num_cols + 1):
@@ -835,11 +832,11 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                         bottom=Side(style='thin', color="CCCCCC")
                     )
                     
-                    # Colorful alternating row colors for custom fields
+                    # Enhanced colorful alternating row colors for custom fields
                     if row_num % 2 == 0:
-                        data_cell.fill = PatternFill(start_color="F4E6FF", end_color="F4E6FF", fill_type="solid")  # Light purple
+                        data_cell.fill = PatternFill(start_color="E8DAEF", end_color="E8DAEF", fill_type="solid")  # Stronger light purple
                     else:
-                        data_cell.fill = PatternFill(start_color="FCF3FF", end_color="FCF3FF", fill_type="solid")  # Very light purple
+                        data_cell.fill = PatternFill(start_color="F4ECF7", end_color="F4ECF7", fill_type="solid")  # Very light purple with more saturation
                     
                     # Set the value if we found a matching record
                     if record_identifier and record_identifier in custom_field_values:
