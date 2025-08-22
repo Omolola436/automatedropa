@@ -385,6 +385,52 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                             except Exception as fallback_error:
                                 print(f"Fallback also failed for {original_name}: {str(fallback_error)}")
 
+            # Add approved custom fields as separate tabs
+            try:
+                from custom_tab_automation import get_approved_custom_fields_by_category
+                custom_fields = get_approved_custom_fields_by_category()
+                
+                for category, fields in custom_fields.items():
+                    if fields:  # Only create tabs for categories that have approved fields
+                        custom_field_data = []
+                        for field in fields:
+                            # Get all ROPA records and their custom field values for this field
+                            from models import ROPACustomData, ROPARecord
+                            field_values = db.session.query(ROPACustomData, ROPARecord).join(
+                                ROPARecord, ROPACustomData.ropa_record_id == ROPARecord.id
+                            ).filter(ROPACustomData.custom_field_id == field['id']).all()
+                            
+                            for custom_data, ropa_record in field_values:
+                                if user_role != 'Privacy Officer' and ropa_record.created_by != user.id:
+                                    continue  # Skip records user doesn't have access to
+                                    
+                                custom_field_data.append({
+                                    'ROPA Record': ropa_record.processing_activity_name or '',
+                                    'Field Name': field['field_name'],
+                                    'Field Value': custom_data.field_value or '',
+                                    'Field Type': field['field_type'],
+                                    'Is Required': 'Yes' if field['is_required'] else 'No',
+                                    'Record Status': ropa_record.status or '',
+                                    'Created Date': custom_data.created_at.strftime('%Y-%m-%d %H:%M:%S') if custom_data.created_at else '',
+                                    'Updated Date': custom_data.updated_at.strftime('%Y-%m-%d %H:%M:%S') if custom_data.updated_at else ''
+                                })
+                        
+                        if custom_field_data:
+                            custom_df = pd.DataFrame(custom_field_data)
+                            # Clean category name for sheet name
+                            sheet_name = f"Custom_{category.replace(' ', '_').replace('/', '_')}"
+                            if len(sheet_name) > 31:
+                                sheet_name = sheet_name[:31]
+                            
+                            custom_df.to_excel(writer, sheet_name=sheet_name, index=False)
+                            worksheet = workbook[sheet_name]
+                            format_excel_sheet(worksheet, custom_df, is_original_sheet=False)
+                            sheets_written += 1
+                            print(f"Added custom fields tab: {sheet_name} with {len(custom_field_data)} entries")
+                            
+            except Exception as e:
+                print(f"Error adding custom fields tabs: {str(e)}")
+
             # Add updated ROPA records sheet if there are any updates
             if include_updates:
                 try:
@@ -635,5 +681,18 @@ def create_export_summary(excel_files, ropa_records):
 
         for status, count in status_counts.items():
             summary.append({"Category": f"Records - {status}", "Information": str(count)})
+
+    # Custom fields information
+    try:
+        from custom_tab_automation import get_approved_custom_fields_by_category
+        custom_fields = get_approved_custom_fields_by_category()
+        total_custom_fields = sum(len(fields) for fields in custom_fields.values())
+        summary.append({"Category": "Approved Custom Fields", "Information": str(total_custom_fields)})
+        
+        for category, fields in custom_fields.items():
+            if fields:
+                summary.append({"Category": f"Custom Fields - {category}", "Information": str(len(fields))})
+    except Exception as e:
+        summary.append({"Category": "Custom Fields", "Information": f"Error retrieving: {str(e)}"})
 
     return summary
