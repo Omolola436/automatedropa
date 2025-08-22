@@ -238,10 +238,19 @@ def add_activity():
         # Get all form data
         form_data = request.form.to_dict()
 
+        # Validate required field
+        if not form_data.get('processing_activity_name'):
+            flash('Processing Activity Name is required.', 'error')
+            options = get_predefined_options()
+            return render_template('add_activity.html', options=options)
+
         # Build record data dynamically
         record_data = {
-            'processing_activity_name': form_data['processing_activity_name'],
-            'created_by': current_user.id
+            'processing_activity_name': form_data.get('processing_activity_name'),
+            'created_by': current_user.id,
+            'category': form_data.get('category', ''),
+            'description': form_data.get('description', ''),
+            'department_function': current_user.department if hasattr(current_user, 'department') else ''
         }
 
         # Add all other fields that exist in the model
