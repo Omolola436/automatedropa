@@ -304,21 +304,24 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
             sheets_written = 0
             workbook = writer.book
 
+            # Track all processed sheets globally to prevent duplicates across files
+            global_processed_sheets = set()
+            
             # Process each uploaded Excel file
             for excel_file in excel_files:
                 # Get all sheets for this file, ordered by original sheet order
                 sheets = ExcelSheetData.query.filter_by(excel_file_id=excel_file.id).all()
-
-                # Track processed sheets to avoid duplicates
-                processed_sheets = set()
                 
                 # Sort sheets to maintain original order if possible
                 original_sheet_names = json.loads(excel_file.sheet_names)
                 sheets_dict = {sheet.sheet_name: sheet for sheet in sheets}
 
                 for original_name in original_sheet_names:
-                    # Skip if we've already processed this sheet
-                    if original_name in processed_sheets:
+                    # Create unique identifier for this sheet
+                    sheet_identifier = f"{original_name}_{excel_file.id}"
+                    
+                    # Skip if we've already processed this exact sheet
+                    if sheet_identifier in global_processed_sheets:
                         continue
                         
                     if original_name in sheets_dict:
@@ -354,7 +357,12 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 original_sheet_name = sheet_name
                                 counter = 1
                                 while sheet_name in workbook.sheetnames:
-                                    sheet_name = f"{original_sheet_name}_{counter}"
+                                    if len(f"{original_sheet_name}_{counter}") <= 31:
+                                        sheet_name = f"{original_sheet_name}_{counter}"
+                                    else:
+                                        # Truncate and add counter
+                                        truncated = original_sheet_name[:28]
+                                        sheet_name = f"{truncated}_{counter}"
                                     counter += 1
 
                                 # Write sheet with formatting - ensure sheet_name is valid
@@ -369,8 +377,8 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 format_excel_sheet(worksheet, df, is_original_sheet=True, original_sheet_name=original_name)
                                 sheets_written += 1
 
-                                # Mark as processed
-                                processed_sheets.add(original_name)
+                                # Mark as processed globally
+                                global_processed_sheets.add(sheet_identifier)
 
                                 print(f"Exported sheet: '{original_name}' as '{sheet_name}' with {len(df)} rows and {len(df.columns)} columns")
 
@@ -385,7 +393,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                     worksheet = workbook[fallback_name]
                                     format_excel_sheet(worksheet, df, is_original_sheet=True)
                                     sheets_written += 1
-                                    processed_sheets.add(original_name)
+                                    global_processed_sheets.add(sheet_identifier)
                                     print(f"Used fallback name: '{fallback_name}' for sheet '{original_name}'")
                             except Exception as fallback_error:
                                 print(f"Fallback also failed for {original_name}: {str(fallback_error)}")
