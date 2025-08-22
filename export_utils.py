@@ -321,28 +321,17 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                             sheet_data = json.loads(sheet.sheet_data)
 
                             if sheet_data:
-                                # Convert to DataFrame while preserving original structure
+                                # Convert to DataFrame while preserving EXACT original structure
                                 if sheet_data and len(sheet_data) > 0:
-                                    # Get the original columns from the stored sheet info
-                                    original_columns = json.loads(sheet.columns) if sheet.columns else None
-                                    
-                                    # Create DataFrame with proper column handling
+                                    # Create DataFrame from the stored data
                                     df = pd.DataFrame(sheet_data)
                                     
-                                    # If we have original column info and it matches, use it
-                                    if original_columns and len(original_columns) == len(df.columns):
-                                        df.columns = original_columns
-                                    else:
-                                        # Try to get column names from the first row if they look like headers
-                                        if len(sheet_data) > 1:
-                                            first_row = sheet_data[0]
-                                            if isinstance(first_row, dict):
-                                                # If first row values look like headers (strings, not numbers)
-                                                potential_headers = list(first_row.values())
-                                                if all(isinstance(val, str) and val.strip() for val in potential_headers if val is not None):
-                                                    df.columns = potential_headers
-                                                    # Remove the header row from data
-                                                    df = df.iloc[1:].reset_index(drop=True)
+                                    # The data is already stored with the original column names
+                                    # Don't modify column names at all - keep exactly as uploaded
+                                    # The sheet_data already contains the data with original headers preserved
+                                    
+                                    # Remove any completely empty rows but keep original column structure
+                                    df = df.dropna(how='all')
                                 else:
                                     df = pd.DataFrame()
 
@@ -493,17 +482,15 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
         if df.empty:
             return
 
-        # Apply header formatting - make sure all headers are properly filled
+        # Apply header formatting - preserve EXACT original column names
         num_cols = len(df.columns)
         for col_num in range(1, num_cols + 1):
             cell = worksheet.cell(row=1, column=col_num)
             
-            # Set the header value from the DataFrame column
+            # Set the header value EXACTLY as it was in the original file
             if col_num <= len(df.columns):
-                header_value = str(df.columns[col_num - 1]).strip()
-                # Don't show "Unnamed" headers - replace with meaningful names if possible
-                if header_value.startswith('Unnamed:') or not header_value:
-                    header_value = f"Column {col_num}"
+                header_value = str(df.columns[col_num - 1])
+                # Keep the EXACT original header name - no modifications
                 cell.value = header_value
             
             # Apply formatting

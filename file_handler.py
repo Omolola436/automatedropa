@@ -55,9 +55,10 @@ def read_all_excel_sheets(file):
                 # Read sheet with multiple strategies
                 sheet_data = read_sheet_with_fallback(file, sheet_name)
                 if sheet_data is not None and not sheet_data.empty:
+                    # Store data with original column names preserved exactly as uploaded
                     excel_data['sheets'][sheet_name] = {
                         'data': sheet_data.to_dict('records'),
-                        'columns': list(sheet_data.columns),
+                        'columns': list(sheet_data.columns),  # Keep exact original column names
                         'shape': sheet_data.shape,
                         'has_data': True
                     }
@@ -106,8 +107,8 @@ def read_sheet_with_fallback(file, sheet_name):
             df = df.loc[:, ~df.columns.duplicated()]  # Remove duplicate columns
 
             if not df.empty:
-                # Clean column names
-                df.columns = [str(col).strip() for col in df.columns]
+                # Keep original column names EXACTLY as they are - no cleaning or modification
+                df.columns = [str(col) for col in df.columns]
                 return df
         except Exception as e:
             continue
