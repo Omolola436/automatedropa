@@ -1,4 +1,3 @@
-
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
@@ -83,6 +82,32 @@ class ROPARecord(db.Model):
     reviewed_by = db.Column(Integer, db.ForeignKey('users.id'))
     reviewed_at = db.Column(DateTime)
     review_comments = db.Column(Text)
+
+class ExcelFileData(db.Model):
+    __tablename__ = 'excel_files'
+
+    id = db.Column(Integer, primary_key=True)
+    filename = db.Column(String(255), nullable=False)
+    uploaded_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    total_sheets = db.Column(Integer, default=0)
+    sheet_names = db.Column(Text)  # JSON array of sheet names
+    upload_timestamp = db.Column(DateTime, default=datetime.utcnow)
+    metadata = db.Column(Text)  # JSON metadata about the file
+
+    uploader = db.relationship('User', backref='uploaded_excel_files')
+    sheets = db.relationship('ExcelSheetData', backref='excel_file', cascade='all, delete-orphan')
+
+class ExcelSheetData(db.Model):
+    __tablename__ = 'excel_sheets'
+
+    id = db.Column(Integer, primary_key=True)
+    excel_file_id = db.Column(Integer, db.ForeignKey('excel_files.id'), nullable=False)
+    sheet_name = db.Column(String(255), nullable=False)
+    columns = db.Column(Text)  # JSON array of column names
+    row_count = db.Column(Integer, default=0)
+    column_count = db.Column(Integer, default=0)
+    sheet_data = db.Column(Text)  # JSON data of the sheet content
+    created_at = db.Column(DateTime, default=datetime.utcnow)
 
 
 class AuditLog(db.Model):

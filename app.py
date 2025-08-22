@@ -476,6 +476,22 @@ def export_data():
         else:
             return redirect(url_for('privacy_champion_dashboard'))
 
+@app.route('/export-complete-excel')
+@login_required
+def export_complete_excel():
+    """Export complete Excel file with all original sheets plus updates"""
+    try:
+        from file_handler import export_excel_with_all_sheets
+        file_path, filename = export_excel_with_all_sheets(current_user.email, current_user.role, include_updates=True)
+        log_audit_event('Complete Excel Exported', current_user.email, 'Exported complete Excel with all sheets and updates')
+        return send_file(file_path, as_attachment=True, download_name=filename)
+    except Exception as e:
+        flash(f'Error generating complete Excel export: {str(e)}', 'error')
+        if current_user.role == 'Privacy Officer':
+            return redirect(url_for('privacy_officer_dashboard'))
+        else:
+            return redirect(url_for('privacy_champion_dashboard'))
+
 @app.route('/audit-logs')
 @login_required
 def audit_logs():

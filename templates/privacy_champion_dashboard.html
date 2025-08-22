@@ -319,7 +319,7 @@ document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
     radio.addEventListener('change', function() {
         const selectedStatus = this.value;
         const rows = document.querySelectorAll('#ropaTable tbody tr');
-        
+
         rows.forEach(row => {
             if (selectedStatus === 'all' || row.dataset.status === selectedStatus) {
                 row.style.display = '';
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
     draftRows.forEach(row => {
         row.classList.add('table-light');
     });
-    
+
     const rejectedRows = document.querySelectorAll('tr[data-status="Rejected"]');
     rejectedRows.forEach(row => {
         row.classList.add('table-danger');
