@@ -445,19 +445,19 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
         
-        # Professional color schemes matching uploaded ROPA style
+        # Colorful vibrant color schemes for visually appealing exports
         if is_original_sheet:
-            header_color = "2F4F7F"  # Professional dark blue for original sheets
-            alt_row_color = "E8F1FF"  # Very light blue
-            accent_color = "B4D7FF"  # Medium blue for emphasis
+            header_color = "4472C4"  # Vibrant royal blue for original sheets
+            alt_row_color = "E7F3FF"  # Bright light blue
+            accent_color = "9FC5E8"  # Bright medium blue for emphasis
         elif is_ropa_sheet:
-            header_color = "1F497D"  # Deep blue for ROPA sheets  
-            alt_row_color = "F0F4F8"  # Light gray-blue
-            accent_color = "DDEEFF"  # Light blue accent
+            header_color = "70AD47"  # Vibrant green for ROPA sheets  
+            alt_row_color = "E8F5E0"  # Light fresh green
+            accent_color = "C5E0B4"  # Bright light green accent
         else:
-            header_color = "4F6228"  # Professional dark green
-            alt_row_color = "F2F8E8"  # Light green
-            accent_color = "E8F4D0"  # Medium green
+            header_color = "FF6D01"  # Vibrant orange
+            alt_row_color = "FFF2E8"  # Light peach
+            accent_color = "FFD5B4"  # Bright light orange
 
         # Enhanced header formatting with professional styling
         header_font = Font(bold=True, color="FFFFFF", size=12, name="Calibri")
@@ -524,11 +524,13 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                 cell.alignment = data_alignment
                 cell.border = data_border
 
-                # Professional alternating row coloring with better contrast
+                # Colorful alternating row coloring with vibrant contrasts
                 if row_num % 2 == 0:
                     cell.fill = PatternFill(start_color=alt_row_color, end_color=alt_row_color, fill_type="solid")
                 else:
-                    cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+                    # Use a very light version of accent color instead of plain white
+                    light_accent = accent_color if accent_color else "F8FCFF"
+                    cell.fill = PatternFill(start_color=light_accent, end_color=light_accent, fill_type="solid")
 
         # Intelligent column width calculation for better readability
         for col_num in range(1, num_cols + 1):
@@ -584,7 +586,7 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
                 for col_num in range(1, len(df.columns) + 1):
                     cell = worksheet.cell(row=1, column=col_num)
                     cell.font = Font(bold=True, color="FFFFFF", size=11, name="Calibri")
-                    cell.fill = PatternFill(start_color="1F497D", end_color="1F497D", fill_type="solid")
+                    cell.fill = PatternFill(start_color="E67E22", end_color="E67E22", fill_type="solid")  # Bright orange
                     cell.alignment = Alignment(horizontal="center", vertical="center")
                     cell.border = Border(
                         left=Side(style='medium'),
@@ -608,9 +610,9 @@ def format_excel_sheet(worksheet, df, is_ropa_sheet=False, is_original_sheet=Fal
 def format_summary_sheet(worksheet, df):
     """Format the summary sheet with special styling"""
     try:
-        # Title formatting
+        # Colorful title formatting
         title_font = Font(bold=True, color="FFFFFF", size=14)
-        title_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        title_fill = PatternFill(start_color="E74C3C", end_color="E74C3C", fill_type="solid")  # Bright red
         title_alignment = Alignment(horizontal="center", vertical="center")
 
         # Merge cells for title
@@ -773,11 +775,11 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
             for idx, field_name in enumerate(all_custom_fields):
                 col_num = insert_position + idx
                 
-                # Set header styling to match existing headers
+                # Set colorful header styling for custom fields
                 header_cell = worksheet.cell(row=1, column=col_num)
                 header_cell.value = field_name
                 header_cell.font = Font(bold=True, color="FFFFFF", size=11, name="Arial")
-                header_cell.fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+                header_cell.fill = PatternFill(start_color="9B59B6", end_color="9B59B6", fill_type="solid")  # Vibrant purple
                 header_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
                 header_cell.border = Border(
                     left=Side(style='thick', color="FFFFFF"),
@@ -791,7 +793,7 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                     subheader_cell = worksheet.cell(row=2, column=col_num)
                     subheader_cell.value = field_name
                     subheader_cell.font = Font(bold=True, color="FFFFFF", size=9)
-                    subheader_cell.fill = PatternFill(start_color="4472C4", end_color="4472C4", fill_type="solid")
+                    subheader_cell.fill = PatternFill(start_color="8E44AD", end_color="8E44AD", fill_type="solid")  # Darker purple
                     subheader_cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
                     subheader_cell.border = Border(
                         left=Side(style='thin'),
@@ -833,11 +835,11 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                         bottom=Side(style='thin', color="CCCCCC")
                     )
                     
-                    # Alternating row colors
+                    # Colorful alternating row colors for custom fields
                     if row_num % 2 == 0:
-                        data_cell.fill = PatternFill(start_color="E8F4FD", end_color="E8F4FD", fill_type="solid")
+                        data_cell.fill = PatternFill(start_color="F4E6FF", end_color="F4E6FF", fill_type="solid")  # Light purple
                     else:
-                        data_cell.fill = PatternFill(start_color="FFFFFF", end_color="FFFFFF", fill_type="solid")
+                        data_cell.fill = PatternFill(start_color="FCF3FF", end_color="FCF3FF", fill_type="solid")  # Very light purple
                     
                     # Set the value if we found a matching record
                     if record_identifier and record_identifier in custom_field_values:
