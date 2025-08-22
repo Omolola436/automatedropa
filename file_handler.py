@@ -186,18 +186,46 @@ def store_excel_data_in_database(excel_data, user_email, filename):
 
 def is_ropa_sheet(sheet_name, sheet_info):
     """Determine if a sheet contains ROPA data"""
-    ropa_keywords = ['ropa', 'record', 'processing', 'activities', 'register', 'controller', 'processor']
+    sheet_name_lower = sheet_name.lower()
+    
+    # Expanded ROPA keywords including common variations
+    ropa_sheet_keywords = [
+        'ropa', 'record', 'processing', 'activities', 'register', 'controller', 'processor',
+        'activity', 'data protection', 'gdpr', 'privacy', 'personal data'
+    ]
 
-    # Check sheet name
-    if any(keyword in sheet_name.lower() for keyword in ropa_keywords):
+    # Check sheet name for ROPA indicators
+    if any(keyword in sheet_name_lower for keyword in ropa_sheet_keywords):
+        print(f"Sheet '{sheet_name}' identified as ROPA sheet by name")
         return True
 
-    # Check column names
+    # Check column names for ROPA indicators
     columns = [str(col).lower() for col in sheet_info['columns']]
-    ropa_column_keywords = ['processing', 'controller', 'data', 'purpose', 'legal', 'retention', 'security']
+    ropa_column_keywords = [
+        'processing', 'controller', 'data', 'purpose', 'legal', 'retention', 'security',
+        'activity', 'name', 'department', 'contact', 'address', 'dpo', 'subjects',
+        'categories', 'recipients', 'basis', 'measures', 'period'
+    ]
 
     matches = sum(1 for keyword in ropa_column_keywords if any(keyword in col for col in columns))
-    return matches >= 3  # If at least 3 ROPA-related columns found
+    
+    # Lower threshold for better detection
+    if matches >= 2:
+        print(f"Sheet '{sheet_name}' identified as ROPA sheet by columns (matches: {matches})")
+        return True
+        
+    # Additional check: if sheet has reasonable amount of data and looks structured
+    if len(sheet_info['columns']) >= 5 and sheet_info['shape'][0] > 1:
+        # Check if any columns contain typical ROPA field patterns
+        typical_patterns = ['name', 'purpose', 'controller', 'data', 'legal']
+        pattern_matches = sum(1 for pattern in typical_patterns if any(pattern in col for col in columns))
+        
+        if pattern_matches >= 2:
+            print(f"Sheet '{sheet_name}' identified as potential ROPA sheet by structure")
+            return True
+
+    print(f"Sheet '{sheet_name}' not identified as ROPA sheet")
+    return False
 
 def extract_ropa_from_sheet_data(sheet_data, user_id):
     """Extract ROPA records from sheet data"""

@@ -181,7 +181,7 @@ def privacy_officer_dashboard():
         for record in all_records:
             creator = models.User.query.get(record.created_by)
             creator_email = creator.email if creator else f'User ID {record.created_by}'
-            
+
             records_list.append({
                 'id': record.id,
                 'processing_activity_name': record.processing_activity_name,
@@ -461,14 +461,46 @@ def upload_file():
 @login_required
 def export_data():
     """Export ROPA data"""
-    export_format = request.args.get('format', 'excel')
-    include_drafts = request.args.get('include_drafts') == 'true'
-    include_rejected = request.args.get('include_rejected') == 'true'
-
     try:
-        file_path, filename = generate_export(current_user.email, current_user.role, export_format, include_drafts, include_rejected)
-        log_audit_event('Data Exported', current_user.email, f'Exported data in {export_format} format')
+        export_format = request.args.get('format', 'excel')
+        include_drafts = request.args.get('include_drafts') == 'true'
+        include_rejected = request.args.get('include_rejected') == 'true'
+
+        # Special handling for complete Excel export
+        if export_format == 'excel':
+            export_format = 'excel_complete'  # Use the enhanced export
+
+        file_path, filename = generate_export(
+            current_user.email, 
+            current_user.role, 
+            export_format,
+            include_drafts,
+            include_rejected
+        )
+
+        # Get information about what was exported for user feedback
+        from models import ExcelFileData, User
+        user = User.query.filter_by(email=current_user.email).first()
+        if user:
+            if current_user.role == 'Privacy Officer':
+                excel_files = ExcelFileData.query.all()
+            else:
+                excel_files = ExcelFileData.query.filter_by(uploaded_by=user.id).all()
+
+            if excel_files:
+                sheet_info = []
+                for excel_file in excel_files:
+                    sheet_names = json.loads(excel_file.sheet_names)
+                    sheet_info.extend(sheet_names)
+
+                flash(f"Export successful! Included {len(excel_files)} original file(s) with sheets: {', '.join(sheet_info[:10])}{'...' if len(sheet_info) > 10 else ''}", "success")
+            else:
+                flash("Export successful! Included system ROPA records.", "success")
+
+        log_audit_event('Data Export', current_user.email, f'Exported data in {export_format} format with original sheet preservation')
+
         return send_file(file_path, as_attachment=True, download_name=filename)
+
     except Exception as e:
         flash(f'Error generating export: {str(e)}', 'error')
         if current_user.role == 'Privacy Officer':
