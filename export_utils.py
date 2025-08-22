@@ -309,11 +309,18 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                 # Get all sheets for this file, ordered by original sheet order
                 sheets = ExcelSheetData.query.filter_by(excel_file_id=excel_file.id).all()
 
+                # Track processed sheets to avoid duplicates
+                processed_sheets = set()
+                
                 # Sort sheets to maintain original order if possible
                 original_sheet_names = json.loads(excel_file.sheet_names)
                 sheets_dict = {sheet.sheet_name: sheet for sheet in sheets}
 
                 for original_name in original_sheet_names:
+                    # Skip if we've already processed this sheet
+                    if original_name in processed_sheets:
+                        continue
+                        
                     if original_name in sheets_dict:
                         sheet = sheets_dict[original_name]
                         try:
@@ -325,10 +332,6 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 if sheet_data and len(sheet_data) > 0:
                                     # Create DataFrame from the stored data
                                     df = pd.DataFrame(sheet_data)
-                                    
-                                    # The data is already stored with the original column names
-                                    # Don't modify column names at all - keep exactly as uploaded
-                                    # The sheet_data already contains the data with original headers preserved
                                     
                                     # Remove any completely empty rows but keep original column structure
                                     df = df.dropna(how='all')
@@ -347,6 +350,13 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 if len(sheet_name) > 31:
                                     sheet_name = sheet_name[:31].rstrip('_')
 
+                                # Ensure unique sheet name in this workbook
+                                original_sheet_name = sheet_name
+                                counter = 1
+                                while sheet_name in workbook.sheetnames:
+                                    sheet_name = f"{original_sheet_name}_{counter}"
+                                    counter += 1
+
                                 # Write sheet with formatting - ensure sheet_name is valid
                                 if not sheet_name or sheet_name.isspace():
                                     sheet_name = f"Sheet_{sheets_written + 1}"
@@ -358,6 +368,9 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 # Apply beautiful formatting with colors
                                 format_excel_sheet(worksheet, df, is_original_sheet=True, original_sheet_name=original_name)
                                 sheets_written += 1
+
+                                # Mark as processed
+                                processed_sheets.add(original_name)
 
                                 print(f"Exported sheet: '{original_name}' as '{sheet_name}' with {len(df)} rows and {len(df.columns)} columns")
 
@@ -372,6 +385,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                     worksheet = workbook[fallback_name]
                                     format_excel_sheet(worksheet, df, is_original_sheet=True)
                                     sheets_written += 1
+                                    processed_sheets.add(original_name)
                                     print(f"Used fallback name: '{fallback_name}' for sheet '{original_name}'")
                             except Exception as fallback_error:
                                 print(f"Fallback also failed for {original_name}: {str(fallback_error)}")
