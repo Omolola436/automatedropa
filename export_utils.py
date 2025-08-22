@@ -685,7 +685,7 @@ def create_export_summary(excel_files, ropa_records):
 
 
 def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, custom_fields):
-    """Enhance existing sheets by adding custom field columns before Notes/Comments"""
+    """Enhance existing sheets by adding custom field columns at specific positions"""
     try:
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
@@ -707,14 +707,43 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
             if sheet_name in ['Export_Summary', 'System_ROPA_Records']:
                 continue
             
-            # Find the last column with data in the header row
+            # Find the insertion position based on sheet type
+            insert_position = None
             max_col = 1
-            for col in range(1, worksheet.max_column + 1):
-                if worksheet.cell(row=1, col=col).value or worksheet.cell(row=2, col=col).value:
-                    max_col = col
             
-            # Insert custom field columns before the last column (assuming it's Notes/Comments)
-            insert_position = max_col
+            # Get all header values to find the right position
+            headers = []
+            for col in range(1, worksheet.max_column + 50):  # Check more columns
+                cell_value = worksheet.cell(row=1, col=col).value
+                if cell_value:
+                    headers.append((col, str(cell_value).strip().lower()))
+                    max_col = col
+                elif col <= max_col + 10:  # Check a few more columns after last data
+                    headers.append((col, ''))
+                else:
+                    break
+            
+            # Determine insertion position based on sheet content
+            for col_num, header_text in headers:
+                # For Controller sheets - insert after "Reasons For Not Adhering to Policy"
+                if any(keyword in header_text for keyword in ['reasons for not adhering', 'reasons for not adhering to policy', 'policy adherence']):
+                    insert_position = col_num + 1
+                    break
+                # For Processor sheets - insert after "Safeguards & Measures"  
+                elif any(keyword in header_text for keyword in ['safeguards', 'safeguards & measures', 'safeguards and measures']):
+                    insert_position = col_num + 1
+                    break
+            
+            # If specific columns not found, look for Notes/Comments and insert before it
+            if insert_position is None:
+                for col_num, header_text in headers:
+                    if any(keyword in header_text for keyword in ['notes', 'comments', 'note', 'comment']):
+                        insert_position = col_num
+                        break
+            
+            # If still not found, insert before the last column
+            if insert_position is None:
+                insert_position = max_col
             
             # First, shift existing last column to make room for custom fields
             if max_col > 0:
