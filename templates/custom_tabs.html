@@ -81,591 +81,72 @@
             </li>
         </ul>
 
-        <div class="tab-content" id="categoryTabContent">
-        {% if custom_tabs %}
-            <!-- Basic Info Tab -->
-            <div class="tab-pane fade show active" id="basic-info" role="tabpanel">
-                {% set basic_info_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Basic Info') | list %}
-                {% if basic_info_fields %}
-                    {% for tab in basic_info_fields %}
-                        <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="card-title">{{ tab.field_name }}</h6>
-                                        {% if tab.field_description %}
-                                        <p class="card-text text-muted">{{ tab.field_description }}</p>
+        <!-- Processing Activity Name Fields Only -->
+        <div class="custom-fields-container">
+            {% if custom_tabs %}
+                {% for tab in custom_tabs %}
+                    <div class="card mb-3 field-card" data-status="{{ tab.status }}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="card-title">{{ tab.field_name }}</h6>
+                                    {% if tab.field_description %}
+                                    <p class="card-text text-muted">{{ tab.field_description }}</p>
+                                    {% endif %}
+                                    <div class="mb-2">
+                                        <span class="badge bg-info me-1">{{ tab.tab_category }}</span>
+                                        <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
+                                        {% if tab.is_required %}
+                                            <span class="badge bg-warning">Required</span>
+                                        {% else %}
+                                            <span class="badge bg-light text-dark">Optional</span>
                                         {% endif %}
-                                        <div class="mb-2">
-                                            <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                            {% if tab.is_required %}
-                                                <span class="badge bg-warning">Required</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-dark">Optional</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        {% if tab.status == 'Draft' %}
-                                            <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Pending Review' %}
-                                            <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Approved' %}
-                                            <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Rejected' %}
-                                            <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                        {% endif %}
-                                        <br>
-                                        <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                                     </div>
                                 </div>
-                                <div class="d-flex gap-2">
+                                <div class="text-end">
                                     {% if tab.status == 'Draft' %}
-                                        <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                            <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                        </a>
+                                        <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
+                                    {% elif tab.status == 'Pending Review' %}
+                                        <span class="badge bg-warning mb-2">{{ tab.status }}</span>
+                                    {% elif tab.status == 'Approved' %}
+                                        <span class="badge bg-success mb-2">{{ tab.status }}</span>
+                                    {% elif tab.status == 'Rejected' %}
+                                        <span class="badge bg-danger mb-2">{{ tab.status }}</span>
                                     {% endif %}
-                                    {% if tab.status == 'Rejected' and tab.review_comments %}
-                                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#reviewModal{{ tab.id }}">
-                                            <i class="fas fa-comment me-1"></i>View Comments
-                                        </button>
-                                    {% endif %}
+                                    <br>
+                                    <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                                 </div>
                             </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-4">No Basic Info fields created yet.</p>
-                {% endif %}
-            </div>
-
-            <!-- Controller Tab -->
-            <div class="tab-pane fade" id="controller" role="tabpanel">
-                {% set controller_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Controller') | list %}
-                {% if controller_fields %}
-                    {% for tab in controller_fields %}
-                        <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="card-title">{{ tab.field_name }}</h6>
-                                        {% if tab.field_description %}
-                                        <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                        {% endif %}
-                                        <div class="mb-2">
-                                            <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                            {% if tab.is_required %}
-                                                <span class="badge bg-warning">Required</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-dark">Optional</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        {% if tab.status == 'Draft' %}
-                                            <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Pending Review' %}
-                                            <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Approved' %}
-                                            <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Rejected' %}
-                                            <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                        {% endif %}
-                                        <br>
-                                        <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    {% if tab.status == 'Draft' %}
-                                        <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                            <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                        </a>
-                                    {% endif %}
-                                    {% if tab.status == 'Rejected' and tab.review_comments %}
-                                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#reviewModal{{ tab.id }}">
-                                            <i class="fas fa-comment me-1"></i>View Comments
-                                        </button>
-                                    {% endif %}
-                                </div>
+                            <div class="d-flex gap-2">
+                                {% if tab.status == 'Draft' %}
+                                    <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
+                                       class="btn btn-sm btn-outline-primary"
+                                       onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
+                                        <i class="fas fa-paper-plane me-1"></i>Submit for Review
+                                    </a>
+                                {% endif %}
+                                {% if tab.status == 'Rejected' and tab.review_comments %}
+                                    <button type="button" class="btn btn-sm btn-outline-info" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#reviewModal{{ tab.id }}">
+                                        <i class="fas fa-comment me-1"></i>View Comments
+                                    </button>
+                                {% endif %}
                             </div>
                         </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-4">No Controller fields created yet.</p>
-                {% endif %}
-            </div>
-
-            <!-- DPO Tab -->
-            <div class="tab-pane fade" id="dpo" role="tabpanel">
-                {% set dpo_fields = custom_tabs | selectattr('tab_category', 'equalto', 'DPO') | list %}
-                {% if dpo_fields %}
-                    {% for tab in dpo_fields %}
-                        <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="card-title">{{ tab.field_name }}</h6>
-                                        {% if tab.field_description %}
-                                        <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                        {% endif %}
-                                        <div class="mb-2">
-                                            <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                            {% if tab.is_required %}
-                                                <span class="badge bg-warning">Required</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-dark">Optional</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        {% if tab.status == 'Draft' %}
-                                            <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Pending Review' %}
-                                            <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Approved' %}
-                                            <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Rejected' %}
-                                            <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                        {% endif %}
-                                        <br>
-                                        <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    {% if tab.status == 'Draft' %}
-                                        <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                            <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                        </a>
-                                    {% endif %}
-                                    {% if tab.status == 'Rejected' and tab.review_comments %}
-                                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#reviewModal{{ tab.id }}">
-                                            <i class="fas fa-comment me-1"></i>View Comments
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-4">No DPO fields created yet.</p>
-                {% endif %}
-            </div>
-
-            <!-- Processor Tab -->
-            <div class="tab-pane fade" id="processor" role="tabpanel">
-                {% set processor_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Processor') | list %}
-                {% if processor_fields %}
-                    {% for tab in processor_fields %}
-                        <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                            <div class="card-body">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <h6 class="card-title">{{ tab.field_name }}</h6>
-                                        {% if tab.field_description %}
-                                        <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                        {% endif %}
-                                        <div class="mb-2">
-                                            <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                            {% if tab.is_required %}
-                                                <span class="badge bg-warning">Required</span>
-                                            {% else %}
-                                                <span class="badge bg-light text-dark">Optional</span>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        {% if tab.status == 'Draft' %}
-                                            <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Pending Review' %}
-                                            <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Approved' %}
-                                            <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                        {% elif tab.status == 'Rejected' %}
-                                            <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                        {% endif %}
-                                        <br>
-                                        <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                    </div>
-                                </div>
-                                <div class="d-flex gap-2">
-                                    {% if tab.status == 'Draft' %}
-                                        <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary"
-                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                            <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                        </a>
-                                    {% endif %}
-                                    {% if tab.status == 'Rejected' and tab.review_comments %}
-                                        <button type="button" class="btn btn-sm btn-outline-info" 
-                                                data-bs-toggle="modal" 
-                                                data-bs-target="#reviewModal{{ tab.id }}">
-                                            <i class="fas fa-comment me-1"></i>View Comments
-                                        </button>
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endfor %}
-                {% else %}
-                    <p class="text-muted text-center py-4">No Processor fields created yet.</p>
-                {% endif %}
-            </div>
-
-            <!-- Processing Activities Tab with Sub-tabs -->
-            <div class="tab-pane fade" id="processing-activities" role="tabpanel">
-                <ul class="nav nav-pills mb-3" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="processing-subtab" data-bs-toggle="pill" data-bs-target="#processing" type="button" role="tab">
-                            Processing
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="data-subtab" data-bs-toggle="pill" data-bs-target="#data" type="button" role="tab">
-                            Data
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="recipients-subtab" data-bs-toggle="pill" data-bs-target="#recipients" type="button" role="tab">
-                            Recipients
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="retention-subtab" data-bs-toggle="pill" data-bs-target="#retention" type="button" role="tab">
-                            Retention
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="security-subtab" data-bs-toggle="pill" data-bs-target="#security" type="button" role="tab">
-                            Security
-                        </button>
-                    </li>
-                </ul>
-
-                <div class="tab-content">
-                    <!-- Processing Subtab -->
-                    <div class="tab-pane fade show active" id="processing" role="tabpanel">
-                        {% set processing_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Processing') | list %}
-                        {% if processing_fields %}
-                            {% for tab in processing_fields %}
-                                <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="card-title">{{ tab.field_name }}</h6>
-                                                {% if tab.field_description %}
-                                                <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                                {% endif %}
-                                                <div class="mb-2">
-                                                    <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                                    {% if tab.is_required %}
-                                                        <span class="badge bg-warning">Required</span>
-                                                    {% else %}
-                                                        <span class="badge bg-light text-dark">Optional</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                {% if tab.status == 'Draft' %}
-                                                    <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Pending Review' %}
-                                                    <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Approved' %}
-                                                    <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Rejected' %}
-                                                    <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                                {% endif %}
-                                                <br>
-                                                <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            {% if tab.status == 'Draft' %}
-                                                <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary"
-                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                                </a>
-                                            {% endif %}
-                                            {% if tab.status == 'Rejected' and tab.review_comments %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#reviewModal{{ tab.id }}">
-                                                    <i class="fas fa-comment me-1"></i>View Comments
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-4">No Processing fields created yet.</p>
-                        {% endif %}
                     </div>
-
-                    <!-- Data Subtab -->
-                    <div class="tab-pane fade" id="data" role="tabpanel">
-                        {% set data_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Data') | list %}
-                        {% if data_fields %}
-                            {% for tab in data_fields %}
-                                <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="card-title">{{ tab.field_name }}</h6>
-                                                {% if tab.field_description %}
-                                                <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                                {% endif %}
-                                                <div class="mb-2">
-                                                    <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                                    {% if tab.is_required %}
-                                                        <span class="badge bg-warning">Required</span>
-                                                    {% else %}
-                                                        <span class="badge bg-light text-dark">Optional</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                {% if tab.status == 'Draft' %}
-                                                    <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Pending Review' %}
-                                                    <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Approved' %}
-                                                    <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Rejected' %}
-                                                    <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                                {% endif %}
-                                                <br>
-                                                <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            {% if tab.status == 'Draft' %}
-                                                <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary"
-                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                                </a>
-                                            {% endif %}
-                                            {% if tab.status == 'Rejected' and tab.review_comments %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#reviewModal{{ tab.id }}">
-                                                    <i class="fas fa-comment me-1"></i>View Comments
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-4">No Data fields created yet.</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Recipients Subtab -->
-                    <div class="tab-pane fade" id="recipients" role="tabpanel">
-                        {% set recipients_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Recipients') | list %}
-                        {% if recipients_fields %}
-                            {% for tab in recipients_fields %}
-                                <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="card-title">{{ tab.field_name }}</h6>
-                                                {% if tab.field_description %}
-                                                <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                                {% endif %}
-                                                <div class="mb-2">
-                                                    <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                                    {% if tab.is_required %}
-                                                        <span class="badge bg-warning">Required</span>
-                                                    {% else %}
-                                                        <span class="badge bg-light text-dark">Optional</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                {% if tab.status == 'Draft' %}
-                                                    <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Pending Review' %}
-                                                    <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Approved' %}
-                                                    <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Rejected' %}
-                                                    <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                                {% endif %}
-                                                <br>
-                                                <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            {% if tab.status == 'Draft' %}
-                                                <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary"
-                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                                </a>
-                                            {% endif %}
-                                            {% if tab.status == 'Rejected' and tab.review_comments %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#reviewModal{{ tab.id }}">
-                                                    <i class="fas fa-comment me-1"></i>View Comments
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-4">No Recipients fields created yet.</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Retention Subtab -->
-                    <div class="tab-pane fade" id="retention" role="tabpanel">
-                        {% set retention_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Retention') | list %}
-                        {% if retention_fields %}
-                            {% for tab in retention_fields %}
-                                <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="card-title">{{ tab.field_name }}</h6>
-                                                {% if tab.field_description %}
-                                                <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                                {% endif %}
-                                                <div class="mb-2">
-                                                    <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                                    {% if tab.is_required %}
-                                                        <span class="badge bg-warning">Required</span>
-                                                    {% else %}
-                                                        <span class="badge bg-light text-dark">Optional</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                {% if tab.status == 'Draft' %}
-                                                    <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Pending Review' %}
-                                                    <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Approved' %}
-                                                    <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Rejected' %}
-                                                    <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                                {% endif %}
-                                                <br>
-                                                <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            {% if tab.status == 'Draft' %}
-                                                <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary"
-                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                                </a>
-                                            {% endif %}
-                                            {% if tab.status == 'Rejected' and tab.review_comments %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#reviewModal{{ tab.id }}">
-                                                    <i class="fas fa-comment me-1"></i>View Comments
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-4">No Retention fields created yet.</p>
-                        {% endif %}
-                    </div>
-
-                    <!-- Security Subtab -->
-                    <div class="tab-pane fade" id="security" role="tabpanel">
-                        {% set security_fields = custom_tabs | selectattr('tab_category', 'equalto', 'Security') | list %}
-                        {% if security_fields %}
-                            {% for tab in security_fields %}
-                                <div class="card mb-3 field-card" data-status="{{ tab.status }}">
-                                    <div class="card-body">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div>
-                                                <h6 class="card-title">{{ tab.field_name }}</h6>
-                                                {% if tab.field_description %}
-                                                <p class="card-text text-muted">{{ tab.field_description }}</p>
-                                                {% endif %}
-                                                <div class="mb-2">
-                                                    <span class="badge bg-secondary me-1">{{ tab.field_type }}</span>
-                                                    {% if tab.is_required %}
-                                                        <span class="badge bg-warning">Required</span>
-                                                    {% else %}
-                                                        <span class="badge bg-light text-dark">Optional</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            <div class="text-end">
-                                                {% if tab.status == 'Draft' %}
-                                                    <span class="badge bg-secondary mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Pending Review' %}
-                                                    <span class="badge bg-warning mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Approved' %}
-                                                    <span class="badge bg-success mb-2">{{ tab.status }}</span>
-                                                {% elif tab.status == 'Rejected' %}
-                                                    <span class="badge bg-danger mb-2">{{ tab.status }}</span>
-                                                {% endif %}
-                                                <br>
-                                                <small class="text-muted">{{ tab.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                                            </div>
-                                        </div>
-                                        <div class="d-flex gap-2">
-                                            {% if tab.status == 'Draft' %}
-                                                <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary"
-                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
-                                                    <i class="fas fa-paper-plane me-1"></i>Submit for Review
-                                                </a>
-                                            {% endif %}
-                                            {% if tab.status == 'Rejected' and tab.review_comments %}
-                                                <button type="button" class="btn btn-sm btn-outline-info" 
-                                                        data-bs-toggle="modal" 
-                                                        data-bs-target="#reviewModal{{ tab.id }}">
-                                                    <i class="fas fa-comment me-1"></i>View Comments
-                                                </button>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                </div>
-                            {% endfor %}
-                        {% else %}
-                            <p class="text-muted text-center py-4">No Security fields created yet.</p>
-                        {% endif %}
-                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-plus-square fa-3x text-muted mb-3"></i>
+                    <h5>No Custom Fields Yet</h5>
+                    <p class="text-muted">Create your first custom field for processing activity names.</p>
+                    <a href="{{ url_for('add_custom_field') }}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Add Custom Field
+                    </a>
                 </div>
-            </div>
+            {% endif %}
         </div>
-        {% else %}
-        <div class="text-center py-4">
-            <i class="fas fa-plus-square fa-3x text-muted mb-3"></i>
-            <h5>No Custom Fields Yet</h5>
-            <p class="text-muted">Create your first custom field to extend the ROPA form.</p>
-            <a href="{{ url_for('add_custom_field') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-2"></i>Add Custom Field
-            </a>
-        </div>
-        {% endif %}
     </div>
 </div>
 
