@@ -125,6 +125,28 @@ def get_approved_custom_fields_by_category():
     return categories
 
 
+def get_custom_fields_for_sheet_type(sheet_type):
+    """
+    Get approved custom fields for specific sheet types (Controller/Processor)
+    """
+    custom_fields = get_approved_custom_fields_by_category()
+    
+    if sheet_type.lower() == 'controller':
+        # Include fields that are relevant to Controller sheets
+        relevant_fields = []
+        for category in ['Basic Info', 'Controller', 'DPO', 'Processing', 'Data', 'Recipients', 'Retention', 'Security']:
+            relevant_fields.extend(custom_fields.get(category, []))
+        return relevant_fields
+    elif sheet_type.lower() == 'processor':
+        # Include fields that are relevant to Processor sheets
+        relevant_fields = []
+        for category in ['Basic Info', 'Processor', 'DPO', 'Processing', 'Data', 'Recipients', 'Retention', 'Security']:
+            relevant_fields.extend(custom_fields.get(category, []))
+        return relevant_fields
+    
+    return []
+
+
 def get_custom_data_for_record(ropa_record_id):
     """
     Get all custom field data for a specific ROPA record

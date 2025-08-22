@@ -709,6 +709,7 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
             
             # Find the insertion position based on sheet type
             insert_position = None
+            notes_column = None
             max_col = 1
             
             # Get all header values to find the right position
@@ -723,40 +724,46 @@ def enhance_existing_sheets_with_custom_fields(workbook, custom_field_values, cu
                 else:
                     break
             
-            # Determine insertion position based on sheet content
+            # Find Notes/Comments column first
             for col_num, header_text in headers:
-                # For Controller sheets - insert after "Reasons For Not Adhering to Policy"
-                if any(keyword in header_text for keyword in ['reasons for not adhering', 'reasons for not adhering to policy', 'policy adherence']):
-                    insert_position = col_num + 1
-                    break
-                # For Processor sheets - insert after "Safeguards & Measures"  
-                elif any(keyword in header_text for keyword in ['safeguards', 'safeguards & measures', 'safeguards and measures']):
-                    insert_position = col_num + 1
+                if any(keyword in header_text for keyword in ['notes', 'comments', 'note', 'comment']):
+                    notes_column = col_num
+                    insert_position = col_num  # Insert before Notes/Comments
                     break
             
-            # If specific columns not found, look for Notes/Comments and insert before it
+            # If Notes/Comments not found, determine insertion position based on sheet content
             if insert_position is None:
                 for col_num, header_text in headers:
-                    if any(keyword in header_text for keyword in ['notes', 'comments', 'note', 'comment']):
-                        insert_position = col_num
+                    # For Controller sheets - insert after "Reasons For Not Adhering to Policy"
+                    if any(keyword in header_text for keyword in ['reasons for not adhering', 'reasons for not adhering to policy', 'policy adherence']):
+                        insert_position = col_num + 1
                         break
+                    # For Processor sheets - insert after "Safeguards & Measures"  
+                    elif any(keyword in header_text for keyword in ['safeguards', 'safeguards & measures', 'safeguards and measures']):
+                        insert_position = col_num + 1
+                        break
+                
+                # If still not found, insert at the end
+                if insert_position is None:
+                    insert_position = max_col + 1
             
-            # If still not found, insert before the last column
-            if insert_position is None:
-                insert_position = max_col
-            
-            # First, shift existing last column to make room for custom fields
-            if max_col > 0:
-                # Move the last column (Notes/Comments) to after custom fields
+            # If Notes/Comments column exists, move it to after custom fields
+            if notes_column is not None:
+                # Move the Notes/Comments column to after custom fields
                 for row_num in range(1, worksheet.max_row + 1):
-                    old_cell = worksheet.cell(row=row_num, column=max_col)
-                    new_cell = worksheet.cell(row=row_num, column=max_col + len(all_custom_fields))
+                    old_cell = worksheet.cell(row=row_num, column=notes_column)
+                    new_cell = worksheet.cell(row=row_num, column=insert_position + len(all_custom_fields))
                     new_cell.value = old_cell.value
                     new_cell.font = old_cell.font
                     new_cell.fill = old_cell.fill
                     new_cell.alignment = old_cell.alignment
                     new_cell.border = old_cell.border
+                    # Clear the old cell
                     old_cell.value = None
+                    old_cell.font = Font()
+                    old_cell.fill = PatternFill()
+                    old_cell.alignment = Alignment()
+                    old_cell.border = Border()
             
             # Add custom field headers
             for idx, field_name in enumerate(all_custom_fields):
