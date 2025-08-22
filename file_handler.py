@@ -282,7 +282,7 @@ def parse_excel_file(uploaded_file):
         ropa_keywords = ['ropa', 'record', 'processing', 'activities', 'register']
 
         for sheet in sheet_names:
-            if any(keyword in sheet.lower() for keyword in<bos>ropa_keywords):
+            if any(keyword in sheet.lower() for keyword in ropa_keywords):
                 target_sheet = sheet
                 break
 
