@@ -92,7 +92,7 @@ class ExcelFileData(db.Model):
     total_sheets = db.Column(Integer, default=0)
     sheet_names = db.Column(Text)  # JSON array of sheet names
     upload_timestamp = db.Column(DateTime, default=datetime.utcnow)
-    metadata = db.Column(Text)  # JSON metadata about the file
+    file_metadata = db.Column(Text)  # JSON metadata about the file
 
     uploader = db.relationship('User', backref='uploaded_excel_files')
     sheets = db.relationship('ExcelSheetData', backref='excel_file', cascade='all, delete-orphan')

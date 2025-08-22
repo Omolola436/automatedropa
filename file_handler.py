@@ -139,7 +139,7 @@ def store_excel_data_in_database(excel_data, user_email, filename):
             total_sheets=excel_data['metadata']['total_sheets'],
             sheet_names=json.dumps(excel_data['metadata']['sheet_names']),
             upload_timestamp=datetime.now(),
-            metadata=json.dumps(excel_data['metadata'])
+            file_metadata=json.dumps(excel_data['metadata'])
         )
         db.session.add(excel_file_record)
         db.session.flush()  # Get the ID
