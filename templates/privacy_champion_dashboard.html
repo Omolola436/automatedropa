@@ -5,142 +5,307 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-user-check me-2"></i>Privacy Champion Dashboard</h1>
+    <div>
+        <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Activity
+        </a>
+    </div>
 </div>
 
-<!-- Custom Tabs Navigation -->
-<div class="card">
+<!-- Role Information -->
+<div class="alert alert-info mb-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h5 class="alert-heading mb-2">
+                <i class="fas fa-info-circle me-2"></i>Privacy Champion Role
+            </h5>
+            <p class="mb-0">
+                As a Privacy Champion, you can create and manage ROPA records for your department. 
+                Records you submit for review will be evaluated by Privacy Officers for approval.
+            </p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <strong>Department:</strong> {{ current_user.department or 'Not Assigned' }}<br>
+            <strong>Records Access:</strong> Your Department + Created by You
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <a href="#records-table" class="dashboard-card-clickable">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Your Records</h6>
+                            <h3 class="mb-0">{{ total_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-file-alt fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <a href="javascript:void(0)" onclick="filterRecords('Approved')" class="dashboard-card-clickable">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Approved</h6>
+                            <h3 class="mb-0">{{ approved_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <a href="javascript:void(0)" onclick="filterRecords('Pending Review')" class="dashboard-card-clickable">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Pending Review</h6>
+                            <h3 class="mb-0">{{ pending_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clock fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-md-3 mb-3">
+        <a href="javascript:void(0)" onclick="filterRecords('Draft')" class="dashboard-card-clickable">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Draft Records</h6>
+                            <h3 class="mb-0">{{ draft_records }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-edit fa-2x opacity-75"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-plus-circle me-2"></i>Create New Record
+                </h5>
+                <p class="card-text">Add a new processing activity for your department. You can save as draft or submit for review.</p>
+                <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add New Activity
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-download me-2"></i>Export Your Data
+                </h5>
+                <p class="card-text">Export your ROPA records for offline review, reporting, or backup purposes.</p>
+                <div class="btn-group" role="group">
+                    <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-excel me-1"></i>Excel
+                    </a>
+                    <a href="{{ url_for('export_data', format='csv') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-csv me-1"></i>CSV
+                    </a>
+                    <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-file-pdf me-1"></i>PDF
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Records by Status -->
+<div class="row mb-4">
+    {% if pending_records > 0 %}
+    <div class="col-md-12 mb-3">
+        <div class="alert alert-warning">
+            <h5 class="alert-heading">
+                <i class="fas fa-exclamation-triangle me-2"></i>Pending Review Records
+            </h5>
+            <p class="mb-2">You have {{ pending_records }} record(s) waiting for Privacy Officer review.</p>
+            <small>These records have been submitted and are awaiting approval. You cannot edit them until they are approved or rejected.</small>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if draft_records > 0 %}
+    <div class="col-md-12 mb-3">
+        <div class="alert alert-secondary">
+            <h5 class="alert-heading">
+                <i class="fas fa-edit me-2"></i>Draft Records
+            </h5>
+            <p class="mb-2">You have {{ draft_records }} draft record(s) that can be completed and submitted.</p>
+            <small>Draft records are not visible to Privacy Officers until you submit them for review.</small>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ROPA Records Table -->
+<div class="card" id="records-table">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table me-2"></i>Your ROPA Records
+            </h5>
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="statusFilter" id="all" value="all" checked>
+                <label class="btn btn-outline-primary" for="all">All</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="draft" value="Draft">
+                <label class="btn btn-outline-secondary" for="draft">Drafts</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="pending" value="Pending Review">
+                <label class="btn btn-outline-warning" for="pending">Pending</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="approved" value="Approved">
+                <label class="btn btn-outline-success" for="approved">Approved</label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {% if records %}
+            <div class="table-responsive">
+                <table class="table table-hover" id="ropaTable">
+                    <thead>
+                        <tr>
+                            <th>Activity Name</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Created/Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in records %}
+                        <tr data-status="{{ record.status }}">
+                            <td>
+                                <strong>{{ record.processing_activity_name }}</strong>
+                                <br><small class="text-muted">{{ record.description[:80] }}{% if record.description|length > 80 %}...{% endif %}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">{{ record.category or 'N/A' }}</span>
+                            </td>
+                            <td>
+                                {% if record.status == 'Approved' %}
+                                    <span class="badge bg-success">{{ record.status }}</span>
+                                {% elif record.status == 'Pending Review' %}
+                                    <span class="badge bg-warning">{{ record.status }}</span>
+                                {% elif record.status == 'Rejected' %}
+                                    <span class="badge bg-danger">{{ record.status }}</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ record.status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <small>
+                                    {% if record.updated_at and record.updated_at != record.created_at %}
+                                        Updated: {{ record.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        Created: {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else 'N/A' }}
+                                    {% endif %}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    {% if record.status in ['Draft', 'Rejected'] or record.created_by == session.user_email %}
+                                    <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if record.status == 'Draft' and record.created_by == session.user_email %}
+                                    <a href="{{ url_for('update_status', record_id=record.id, status='Pending Review') }}" 
+                                       class="btn btn-outline-success" title="Submit for Review" 
+                                       onclick="return confirm('Submit this record for Privacy Officer review?')">
+                                        <i class="fas fa-paper-plane"></i>
+                                    </a>
+                                    {% endif %}
+                                    {% if record.created_by == session.user_email %}
+                                    <a href="{{ url_for('delete_activity', record_id=record.id) }}" class="btn btn-outline-danger" title="Delete" 
+                                       onclick="return confirm('Are you sure you want to delete this record?')">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+                <h5>No ROPA Records Found</h5>
+                <p class="text-muted">Get started by creating your first processing activity record for your department.</p>
+                <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add New Activity
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Help Section -->
+<div class="card mt-4">
     <div class="card-header">
         <h5 class="mb-0">
-            <i class="fas fa-tabs me-2"></i>ROPA Record Sections
+            <i class="fas fa-question-circle me-2"></i>Need Help?
         </h5>
     </div>
     <div class="card-body">
-        <ul class="nav nav-pills nav-justified" id="ropaMainTabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="basic-info-tab" data-bs-toggle="pill" data-bs-target="#basic-info" type="button" role="tab" aria-controls="basic-info" aria-selected="true">
-                    <i class="fas fa-info-circle me-1"></i>Basic Info
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="controller-tab" data-bs-toggle="pill" data-bs-target="#controller" type="button" role="tab" aria-controls="controller" aria-selected="false">
-                    <i class="fas fa-user-tie me-1"></i>Controller
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="dpo-tab" data-bs-toggle="pill" data-bs-target="#dpo" type="button" role="tab" aria-controls="dpo" aria-selected="false">
-                    <i class="fas fa-shield-alt me-1"></i>DPO
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="processor-tab" data-bs-toggle="pill" data-bs-target="#processor" type="button" role="tab" aria-controls="processor" aria-selected="false">
-                    <i class="fas fa-cogs me-1"></i>Processor
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="processing-tab" data-bs-toggle="pill" data-bs-target="#processing" type="button" role="tab" aria-controls="processing" aria-selected="false">
-                    <i class="fas fa-tasks me-1"></i>Processing
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="data-tab" data-bs-toggle="pill" data-bs-target="#data" type="button" role="tab" aria-controls="data" aria-selected="false">
-                    <i class="fas fa-database me-1"></i>Data
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="recipients-tab" data-bs-toggle="pill" data-bs-target="#recipients" type="button" role="tab" aria-controls="recipients" aria-selected="false">
-                    <i class="fas fa-users me-1"></i>Recipients
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="retention-tab" data-bs-toggle="pill" data-bs-target="#retention" type="button" role="tab" aria-controls="retention" aria-selected="false">
-                    <i class="fas fa-calendar me-1"></i>Retention
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="security-tab" data-bs-toggle="pill" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">
-                    <i class="fas fa-lock me-1"></i>Security
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="custom-tabs-tab" data-bs-toggle="pill" data-bs-target="#custom-tabs" type="button" role="tab" aria-controls="custom-tabs" aria-selected="false">
-                    <i class="fas fa-plus-square me-1"></i>Custom Tabs
-                </button>
-            </li>
-        </ul>
-
-        <!-- Tab Content -->
-        <div class="tab-content mt-4" id="ropaMainTabsContent">
-            <div class="tab-pane fade show active" id="basic-info" role="tabpanel" aria-labelledby="basic-info-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Basic Info:</strong> Core information about the processing activity including name, purpose, and description.
-                </div>
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Getting Started:</h6>
+                <ul class="small">
+                    <li>Create a new ROPA record by clicking "Add New Activity"</li>
+                    <li>Fill in all required fields marked with *</li>
+                    <li>Save as draft to continue later, or submit for review</li>
+                    <li>Monitor the status of your submitted records</li>
+                </ul>
             </div>
-
-            <div class="tab-pane fade" id="controller" role="tabpanel" aria-labelledby="controller-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-user-tie me-2"></i>
-                    <strong>Controller:</strong> Information about the data controller responsible for processing decisions.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="dpo" role="tabpanel" aria-labelledby="dpo-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-shield-alt me-2"></i>
-                    <strong>DPO:</strong> Data Protection Officer contact details and responsibilities.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="processor" role="tabpanel" aria-labelledby="processor-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-cogs me-2"></i>
-                    <strong>Processor:</strong> Third-party processors involved in data processing activities.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="processing" role="tabpanel" aria-labelledby="processing-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-tasks me-2"></i>
-                    <strong>Processing:</strong> Details about processing operations, legal basis, and purposes.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="data" role="tabpanel" aria-labelledby="data-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-database me-2"></i>
-                    <strong>Data:</strong> Categories of personal data being processed and data sources.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="recipients" role="tabpanel" aria-labelledby="recipients-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-users me-2"></i>
-                    <strong>Recipients:</strong> Categories of recipients who have access to personal data.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="retention" role="tabpanel" aria-labelledby="retention-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-calendar me-2"></i>
-                    <strong>Retention:</strong> Data retention periods and deletion procedures.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
-                <div class="alert alert-info">
-                    <i class="fas fa-lock me-2"></i>
-                    <strong>Security:</strong> Technical and organizational security measures implemented.
-                </div>
-            </div>
-
-            <div class="tab-pane fade" id="custom-tabs" role="tabpanel" aria-labelledby="custom-tabs-tab">
-                <div class="alert alert-warning">
-                    <i class="fas fa-plus-square me-2"></i>
-                    <strong>Custom Tabs:</strong> Additional custom fields and sections for specific organizational needs.
-                </div>
-                <a href="{{ url_for('custom_tabs') }}" class="btn btn-primary">
-                    <i class="fas fa-cog me-2"></i>Manage Custom Tabs
-                </a>
+            <div class="col-md-6">
+                <h6>Record Status:</h6>
+                <ul class="small">
+                    <li><span class="badge bg-secondary">Draft</span> - Can be edited and submitted</li>
+                    <li><span class="badge bg-warning">Pending Review</span> - Waiting for Privacy Officer approval</li>
+                    <li><span class="badge bg-success">Approved</span> - Approved by Privacy Officer</li>
+                    <li><span class="badge bg-danger">Rejected</span> - Needs revision before resubmission</li>
+                </ul>
             </div>
         </div>
     </div>
@@ -149,16 +314,32 @@
 
 {% block scripts %}
 <script>
-// Initialize Bootstrap tabs
-document.addEventListener('DOMContentLoaded', function() {
-    var triggerTabList = [].slice.call(document.querySelectorAll('#ropaMainTabs button'));
-    triggerTabList.forEach(function (triggerEl) {
-        var tabTrigger = new bootstrap.Tab(triggerEl);
-
-        triggerEl.addEventListener('click', function (event) {
-            event.preventDefault();
-            tabTrigger.show();
+// Status filtering functionality
+document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        const selectedStatus = this.value;
+        const rows = document.querySelectorAll('#ropaTable tbody tr');
+        
+        rows.forEach(row => {
+            if (selectedStatus === 'all' || row.dataset.status === selectedStatus) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
         });
+    });
+});
+
+// Highlight draft and rejected records that need attention
+document.addEventListener('DOMContentLoaded', function() {
+    const draftRows = document.querySelectorAll('tr[data-status="Draft"]');
+    draftRows.forEach(row => {
+        row.classList.add('table-light');
+    });
+    
+    const rejectedRows = document.querySelectorAll('tr[data-status="Rejected"]');
+    rejectedRows.forEach(row => {
+        row.classList.add('table-danger');
     });
 });
 </script>
