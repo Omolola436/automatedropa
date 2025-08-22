@@ -354,7 +354,8 @@ def view_activity(record_id):
         abort(403)
 
     # Get custom fields and their data for this record
-    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record
+    from custom_tab_automation import get_approved_custom_fields_by_category
+    from custom_tab_automation import get_custom_data_for_record
     try:
         custom_fields = get_approved_custom_fields_by_category()
         custom_data = get_custom_data_for_record(record.id)
@@ -864,18 +865,13 @@ def add_custom_field():
 @login_required
 def submit_custom_field(field_id):
     """Submit custom field for review"""
-    custom_tab = models.CustomTab.query.get_or_404(field_id)
-
-    if custom_tab.created_by != current_user.id:
-        abort(403)
-
     from custom_tab_automation import submit_custom_tab_for_review
     result = submit_custom_tab_for_review(field_id)
 
     if result['success']:
-        flash('Custom field submitted for review!', 'success')
+        flash('Custom field submitted successfully for Privacy Officer review!', 'success')
     else:
-        flash(result['message'], 'error')
+        flash(f'Error submitting custom field: {result["message"]}', 'error')
 
     return redirect(url_for('custom_tabs'))
 
@@ -941,7 +937,8 @@ def view_ropa(id):
         abort(403)
 
     # Get custom fields and their data for this record
-    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record
+    from custom_tab_automation import get_approved_custom_fields_by_category
+    from custom_tab_automation import get_custom_data_for_record
     try:
         custom_fields = get_approved_custom_fields_by_category()
         custom_data = get_custom_data_for_record(record.id)
@@ -962,7 +959,9 @@ def edit_ropa(id):
         abort(403)
 
     # Get custom fields and their data
-    from custom_tab_automation import get_approved_custom_fields_by_category, get_custom_data_for_record, update_custom_data_for_record
+    from custom_tab_automation import get_approved_custom_fields_by_category
+    from custom_tab_automation import get_custom_data_for_record
+    from custom_tab_automation import update_custom_data_for_record
     try:
         custom_fields = get_approved_custom_fields_by_category()
         custom_data = get_custom_data_for_record(record.id)

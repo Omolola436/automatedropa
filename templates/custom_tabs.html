@@ -122,7 +122,8 @@
                                 <div class="d-flex gap-2">
                                     {% if tab.status == 'Draft' %}
                                         <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-outline-primary"
+                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                             <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                         </a>
                                     {% endif %}
@@ -181,7 +182,8 @@
                                 <div class="d-flex gap-2">
                                     {% if tab.status == 'Draft' %}
                                         <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-outline-primary"
+                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                             <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                         </a>
                                     {% endif %}
@@ -240,7 +242,8 @@
                                 <div class="d-flex gap-2">
                                     {% if tab.status == 'Draft' %}
                                         <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-outline-primary"
+                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                             <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                         </a>
                                     {% endif %}
@@ -299,7 +302,8 @@
                                 <div class="d-flex gap-2">
                                     {% if tab.status == 'Draft' %}
                                         <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                           class="btn btn-sm btn-outline-primary">
+                                           class="btn btn-sm btn-outline-primary"
+                                           onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                             <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                         </a>
                                     {% endif %}
@@ -389,7 +393,8 @@
                                         <div class="d-flex gap-2">
                                             {% if tab.status == 'Draft' %}
                                                 <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                                     <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                                 </a>
                                             {% endif %}
@@ -448,7 +453,8 @@
                                         <div class="d-flex gap-2">
                                             {% if tab.status == 'Draft' %}
                                                 <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                                     <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                                 </a>
                                             {% endif %}
@@ -507,7 +513,8 @@
                                         <div class="d-flex gap-2">
                                             {% if tab.status == 'Draft' %}
                                                 <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                                     <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                                 </a>
                                             {% endif %}
@@ -566,7 +573,8 @@
                                         <div class="d-flex gap-2">
                                             {% if tab.status == 'Draft' %}
                                                 <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                                     <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                                 </a>
                                             {% endif %}
@@ -625,7 +633,8 @@
                                         <div class="d-flex gap-2">
                                             {% if tab.status == 'Draft' %}
                                                 <a href="{{ url_for('submit_custom_field', field_id=tab.id) }}" 
-                                                   class="btn btn-sm btn-outline-primary">
+                                                   class="btn btn-sm btn-outline-primary"
+                                                   onclick="return confirm('Submit this custom field for Privacy Officer review? You will not be able to edit it while under review.')">
                                                     <i class="fas fa-paper-plane me-1"></i>Submit for Review
                                                 </a>
                                             {% endif %}
@@ -696,14 +705,14 @@
 document.addEventListener('DOMContentLoaded', function() {
     const statusFilters = document.querySelectorAll('input[name="statusFilter"]');
     const fieldCards = document.querySelectorAll('.field-card');
-    
+
     statusFilters.forEach(filter => {
         filter.addEventListener('change', function() {
             const selectedStatus = this.value;
-            
+
             fieldCards.forEach(card => {
                 const cardStatus = card.getAttribute('data-status');
-                
+
                 if (selectedStatus === 'all' || cardStatus === selectedStatus) {
                     card.style.display = '';
                 } else {
