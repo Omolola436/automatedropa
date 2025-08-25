@@ -97,35 +97,35 @@ def register():
     """Register first Privacy Officer or redirect if already exists"""
     # Check if any Privacy Officer exists
     privacy_officer_exists = models.User.query.filter_by(role='Privacy Officer').first() is not None
-    
+
     if privacy_officer_exists:
         flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
         return redirect(url_for('login'))
-    
+
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         department = request.form.get('department')
-        
+
         # Validation
         if not all([email, password, confirm_password, department]):
             flash('All fields are required', 'error')
             return render_template('register.html', first_time_setup=True)
-        
+
         if password != confirm_password:
             flash('Passwords do not match', 'error')
             return render_template('register.html', first_time_setup=True)
-        
+
         if len(password) < 6:
             flash('Password must be at least 6 characters long', 'error')
             return render_template('register.html', first_time_setup=True)
-        
+
         # Check if email already exists
         if models.User.query.filter_by(email=email).first():
             flash('Email already registered', 'error')
             return render_template('register.html', first_time_setup=True)
-        
+
         try:
             # Create first Privacy Officer
             user = models.User(
@@ -136,15 +136,15 @@ def register():
             )
             db.session.add(user)
             db.session.commit()
-            
+
             log_audit_event('First Privacy Officer Created', email, 'First-time setup completed')
             flash('Privacy Officer account created successfully! You can now log in.', 'success')
             return redirect(url_for('login'))
-            
+
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating account: {str(e)}', 'error')
-    
+
     return render_template('register.html', first_time_setup=True)
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
@@ -153,33 +153,33 @@ def forgot_password():
     if request.method == 'POST':
         email = request.form['email']
         user = models.User.query.filter_by(email=email).first()
-        
+
         if user:
             # Generate reset token
             import secrets
             import hashlib
             token = secrets.token_urlsafe(32)
             token_hash = hashlib.sha256(token.encode()).hexdigest()
-            
+
             # Set token expiry (24 hours from now)
             from datetime import datetime, timedelta
             user.reset_token = token_hash
             user.reset_token_expires = datetime.utcnow() + timedelta(hours=24)
             db.session.commit()
-            
+
             # In a production app, you would send an email here
             # For now, we'll flash the reset link
             reset_url = url_for('reset_password', token=token, _external=True)
-            
+
             log_audit_event('Password Reset Requested', email, 'User requested password reset')
             flash(f'Password reset instructions would be sent to {email}. For development: {reset_url}', 'info')
         else:
             # Don't reveal whether email exists or not for security
             flash('If an account with that email exists, password reset instructions will be sent.', 'info')
             log_audit_event('Password Reset Failed', email, 'Password reset requested for non-existent email')
-        
+
         return redirect(url_for('login'))
-    
+
     return render_template('forgot_password.html')
 
 @app.route('/reset-password/<token>', methods=['GET', 'POST'])
@@ -187,40 +187,40 @@ def reset_password(token):
     """Handle password reset with token"""
     import hashlib
     from datetime import datetime
-    
+
     # Hash the token to match what's stored in database
     token_hash = hashlib.sha256(token.encode()).hexdigest()
-    
+
     # Find user with valid token
     user = models.User.query.filter_by(reset_token=token_hash).first()
-    
+
     if not user or not user.reset_token_expires or user.reset_token_expires < datetime.utcnow():
         flash('Invalid or expired reset token. Please request a new password reset.', 'error')
         return redirect(url_for('forgot_password'))
-    
+
     if request.method == 'POST':
         password = request.form['password']
         confirm_password = request.form['confirm_password']
-        
+
         # Validation
         if len(password) < 6:
             flash('Password must be at least 6 characters long', 'error')
             return render_template('reset_password.html')
-        
+
         if password != confirm_password:
             flash('Passwords do not match', 'error')
             return render_template('reset_password.html')
-        
+
         # Update password and clear reset token
         user.password_hash = generate_password_hash(password)
         user.reset_token = None
         user.reset_token_expires = None
         db.session.commit()
-        
+
         log_audit_event('Password Reset Completed', user.email, 'User successfully reset password')
         flash('Your password has been reset successfully. You can now log in with your new password.', 'success')
         return redirect(url_for('login'))
-    
+
     return render_template('reset_password.html')
 
 @app.route('/logout')
@@ -875,14 +875,14 @@ def integrate_custom_activities(record):
         # Get custom field data for this record
         from custom_tab_automation import get_custom_data_for_record
         custom_data = get_custom_data_for_record(record.id)
-        
+
         if not custom_data:
             return
-        
+
         # Log the integration attempt
         log_audit_event('Custom Activities Integration', current_user.email, 
                        f'Integrated custom field data into ROPA {record.processing_activity_name}')
-        
+
     except Exception as e:
         # If custom field integration fails, just log it and continue
         print(f"Custom field integration error: {str(e)}")
