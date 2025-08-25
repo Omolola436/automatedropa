@@ -92,11 +92,60 @@ def login():
 
     return render_template('login.html')
 
-@app.route('/register')
+@app.route('/register', methods=['GET', 'POST'])
 def register():
-    """Redirect to login - public registration disabled"""
-    flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
-    return redirect(url_for('login'))
+    """Register first Privacy Officer or redirect if already exists"""
+    # Check if any Privacy Officer exists
+    privacy_officer_exists = models.User.query.filter_by(role='Privacy Officer').first() is not None
+    
+    if privacy_officer_exists:
+        flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
+        return redirect(url_for('login'))
+    
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+        confirm_password = request.form.get('confirm_password')
+        department = request.form.get('department')
+        
+        # Validation
+        if not all([email, password, confirm_password, department]):
+            flash('All fields are required', 'error')
+            return render_template('register.html', first_time_setup=True)
+        
+        if password != confirm_password:
+            flash('Passwords do not match', 'error')
+            return render_template('register.html', first_time_setup=True)
+        
+        if len(password) < 6:
+            flash('Password must be at least 6 characters long', 'error')
+            return render_template('register.html', first_time_setup=True)
+        
+        # Check if email already exists
+        if models.User.query.filter_by(email=email).first():
+            flash('Email already registered', 'error')
+            return render_template('register.html', first_time_setup=True)
+        
+        try:
+            # Create first Privacy Officer
+            user = models.User(
+                email=email,
+                password_hash=generate_password_hash(password),
+                role='Privacy Officer',
+                department=department
+            )
+            db.session.add(user)
+            db.session.commit()
+            
+            log_audit_event('First Privacy Officer Created', email, 'First-time setup completed')
+            flash('Privacy Officer account created successfully! You can now log in.', 'success')
+            return redirect(url_for('login'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error creating account: {str(e)}', 'error')
+    
+    return render_template('register.html', first_time_setup=True)
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -813,6 +862,12 @@ def api_suggest_security():
     risk_level = data.get('risk_level', 'Medium')
     suggestions = suggest_security_measures(data_categories, risk_level)
     return jsonify({'suggestions': suggestions})
+
+@app.route('/api/check-privacy-officer')
+def api_check_privacy_officer():
+    """API endpoint to check if Privacy Officer exists"""
+    privacy_officer_exists = models.User.query.filter_by(role='Privacy Officer').first() is not None
+    return jsonify({'exists': privacy_officer_exists})
 
 def integrate_custom_activities(record):
     """Integrate approved custom field data into main ROPA record"""

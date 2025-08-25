@@ -48,11 +48,36 @@
                 </div>
 
                 <div class="text-center">
+                    <div id="create-account-section">
+                        <!-- This will be populated by JavaScript -->
+                    </div>
                     <p class="mb-0 text-muted">
                         <i class="fas fa-info-circle me-1"></i>
-                        Don't have access? Contact your Privacy Officer for account registration.
+                        <span id="contact-message">Don't have access? Contact your Privacy Officer for account registration.</span>
                     </p>
                 </div>
+
+                <script>
+                // Check if Privacy Officer exists
+                fetch('/api/check-privacy-officer')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (!data.exists) {
+                            document.getElementById('create-account-section').innerHTML = `
+                                <div class="mb-3">
+                                    <a href="{{ url_for('register') }}" class="btn btn-success">
+                                        <i class="fas fa-user-plus me-2"></i>Create Privacy Officer Account
+                                    </a>
+                                </div>
+                            `;
+                            document.getElementById('contact-message').textContent = 
+                                'No Privacy Officer account found. Create the first account to get started.';
+                        }
+                    })
+                    .catch(error => {
+                        console.log('Could not check Privacy Officer status:', error);
+                    });
+                </script>
             </div>
         </div>
         
