@@ -23,7 +23,9 @@ def init_database():
             role TEXT NOT NULL DEFAULT 'Privacy Champion',
             department TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            last_login DATETIME
+            last_login DATETIME,
+            reset_token TEXT,
+            reset_token_expires DATETIME
         )
     """)
 
