@@ -59,23 +59,20 @@ def init_database():
             third_country_transfers TEXT,
             safeguards TEXT,
             retention_period TEXT,
-            retention_criteria TEXT,
-            retention_justification TEXT,
+            deletion_procedures TEXT,
             security_measures TEXT,
             breach_likelihood TEXT,
             breach_impact TEXT,
-            dpia_required TEXT,
-            additional_info TEXT,
-            international_transfers TEXT,
+            risk_level TEXT,
+            dpia_required BOOLEAN DEFAULT 0,
+            dpia_outcome TEXT,
             status TEXT DEFAULT 'Draft',
-            created_by TEXT NOT NULL,
+            created_by INTEGER NOT NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-            updated_by TEXT,
-            reviewed_by TEXT,
+            reviewed_by INTEGER,
             reviewed_at DATETIME,
-            approved_by TEXT,
-            approved_at DATETIME
+            review_comments TEXT
         )
     """)
 

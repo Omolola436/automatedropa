@@ -28,6 +28,17 @@ def fix_database_schema():
         'reviewed_by', 'reviewed_at', 'review_comments'
     ]
     
+    print(f"Checking for {len(required_columns)} required columns...")
+    print(f"Existing columns: {existing_columns}")
+    
+    missing_columns = [col for col in required_columns if col not in existing_columns]
+    print(f"Missing columns: {missing_columns}")
+    
+    if not missing_columns:
+        print("All required columns already exist!")
+        conn.close()
+        return
+    
     # Add missing columns
     for column in required_columns:
         if column not in existing_columns:
