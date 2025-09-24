@@ -297,7 +297,10 @@ def save_ropa_record(record_data, user_email):
 
     except Exception as e:
         print(f"DEBUG: Error saving record: {str(e)}")
-        print(f"DEBUG: Values count: {len(values) if 'values' in locals() else 'Unknown'}")
+        try:
+            print(f"DEBUG: Values count: {len(values)}")
+        except NameError:
+            print("DEBUG: Values not defined")
         conn.rollback()
         raise e
     finally:

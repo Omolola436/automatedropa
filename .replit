@@ -1,0 +1,6 @@
+modules = ["python-3.11", "c-clang14", "cpp-clang14", "web"]
+[agent]
+expertMode = true
+
+[nix]
+channel = "stable-25_05"
