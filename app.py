@@ -532,6 +532,76 @@ def view_activity(record_id):
 
     return render_template('ropa_view_excel.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
 
+@app.route('/view-all-ropa-excel')
+@login_required
+def view_all_ropa_excel():
+    """View all ROPA records in Excel format (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    # Get all ROPA records
+    records = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).all()
+    
+    log_audit_event('View All ROPA Excel', current_user.email, 'Viewed all ROPA records in Excel format')
+    return render_template('view_all_ropa_excel.html', records=records, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+
+@app.route('/edit-all-ropa-excel', methods=['GET', 'POST'])
+@login_required
+def edit_all_ropa_excel():
+    """Edit all ROPA records in Excel format (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    if request.method == 'POST':
+        try:
+            # Process form data for multiple records
+            updated_count = 0
+            
+            # Get all form data
+            form_data = request.form.to_dict()
+            
+            # Process each record update
+            for key, value in form_data.items():
+                if key.startswith('record_') and '_' in key:
+                    # Parse record_ID_field format
+                    parts = key.split('_', 2)
+                    if len(parts) == 3:
+                        record_id = int(parts[1])
+                        field_name = parts[2]
+                        
+                        # Get the record and update the field
+                        record = models.ROPARecord.query.get(record_id)
+                        if record and hasattr(record, field_name):
+                            # Handle special fields
+                            if field_name == 'dpia_required':
+                                value = bool(int(value)) if value else False
+                            elif field_name in ['data_categories', 'special_categories', 'data_subjects']:
+                                # Handle checkbox groups - they come as separate form entries
+                                checkbox_values = request.form.getlist(f'record_{record_id}_{field_name}')
+                                value = ', '.join(checkbox_values)
+                            
+                            setattr(record, field_name, value)
+                            record.updated_at = datetime.utcnow()
+                            updated_count += 1
+            
+            db.session.commit()
+            log_audit_event('Edit All ROPA Excel', current_user.email, f'Updated {updated_count} ROPA record fields')
+            flash(f'Successfully updated {updated_count} ROPA record fields!', 'success')
+            
+            # Redirect to view all to show the updated data
+            return redirect(url_for('view_all_ropa_excel'))
+            
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating records: {str(e)}', 'error')
+            print(f"Error updating all records: {str(e)}")
+    
+    # Get all ROPA records for editing
+    records = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).all()
+    options = get_predefined_options()
+    
+    return render_template('edit_all_ropa_excel.html', records=records, options=options)
+
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required
 def update_status(record_id, status):

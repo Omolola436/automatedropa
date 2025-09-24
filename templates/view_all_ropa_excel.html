@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+
+{% block title %}View All ROPA Records - Excel Format{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-table me-2"></i>All ROPA Records - Excel View</h1>
+    <div>
+        <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary me-2">
+            <i class="fas fa-edit me-2"></i>Edit All Data
+        </a>
+        <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-success me-2">
+            <i class="fas fa-file-excel me-2"></i>Export to Excel
+        </a>
+        <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary Information -->
+<div class="alert alert-info mb-4">
+    <div class="row">
+        <div class="col-md-6">
+            <strong><i class="fas fa-info-circle me-2"></i>Total Records:</strong> {{ records|length }}
+        </div>
+        <div class="col-md-6">
+            <strong><i class="fas fa-clock me-2"></i>Last Updated:</strong> {{ current_time }}
+        </div>
+    </div>
+</div>
+
+{% if records %}
+    {% for record in records %}
+    <!-- Record {{ loop.index }} -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-file-alt me-2"></i>
+                Record {{ loop.index }}: {{ record.processing_activity_name or 'Unnamed Record' }}
+                <span class="badge bg-{% if record.status == 'Approved' %}success{% elif record.status == 'Under Review' %}warning{% elif record.status == 'Rejected' %}danger{% else %}secondary{% endif %} ms-2">
+                    {{ record.status or 'Draft' }}
+                </span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0" style="font-size: 0.9rem;">
+                    <thead class="table-success">
+                        <tr>
+                            <th style="min-width: 150px; background-color: #d4edda;">Field</th>
+                            <th style="background-color: #d4edda;">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold bg-light">ID</td>
+                            <td>{{ record.id }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processing Activity Name</td>
+                            <td>{{ record.processing_activity_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Category</td>
+                            <td>{{ record.category or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Description</td>
+                            <td>{{ record.description or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Department/Function</td>
+                            <td>{{ record.department_function or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Name</td>
+                            <td>{{ record.controller_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Contact</td>
+                            <td>{{ record.controller_contact or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Address</td>
+                            <td style="white-space: pre-wrap;">{{ record.controller_address or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Name</td>
+                            <td>{{ record.dpo_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Contact</td>
+                            <td>{{ record.dpo_contact or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Address</td>
+                            <td style="white-space: pre-wrap;">{{ record.dpo_address or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Name</td>
+                            <td>{{ record.processor_name or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Contact</td>
+                            <td>{{ record.processor_contact or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Address</td>
+                            <td style="white-space: pre-wrap;">{{ record.processor_address or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Purpose of Processing</td>
+                            <td style="white-space: pre-wrap;">{{ record.processing_purpose or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Legal Basis</td>
+                            <td>{{ record.legal_basis or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Legitimate Interests</td>
+                            <td style="white-space: pre-wrap;">{{ record.legitimate_interests or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Data Categories</td>
+                            <td>{{ record.data_categories or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Special Categories</td>
+                            <td>{{ record.special_categories or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Data Subjects</td>
+                            <td>{{ record.data_subjects or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Recipients</td>
+                            <td style="white-space: pre-wrap;">{{ record.recipients or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Third Country Transfers</td>
+                            <td style="white-space: pre-wrap;">{{ record.third_country_transfers or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Safeguards</td>
+                            <td style="white-space: pre-wrap;">{{ record.safeguards or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Retention Period</td>
+                            <td>{{ record.retention_period or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Deletion Procedures</td>
+                            <td style="white-space: pre-wrap;">{{ record.deletion_procedures or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Security Measures</td>
+                            <td style="white-space: pre-wrap;">{{ record.security_measures or '' }}</td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Breach Likelihood</td>
+                            <td>
+                                <span class="badge bg-{% if record.breach_likelihood == 'High' %}danger{% elif record.breach_likelihood == 'Medium' %}warning{% else %}success{% endif %}">
+                                    {{ record.breach_likelihood or 'Not specified' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Breach Impact</td>
+                            <td>
+                                <span class="badge bg-{% if record.breach_impact == 'High' %}danger{% elif record.breach_impact == 'Medium' %}warning{% else %}success{% endif %}">
+                                    {{ record.breach_impact or 'Not specified' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Risk Level</td>
+                            <td>
+                                <span class="badge bg-{% if record.risk_level == 'High' %}danger{% elif record.risk_level == 'Medium' %}warning{% else %}success{% endif %}">
+                                    {{ record.risk_level or 'Not specified' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPIA Required</td>
+                            <td>
+                                <span class="badge bg-{% if record.dpia_required %}warning{% else %}success{% endif %}">
+                                    {{ 'Yes' if record.dpia_required else 'No' }}
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPIA Outcome</td>
+                            <td style="white-space: pre-wrap;">{{ record.dpia_outcome or '' }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Created By</td>
+                            <td>{{ record.creator.email if record.creator else 'Unknown' }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Created Date</td>
+                            <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '' }}</td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Updated Date</td>
+                            <td>{{ record.updated_at.strftime('%Y-%m-%d %H:%M:%S') if record.updated_at else '' }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
+        <h5>No ROPA Records Found</h5>
+        <p class="text-muted">There are currently no ROPA records to display.</p>
+        <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Add New Record
+        </a>
+    </div>
+{% endif %}
+
+<!-- Footer Actions -->
+<div class="card mt-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                </a>
+            </div>
+            <div>
+                <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-success me-2">
+                    <i class="fas fa-file-excel me-2"></i>Export All to Excel
+                </a>
+                <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit All Data
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+.table td {
+    vertical-align: top;
+}
+.table td.fw-bold {
+    width: 25%;
+    min-width: 200px;
+}
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.table-secondary td {
+    background-color: #e2e3e5 !important;
+}
+</style>
+{% endblock %}
