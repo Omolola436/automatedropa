@@ -437,7 +437,7 @@ def add_activity():
 @app.route('/edit-activity/<int:record_id>', methods=['GET', 'POST'])
 @login_required
 def edit_activity(record_id):
-    """Edit existing ROPA activity"""
+    """Edit existing ROPA activity in Excel format"""
     record = models.ROPARecord.query.get_or_404(record_id)
 
     # Check permissions
@@ -445,43 +445,75 @@ def edit_activity(record_id):
         abort(403)
 
     if request.method == 'POST':
-        # Update record fields
-        record.processing_activity_name = request.form['processing_activity_name']
-        record.category = request.form.get('category')
-        record.description = request.form.get('description')
-        record.department_function = request.form.get('department_function')
-        record.controller_name = request.form.get('controller_name')
-        record.controller_contact = request.form.get('controller_contact')
-        record.controller_address = request.form.get('controller_address')
-        record.processing_purpose = request.form.get('processing_purpose')
-        record.legal_basis = request.form.get('legal_basis')
-        record.data_categories = request.form.get('data_categories')
-        record.data_subjects = request.form.get('data_subjects')
-        record.retention_period = request.form.get('retention_period')
-        record.security_measures = request.form.get('security_measures')
+        # Update all record fields from Excel-like form
+        record.processing_activity_name = request.form.get('processing_activity_name', '')
+        record.category = request.form.get('category', '')
+        record.description = request.form.get('description', '')
+        record.department_function = request.form.get('department_function', '')
+        record.controller_name = request.form.get('controller_name', '')
+        record.controller_contact = request.form.get('controller_contact', '')
+        record.controller_address = request.form.get('controller_address', '')
+        record.dpo_name = request.form.get('dpo_name', '')
+        record.dpo_contact = request.form.get('dpo_contact', '')
+        record.dpo_address = request.form.get('dpo_address', '')
+        record.processor_name = request.form.get('processor_name', '')
+        record.processor_contact = request.form.get('processor_contact', '')
+        record.processor_address = request.form.get('processor_address', '')
+        record.processing_purpose = request.form.get('processing_purpose', '')
+        record.legal_basis = request.form.get('legal_basis', '')
+        record.legitimate_interests = request.form.get('legitimate_interests', '')
+        
+        # Handle checkbox groups for data categories and subjects
+        if request.form.getlist('data_categories'):
+            record.data_categories = ', '.join(request.form.getlist('data_categories'))
+        else:
+            record.data_categories = ''
+            
+        if request.form.getlist('special_categories'):
+            record.special_categories = ', '.join(request.form.getlist('special_categories'))
+        else:
+            record.special_categories = ''
+            
+        if request.form.getlist('data_subjects'):
+            record.data_subjects = ', '.join(request.form.getlist('data_subjects'))
+        else:
+            record.data_subjects = ''
+            
+        record.recipients = request.form.get('recipients', '')
+        record.third_country_transfers = request.form.get('third_country_transfers', '')
+        record.safeguards = request.form.get('safeguards', '')
+        record.retention_period = request.form.get('retention_period', '')
+        record.deletion_procedures = request.form.get('deletion_procedures', '')
+        record.security_measures = request.form.get('security_measures', '')
+        record.breach_likelihood = request.form.get('breach_likelihood', '')
+        record.breach_impact = request.form.get('breach_impact', '')
+        record.risk_level = request.form.get('risk_level', '')
+        record.dpia_required = bool(int(request.form.get('dpia_required', '0')))
+        record.dpia_outcome = request.form.get('dpia_outcome', '')
+        
+        # Handle status update
+        if request.form.get('status'):
+            record.status = request.form.get('status')
+        
         record.updated_at = datetime.utcnow()
 
-        # Check if saving as draft or submitting for review
-        if 'save_draft' in request.form:
-            record.status = 'Draft'
-            message = 'ROPA record updated and saved as draft'
-        else:
-            record.status = 'Under Review'
-            message = 'ROPA record updated and submitted for review'
-
-        db.session.commit()
-
-        log_audit_event('ROPA Updated', current_user.email, f'Updated ROPA record: {record.processing_activity_name}')
-        flash(message, 'success')
-        return redirect(url_for('privacy_champion_dashboard'))
+        try:
+            db.session.commit()
+            log_audit_event('ROPA Updated', current_user.email, f'Updated ROPA record: {record.processing_activity_name}')
+            flash('ROPA record updated successfully in Excel format', 'success')
+            return redirect(url_for('index'))
+        except Exception as e:
+            db.session.rollback()
+            flash(f'Error updating record: {str(e)}', 'error')
+            print(f"Error updating record: {str(e)}")
 
     options = get_predefined_options()
-    return render_template('ropa_edit.html', record=record, options=options)
+    return render_template('ropa_edit_excel.html', record=record, options=options)
 
 @app.route('/view-activity/<int:record_id>')
 @login_required
 def view_activity(record_id):
-    """View ROPA activity details"""
+    """View ROPA activity details in Excel format"""
     record = models.ROPARecord.query.get_or_404(record_id)
 
     # Check permissions
@@ -498,7 +530,7 @@ def view_activity(record_id):
         custom_fields = {}
         custom_data = {}
 
-    return render_template('ropa_view.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
+    return render_template('ropa_view_excel.html', record=record, custom_fields=custom_fields, custom_data=custom_data)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required

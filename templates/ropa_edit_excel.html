@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+
+{% block title %}Edit ROPA Record - Excel Format{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-table me-2"></i>Edit ROPA Record - Excel Format</h1>
+    <div>
+        <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-eye me-2"></i>View Record
+        </a>
+        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Record Info Alert -->
+<div class="alert alert-info">
+    <div class="row">
+        <div class="col-md-6">
+            <strong>Record ID:</strong> {{ record.id }}<br>
+            <strong>Status:</strong> 
+            <span class="badge bg-{% if record.status == 'Approved' %}success{% elif record.status == 'Under Review' %}warning{% elif record.status == 'Rejected' %}danger{% else %}secondary{% endif %}">
+                {{ record.status }}
+            </span>
+        </div>
+        <div class="col-md-6">
+            <strong>Created:</strong> {{ record.created_at.strftime('%Y-%m-%d %H:%M') if record.created_at else 'N/A' }}<br>
+            <strong>Created by:</strong> {{ record.creator.email if record.creator else 'Unknown' }}
+        </div>
+    </div>
+</div>
+
+<!-- Excel-like Edit Form -->
+<form method="POST" id="ropaEditForm">
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-file-excel me-2 text-success"></i>
+                Edit ROPA Record Data (Excel Format)
+                <small class="text-muted ms-2">* Required fields</small>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover mb-0" style="font-size: 0.9rem;">
+                    <thead class="table-success">
+                        <tr>
+                            <th style="min-width: 150px; background-color: #d4edda;">Field</th>
+                            <th style="background-color: #d4edda;">Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="fw-bold bg-light">ID</td>
+                            <td class="text-muted">{{ record.id }} <small>(Read Only)</small></td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processing Activity Name *</td>
+                            <td>
+                                <input type="text" class="form-control" name="processing_activity_name" 
+                                       value="{{ record.processing_activity_name or '' }}" required>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Category *</td>
+                            <td>
+                                <select class="form-select" name="category" required>
+                                    <option value="">Select Category</option>
+                                    {% for cat in options.categories %}
+                                    <option value="{{ cat }}" {% if record.category == cat %}selected{% endif %}>{{ cat }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Description *</td>
+                            <td>
+                                <textarea class="form-control" name="description" rows="3" required>{{ record.description or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Department/Function</td>
+                            <td>
+                                <select class="form-select" name="department_function">
+                                    <option value="">Select Department</option>
+                                    {% for dept in options.departments %}
+                                    <option value="{{ dept }}" {% if record.department_function == dept %}selected{% endif %}>{{ dept }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Name *</td>
+                            <td>
+                                <input type="text" class="form-control" name="controller_name" 
+                                       value="{{ record.controller_name or '' }}" required>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Contact *</td>
+                            <td>
+                                <input type="text" class="form-control" name="controller_contact" 
+                                       value="{{ record.controller_contact or '' }}" required>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Controller Address *</td>
+                            <td>
+                                <textarea class="form-control" name="controller_address" rows="2" required>{{ record.controller_address or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Name</td>
+                            <td>
+                                <input type="text" class="form-control" name="dpo_name" 
+                                       value="{{ record.dpo_name or '' }}">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Contact</td>
+                            <td>
+                                <input type="text" class="form-control" name="dpo_contact" 
+                                       value="{{ record.dpo_contact or '' }}">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPO Address</td>
+                            <td>
+                                <textarea class="form-control" name="dpo_address" rows="2">{{ record.dpo_address or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Name</td>
+                            <td>
+                                <input type="text" class="form-control" name="processor_name" 
+                                       value="{{ record.processor_name or '' }}">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Contact</td>
+                            <td>
+                                <input type="text" class="form-control" name="processor_contact" 
+                                       value="{{ record.processor_contact or '' }}">
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Processor Address</td>
+                            <td>
+                                <textarea class="form-control" name="processor_address" rows="2">{{ record.processor_address or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Purpose of Processing *</td>
+                            <td>
+                                <textarea class="form-control" name="processing_purpose" rows="3" required>{{ record.processing_purpose or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Legal Basis *</td>
+                            <td>
+                                <select class="form-select" name="legal_basis" required>
+                                    <option value="">Select Legal Basis</option>
+                                    {% for basis in options.legal_basis %}
+                                    <option value="{{ basis }}" {% if record.legal_basis == basis %}selected{% endif %}>{{ basis }}</option>
+                                    {% endfor %}
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Legitimate Interests</td>
+                            <td>
+                                <textarea class="form-control" name="legitimate_interests" rows="2">{{ record.legitimate_interests or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Data Categories *</td>
+                            <td>
+                                <div class="row">
+                                    {% set selected_data_categories = (record.data_categories or '').split(', ') %}
+                                    {% for category in options.data_categories %}
+                                    <div class="col-md-6 mb-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="data_categories" value="{{ category }}" 
+                                                   id="data_cat_{{ loop.index }}" {% if category in selected_data_categories %}checked{% endif %}>
+                                            <label class="form-check-label" for="data_cat_{{ loop.index }}" style="font-size: 0.85rem;">
+                                                {{ category }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Special Categories</td>
+                            <td>
+                                <div class="row">
+                                    {% set selected_special_categories = (record.special_categories or '').split(', ') %}
+                                    {% for category in options.special_categories %}
+                                    <div class="col-md-6 mb-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="special_categories" value="{{ category }}" 
+                                                   id="special_cat_{{ loop.index }}" {% if category in selected_special_categories %}checked{% endif %}>
+                                            <label class="form-check-label" for="special_cat_{{ loop.index }}" style="font-size: 0.85rem;">
+                                                {{ category }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Data Subjects *</td>
+                            <td>
+                                <div class="row">
+                                    {% set selected_data_subjects = (record.data_subjects or '').split(', ') %}
+                                    {% for subject in options.data_subjects %}
+                                    <div class="col-md-6 mb-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="data_subjects" value="{{ subject }}" 
+                                                   id="data_subj_{{ loop.index }}" {% if subject in selected_data_subjects %}checked{% endif %}>
+                                            <label class="form-check-label" for="data_subj_{{ loop.index }}" style="font-size: 0.85rem;">
+                                                {{ subject }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Recipients *</td>
+                            <td>
+                                <textarea class="form-control" name="recipients" rows="2" required>{{ record.recipients or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Third Country Transfers</td>
+                            <td>
+                                <textarea class="form-control" name="third_country_transfers" rows="2">{{ record.third_country_transfers or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Safeguards</td>
+                            <td>
+                                <textarea class="form-control" name="safeguards" rows="2">{{ record.safeguards or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Retention Period *</td>
+                            <td>
+                                <input type="text" class="form-control" name="retention_period" 
+                                       value="{{ record.retention_period or '' }}" required>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Deletion Procedures</td>
+                            <td>
+                                <textarea class="form-control" name="deletion_procedures" rows="2">{{ record.deletion_procedures or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Security Measures *</td>
+                            <td>
+                                <textarea class="form-control" name="security_measures" rows="3" required>{{ record.security_measures or '' }}</textarea>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Breach Likelihood</td>
+                            <td>
+                                <select class="form-select" name="breach_likelihood">
+                                    <option value="Low" {% if record.breach_likelihood == 'Low' %}selected{% endif %}>Low</option>
+                                    <option value="Medium" {% if record.breach_likelihood == 'Medium' %}selected{% endif %}>Medium</option>
+                                    <option value="High" {% if record.breach_likelihood == 'High' %}selected{% endif %}>High</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Breach Impact</td>
+                            <td>
+                                <select class="form-select" name="breach_impact">
+                                    <option value="Low" {% if record.breach_impact == 'Low' %}selected{% endif %}>Low</option>
+                                    <option value="Medium" {% if record.breach_impact == 'Medium' %}selected{% endif %}>Medium</option>
+                                    <option value="High" {% if record.breach_impact == 'High' %}selected{% endif %}>High</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">Risk Level</td>
+                            <td>
+                                <select class="form-select" name="risk_level">
+                                    <option value="Low" {% if record.risk_level == 'Low' %}selected{% endif %}>Low</option>
+                                    <option value="Medium" {% if record.risk_level == 'Medium' %}selected{% endif %}>Medium</option>
+                                    <option value="High" {% if record.risk_level == 'High' %}selected{% endif %}>High</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPIA Required</td>
+                            <td>
+                                <select class="form-select" name="dpia_required">
+                                    <option value="0" {% if not record.dpia_required %}selected{% endif %}>No</option>
+                                    <option value="1" {% if record.dpia_required %}selected{% endif %}>Yes</option>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="fw-bold bg-light">DPIA Outcome</td>
+                            <td>
+                                <textarea class="form-control" name="dpia_outcome" rows="2">{{ record.dpia_outcome or '' }}</textarea>
+                            </td>
+                        </tr>
+                        {% if current_user.role == 'Privacy Officer' or record.status == 'Draft' %}
+                        <tr>
+                            <td class="fw-bold bg-light">Status</td>
+                            <td>
+                                <select class="form-select" name="status">
+                                    {% if current_user.role == 'Privacy Officer' %}
+                                        <option value="Draft" {% if record.status == 'Draft' %}selected{% endif %}>Draft</option>
+                                        <option value="Under Review" {% if record.status == 'Under Review' %}selected{% endif %}>Under Review</option>
+                                        <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved</option>
+                                        <option value="Rejected" {% if record.status == 'Rejected' %}selected{% endif %}>Rejected</option>
+                                    {% else %}
+                                        <option value="Draft" {% if record.status == 'Draft' %}selected{% endif %}>Save as Draft</option>
+                                        <option value="Under Review" {% if record.status == 'Under Review' %}selected{% endif %}>Submit for Review</option>
+                                    {% endif %}
+                                </select>
+                            </td>
+                        </tr>
+                        {% endif %}
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Created By</td>
+                            <td class="text-muted">{{ record.creator.email if record.creator else 'Unknown' }} <small>(Read Only)</small></td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Created Date</td>
+                            <td class="text-muted">{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '' }} <small>(Read Only)</small></td>
+                        </tr>
+                        <tr class="table-secondary">
+                            <td class="fw-bold">Updated Date</td>
+                            <td class="text-muted">{{ record.updated_at.strftime('%Y-%m-%d %H:%M:%S') if record.updated_at else '' }} <small>(Read Only)</small></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </button>
+                </div>
+                <div>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save me-2"></i>Save Changes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block styles %}
+<style>
+.table td {
+    vertical-align: top;
+    padding: 0.75rem;
+}
+.table td.fw-bold {
+    width: 25%;
+    min-width: 200px;
+}
+.form-control, .form-select {
+    font-size: 0.9rem;
+}
+.form-check-input {
+    margin-right: 0.25rem;
+}
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+.table-secondary td {
+    background-color: #e2e3e5 !important;
+}
+</style>
+{% endblock %}
