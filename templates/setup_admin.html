@@ -1,0 +1,76 @@
+
+{% extends "base.html" %}
+
+{% block title %}Setup Privacy Officer - Privacy ROPA System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <i class="fas fa-user-shield fa-3x text-primary mb-3"></i>
+                    <h3 class="card-title">Setup Privacy Officer</h3>
+                    <p class="text-muted">Create the initial Privacy Officer account to manage the ROPA system</p>
+                </div>
+
+                <div class="alert alert-info">
+                    <h6><i class="fas fa-info-circle me-2"></i>Important:</h6>
+                    <p class="mb-0">This is a one-time setup. The Privacy Officer account will have full system access including user management, approvals, and audit logs.</p>
+                </div>
+
+                <form method="POST">
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-envelope"></i>
+                            </span>
+                            <input type="email" class="form-control" id="email" name="email" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="password" class="form-label">Password *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="password" name="password" required minlength="6">
+                            </div>
+                            <div class="form-text">Minimum 6 characters</div>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="confirm_password" class="form-label">Confirm Password *</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-lock"></i>
+                                </span>
+                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required minlength="6">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="department" class="form-label">Department *</label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-building"></i>
+                            </span>
+                            <input type="text" class="form-control" id="department" name="department" required placeholder="e.g., Legal, IT, Compliance">
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2 mb-3">
+                        <button type="submit" class="btn btn-primary btn-lg">
+                            <i class="fas fa-user-plus me-2"></i>Create Privacy Officer Account
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
