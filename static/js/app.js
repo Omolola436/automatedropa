@@ -151,7 +151,7 @@ const ROPAApp = {
             </div>
         `;
 
-        tableContainer.insertBefore(searchContainer, table.parentElement);
+        tableContainer.insertBefore(searchContainer, table);
 
         const searchInput = searchContainer.querySelector('input');
         searchInput.addEventListener('keyup', function() {
