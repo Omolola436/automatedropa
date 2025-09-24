@@ -1,13 +1,13 @@
 {% extends "base.html" %}
 
-{% block title %}Edit All ROPA Records - Excel Format{% endblock %}
+{% block title %}Edit Uploaded ROPA Files - Excel Format{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-table me-2"></i>Edit All ROPA Records - Excel Format</h1>
+    <h1><i class="fas fa-edit me-2"></i>Edit Uploaded ROPA Files - Excel Format</h1>
     <div>
-        <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-primary me-2">
-            <i class="fas fa-eye me-2"></i>View All Data
+        <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-secondary me-2">
+            <i class="fas fa-eye me-2"></i>View Data
         </a>
         <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
@@ -15,245 +15,119 @@
     </div>
 </div>
 
-<!-- Summary Information -->
-<div class="alert alert-warning mb-4">
-    <div class="row">
-        <div class="col-md-8">
-            <strong><i class="fas fa-exclamation-triangle me-2"></i>Editing Mode:</strong> 
-            You are editing {{ records|length }} ROPA records. Changes will be applied to all records when you save.
-        </div>
-        <div class="col-md-4 text-end">
-            <small class="text-muted">* indicates required fields</small>
-        </div>
+{% if uploaded_files %}
+<form method="POST" action="{{ url_for('edit_all_ropa_excel') }}" onsubmit="return confirm('Are you sure you want to save all changes to the uploaded files?');">
+    
+    <!-- Summary Information -->
+    <div class="alert alert-warning mb-4">
+        <h5><i class="fas fa-exclamation-triangle me-2"></i>Edit Uploaded ROPA Data</h5>
+        <p class="mb-0">You are editing the original uploaded file data. Changes will be saved directly to the uploaded file records.</p>
     </div>
-</div>
 
-{% if records %}
-<form method="POST" id="editAllROPAForm">
-    {% for record in records %}
-    <!-- Record {{ loop.index }} -->
+    {% for file in uploaded_files %}
+    <!-- File {{ loop.index }} -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">
-                <i class="fas fa-edit me-2"></i>
-                Record {{ loop.index }}: {{ record.processing_activity_name or 'Unnamed Record' }}
-                <span class="badge bg-{% if record.status == 'Approved' %}success{% elif record.status == 'Under Review' %}warning{% elif record.status == 'Rejected' %}danger{% else %}secondary{% endif %} ms-2">
-                    {{ record.status or 'Draft' }}
-                </span>
-                <small class="text-muted ms-2">(ID: {{ record.id }})</small>
+                <i class="fas fa-file-excel me-2"></i>
+                File {{ loop.index }}: {{ file.filename }}
+                <span class="badge bg-primary ms-2">{{ file.total_sheets }} sheet(s)</span>
+                <small class="text-muted ms-2">
+                    Uploaded: {{ file.upload_timestamp.strftime('%Y-%m-%d %H:%M:%S') if file.upload_timestamp else 'Unknown' }}
+                </small>
             </h5>
+            <small class="text-muted">
+                Uploaded by: {{ file.uploader.email if file.uploader else 'Unknown' }}
+            </small>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-bordered table-hover mb-0" style="font-size: 0.9rem;">
-                    <thead class="table-success">
-                        <tr>
-                            <th style="min-width: 150px; background-color: #d4edda;">Field</th>
-                            <th style="background-color: #d4edda;">Value</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td class="fw-bold bg-light">ID</td>
-                            <td class="text-muted">{{ record.id }} <small>(Read Only)</small></td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Processing Activity Name *</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_processing_activity_name" 
-                                       value="{{ record.processing_activity_name or '' }}" required>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Category *</td>
-                            <td>
-                                <select class="form-select" name="record_{{ record.id }}_category" required>
-                                    <option value="">Select Category</option>
-                                    {% for cat in options.categories %}
-                                    <option value="{{ cat }}" {% if record.category == cat %}selected{% endif %}>{{ cat }}</option>
+        <div class="card-body">
+            {% if file.sheets %}
+                {% for sheet in file.sheets %}
+                {% if sheet.sheet_data %}
+                    {% set sheet_data_list = sheet.sheet_data | from_json %}
+                    {% if sheet_data_list %}
+                    <h6 class="mb-3">
+                        <i class="fas fa-table me-2"></i>Sheet: {{ sheet.sheet_name }}
+                        <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>
+                    </h6>
+                    
+                    <div class="table-responsive mb-4">
+                        <table class="table table-bordered table-hover table-sm" style="font-size: 0.85rem;">
+                            {% if sheet_data_list %}
+                                <thead class="table-warning">
+                                    <tr>
+                                        <th style="background-color: #fff3cd; width: 50px;">#</th>
+                                        {% if sheet_data_list[0] %}
+                                            {% for column in sheet_data_list[0].keys() %}
+                                            <th style="background-color: #fff3cd; min-width: 150px;">{{ column }}</th>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for row in sheet_data_list %}
+                                    <tr>
+                                        <td class="fw-bold bg-light text-center">{{ loop.index }}</td>
+                                        {% for column, value in row.items() %}
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                name="sheet_{{ sheet.id }}_row_{{ loop.index0 }}_col_{{ column }}"
+                                                value="{{ value if value is not none else '' }}"
+                                                class="form-control form-control-sm"
+                                                style="border: none; background: transparent;"
+                                            >
+                                        </td>
+                                        {% endfor %}
+                                    </tr>
                                     {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Description *</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_description" rows="2" required>{{ record.description or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Department/Function</td>
-                            <td>
-                                <select class="form-select" name="record_{{ record.id }}_department_function">
-                                    <option value="">Select Department</option>
-                                    {% for dept in options.departments %}
-                                    <option value="{{ dept }}" {% if record.department_function == dept %}selected{% endif %}>{{ dept }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Controller Name *</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_controller_name" 
-                                       value="{{ record.controller_name or '' }}" required>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Controller Contact *</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_controller_contact" 
-                                       value="{{ record.controller_contact or '' }}" required>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Controller Address *</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_controller_address" rows="2" required>{{ record.controller_address or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">DPO Name</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_dpo_name" 
-                                       value="{{ record.dpo_name or '' }}">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">DPO Contact</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_dpo_contact" 
-                                       value="{{ record.dpo_contact or '' }}">
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">DPO Address</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_dpo_address" rows="2">{{ record.dpo_address or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Purpose of Processing *</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_processing_purpose" rows="2" required>{{ record.processing_purpose or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Legal Basis *</td>
-                            <td>
-                                <select class="form-select" name="record_{{ record.id }}_legal_basis" required>
-                                    <option value="">Select Legal Basis</option>
-                                    {% for basis in options.legal_basis %}
-                                    <option value="{{ basis }}" {% if record.legal_basis == basis %}selected{% endif %}>{{ basis }}</option>
-                                    {% endfor %}
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Data Categories *</td>
-                            <td>
-                                <div class="row">
-                                    {% set selected_data_categories = (record.data_categories or '').split(', ') %}
-                                    {% for category in options.data_categories %}
-                                    <div class="col-md-6 mb-1">
-                                        <div class="form-check form-check-inline">
-                                            <input class="form-check-input" type="checkbox" name="record_{{ record.id }}_data_categories" value="{{ category }}" 
-                                                   id="data_cat_{{ record.id }}_{{ loop.index }}" {% if category in selected_data_categories %}checked{% endif %}>
-                                            <label class="form-check-label" for="data_cat_{{ record.id }}_{{ loop.index }}" style="font-size: 0.8rem;">
-                                                {{ category }}
-                                            </label>
-                                        </div>
-                                    </div>
-                                    {% endfor %}
-                                </div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Recipients *</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_recipients" rows="2" required>{{ record.recipients or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Retention Period *</td>
-                            <td>
-                                <input type="text" class="form-control" name="record_{{ record.id }}_retention_period" 
-                                       value="{{ record.retention_period or '' }}" required>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Security Measures *</td>
-                            <td>
-                                <textarea class="form-control" name="record_{{ record.id }}_security_measures" rows="2" required>{{ record.security_measures or '' }}</textarea>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Risk Level</td>
-                            <td>
-                                <select class="form-select" name="record_{{ record.id }}_risk_level">
-                                    <option value="Low" {% if record.risk_level == 'Low' %}selected{% endif %}>Low</option>
-                                    <option value="Medium" {% if record.risk_level == 'Medium' %}selected{% endif %}>Medium</option>
-                                    <option value="High" {% if record.risk_level == 'High' %}selected{% endif %}>High</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="fw-bold bg-light">Status</td>
-                            <td>
-                                <select class="form-select" name="record_{{ record.id }}_status">
-                                    <option value="Draft" {% if record.status == 'Draft' %}selected{% endif %}>Draft</option>
-                                    <option value="Under Review" {% if record.status == 'Under Review' %}selected{% endif %}>Under Review</option>
-                                    <option value="Approved" {% if record.status == 'Approved' %}selected{% endif %}>Approved</option>
-                                    <option value="Rejected" {% if record.status == 'Rejected' %}selected{% endif %}>Rejected</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr class="table-secondary">
-                            <td class="fw-bold">Created By</td>
-                            <td class="text-muted">{{ record.creator.email if record.creator else 'Unknown' }} <small>(Read Only)</small></td>
-                        </tr>
-                        <tr class="table-secondary">
-                            <td class="fw-bold">Created Date</td>
-                            <td class="text-muted">{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '' }} <small>(Read Only)</small></td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+                                </tbody>
+                            {% endif %}
+                        </table>
+                    </div>
+                    {% endif %}
+                {% endif %}
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-3">
+                    <i class="fas fa-table fa-2x text-muted mb-2"></i>
+                    <p class="text-muted">No sheet data available for this file.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 
-    <!-- Save Button -->
-    <div class="card">
+    <!-- Save Actions -->
+    <div class="card mt-4">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <button type="button" class="btn btn-outline-secondary" onclick="history.back()">
-                        <i class="fas fa-times me-2"></i>Cancel Changes
-                    </button>
+                    <p class="mb-0 text-muted">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Changes will be saved to the uploaded file records in the database.
+                    </p>
                 </div>
                 <div>
-                    <button type="submit" class="btn btn-success btn-lg">
+                    <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-times me-2"></i>Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success">
                         <i class="fas fa-save me-2"></i>Save All Changes
                     </button>
                 </div>
             </div>
-            <div class="mt-3">
-                <small class="text-muted">
-                    <i class="fas fa-info-circle me-1"></i>
-                    Saving will update all {{ records|length }} records and redirect you to the view page to see the newest data.
-                </small>
-            </div>
         </div>
     </div>
+
 </form>
 {% else %}
     <div class="text-center py-5">
         <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-        <h5>No ROPA Records Found</h5>
-        <p class="text-muted">There are currently no ROPA records to edit.</p>
-        <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add New Record
+        <h5>No Uploaded ROPA Files Found</h5>
+        <p class="text-muted">There are currently no uploaded ROPA files to edit.</p>
+        <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+            <i class="fas fa-upload me-2"></i>Upload New File
         </a>
     </div>
 {% endif %}
@@ -264,53 +138,27 @@
 <style>
 .table td {
     vertical-align: top;
-    padding: 0.75rem;
+    padding: 4px;
 }
-.table td.fw-bold {
-    width: 25%;
-    min-width: 200px;
+.table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
-.form-control, .form-select {
-    font-size: 0.9rem;
+.form-control-sm {
+    font-size: 0.85rem;
+    padding: 2px 6px;
 }
-.form-check-input {
-    margin-right: 0.25rem;
+.form-control-sm:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    background-color: #fff;
 }
-.table tbody tr:hover {
+.table tbody tr:hover .form-control {
     background-color: #f8f9fa;
-}
-.table-secondary td {
-    background-color: #e2e3e5 !important;
 }
 .card {
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 </style>
-{% endblock %}
-
-{% block scripts %}
-<script>
-// Form submission handling
-document.getElementById('editAllROPAForm').addEventListener('submit', function(e) {
-    const submitBtn = this.querySelector('button[type="submit"]');
-    const originalText = submitBtn.innerHTML;
-    
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving Changes...';
-    submitBtn.disabled = true;
-    
-    // Re-enable button after timeout in case of errors
-    setTimeout(function() {
-        submitBtn.innerHTML = originalText;
-        submitBtn.disabled = false;
-    }, 10000);
-});
-
-// Add confirmation for form submission
-document.getElementById('editAllROPAForm').addEventListener('submit', function(e) {
-    const recordCount = {{ records|length }};
-    if (!confirm(`Are you sure you want to save changes to all ${recordCount} ROPA records?`)) {
-        e.preventDefault();
-    }
-});
-</script>
 {% endblock %}

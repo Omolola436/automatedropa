@@ -62,6 +62,17 @@ def load_user(user_id):
 # Import enhanced audit logging functions
 from audit_logger import log_audit_event, log_security_event, get_client_ip
 
+# Add custom Jinja filters
+@app.template_filter('from_json')
+def from_json_filter(json_str):
+    """Custom Jinja filter to parse JSON strings"""
+    try:
+        if isinstance(json_str, str):
+            return json.loads(json_str)
+        return json_str
+    except (ValueError, TypeError):
+        return []
+
 @app.route('/')
 def index():
     """Redirect to appropriate dashboard based on user role"""
