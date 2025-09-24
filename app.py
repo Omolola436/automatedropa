@@ -535,72 +535,66 @@ def view_activity(record_id):
 @app.route('/view-all-ropa-excel')
 @login_required
 def view_all_ropa_excel():
-    """View all ROPA records in Excel format (Privacy Officer only)"""
+    """View all uploaded ROPA files in Excel format (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
     
-    # Get all ROPA records
-    records = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).all()
+    # Get all uploaded Excel files with their sheet data
+    uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
     
-    log_audit_event('View All ROPA Excel', current_user.email, 'Viewed all ROPA records in Excel format')
-    return render_template('view_all_ropa_excel.html', records=records, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+    log_audit_event('View Uploaded ROPA Excel', current_user.email, 'Viewed all uploaded ROPA files in Excel format')
+    return render_template('view_all_ropa_excel.html', uploaded_files=uploaded_files, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
 @app.route('/edit-all-ropa-excel', methods=['GET', 'POST'])
 @login_required
 def edit_all_ropa_excel():
-    """Edit all ROPA records in Excel format (Privacy Officer only)"""
+    """Edit all uploaded ROPA files in Excel format (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
     
     if request.method == 'POST':
         try:
-            # Process form data for multiple records
+            import json
             updated_count = 0
             
             # Get all form data
             form_data = request.form.to_dict()
             
-            # Process each record update
+            # Process each sheet update
             for key, value in form_data.items():
-                if key.startswith('record_') and '_' in key:
-                    # Parse record_ID_field format
-                    parts = key.split('_', 2)
-                    if len(parts) == 3:
-                        record_id = int(parts[1])
-                        field_name = parts[2]
+                if key.startswith('sheet_') and '_row_' in key and '_col_' in key:
+                    # Parse sheet_ID_row_X_col_Y format
+                    parts = key.replace('sheet_', '').split('_')
+                    if len(parts) >= 4:
+                        sheet_id = int(parts[0])
+                        row_idx = int(parts[2])
+                        col_name = '_'.join(parts[4:])  # Join remaining parts for column name
                         
-                        # Get the record and update the field
-                        record = models.ROPARecord.query.get(record_id)
-                        if record and hasattr(record, field_name):
-                            # Handle special fields
-                            if field_name == 'dpia_required':
-                                value = bool(int(value)) if value else False
-                            elif field_name in ['data_categories', 'special_categories', 'data_subjects']:
-                                # Handle checkbox groups - they come as separate form entries
-                                checkbox_values = request.form.getlist(f'record_{record_id}_{field_name}')
-                                value = ', '.join(checkbox_values)
-                            
-                            setattr(record, field_name, value)
-                            record.updated_at = datetime.utcnow()
-                            updated_count += 1
+                        # Get the sheet and update the data
+                        sheet = models.ExcelSheetData.query.get(sheet_id)
+                        if sheet:
+                            sheet_data = json.loads(sheet.sheet_data)
+                            if row_idx < len(sheet_data) and col_name in sheet_data[row_idx]:
+                                sheet_data[row_idx][col_name] = value
+                                sheet.sheet_data = json.dumps(sheet_data)
+                                updated_count += 1
             
             db.session.commit()
-            log_audit_event('Edit All ROPA Excel', current_user.email, f'Updated {updated_count} ROPA record fields')
-            flash(f'Successfully updated {updated_count} ROPA record fields!', 'success')
+            log_audit_event('Edit Uploaded ROPA Excel', current_user.email, f'Updated {updated_count} uploaded file fields')
+            flash(f'Successfully updated {updated_count} uploaded file fields!', 'success')
             
             # Redirect to view all to show the updated data
             return redirect(url_for('view_all_ropa_excel'))
             
         except Exception as e:
             db.session.rollback()
-            flash(f'Error updating records: {str(e)}', 'error')
-            print(f"Error updating all records: {str(e)}")
+            flash(f'Error updating uploaded files: {str(e)}', 'error')
+            print(f"Error updating uploaded files: {str(e)}")
     
-    # Get all ROPA records for editing
-    records = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).all()
-    options = get_predefined_options()
+    # Get all uploaded Excel files with their sheet data for editing
+    uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
     
-    return render_template('edit_all_ropa_excel.html', records=records, options=options)
+    return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required
