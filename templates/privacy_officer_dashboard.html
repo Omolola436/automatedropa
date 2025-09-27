@@ -200,6 +200,38 @@
             </div>
         </div>
     </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-save me-2"></i>Saved ROPA
+                </h5>
+                <p class="card-text">Manage saved ROPA records and access previously stored processing activities.</p>
+                <div class="btn-group d-grid gap-2" role="group">
+                    <a href="{{ url_for('view_saved_ropa') }}" class="btn btn-outline-success">
+                        <i class="fas fa-folder-open me-1"></i>View Saved ROPA
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-question-circle me-2"></i>Help & Support
+                </h5>
+                <p class="card-text">Get help with errors, troubleshooting tips, and system guidance.</p>
+                <div class="btn-group d-grid gap-2" role="group">
+                    <a href="{{ url_for('system_help') }}" class="btn btn-outline-warning">
+                        <i class="fas fa-life-ring me-1"></i>Help & Errors
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Recent Audit Activities -->

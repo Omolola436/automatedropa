@@ -34,12 +34,36 @@
                         </div>
                     </div>
 
+                    <!-- Consent Section -->
+                    <div class="mb-3">
+                        <div class="card border-primary">
+                            <div class="card-body py-2">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
+                                    <label class="form-check-label" for="consent">
+                                        <small>
+                                            <i class="fas fa-shield-alt text-primary me-1"></i>
+                                            I consent to using this GDPR ROPA system for managing processing activities and understand that my login activity will be logged for security and compliance purposes.
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="d-grid gap-2 mb-3">
-                        <button type="submit" class="btn btn-primary">
+                        <button type="submit" class="btn btn-primary" id="loginBtn" disabled>
                             <i class="fas fa-sign-in-alt me-2"></i>Sign In
                         </button>
                     </div>
                 </form>
+
+                <script>
+                // Enable/disable login button based on consent
+                document.getElementById('consent').addEventListener('change', function() {
+                    document.getElementById('loginBtn').disabled = !this.checked;
+                });
+                </script>
 
                 <div class="text-center mb-3">
                     <a href="{{ url_for('forgot_password') }}" class="btn btn-outline-secondary">

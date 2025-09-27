@@ -89,6 +89,12 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        consent = request.form.get('consent')
+
+        # Check consent
+        if not consent:
+            flash('You must provide consent to use the system', 'error')
+            return render_template('login.html')
 
         user = models.User.query.filter_by(email=email).first()
 
@@ -96,7 +102,7 @@ def login():
             login_user(user)
             user.last_login = datetime.utcnow()
             db.session.commit()
-            log_audit_event('Login Success', email, 'User logged in successfully')
+            log_audit_event('Login Success', email, 'User logged in successfully with consent')
             return redirect(url_for('index'))
         else:
             log_audit_event('Login Failed', email, 'Failed login attempt')
@@ -571,7 +577,7 @@ def edit_all_ropa_excel():
             # Get all form data
             form_data = request.form.to_dict()
             
-            # Process each sheet update
+            # Process each sheet update (existing data)
             for key, value in form_data.items():
                 if key.startswith('sheet_') and '_row_' in key and '_col_' in key:
                     # Parse sheet_ID_row_X_col_Y format
@@ -589,6 +595,46 @@ def edit_all_ropa_excel():
                                 sheet_data[row_idx][col_name] = value
                                 sheet.sheet_data = json.dumps(sheet_data)
                                 updated_count += 1
+                
+                # Process new rows data
+                elif key.startswith('sheet_') and '_new_row_' in key and '_col_' in key:
+                    # Parse sheet_ID_new_row_X_col_Y format
+                    parts = key.replace('sheet_', '').split('_')
+                    if len(parts) >= 5 and value.strip():  # Only process if value is not empty
+                        sheet_id = int(parts[0])
+                        new_row_idx = int(parts[3])
+                        col_name = '_'.join(parts[5:])
+                        
+                        # Get the sheet and add new data
+                        sheet = models.ExcelSheetData.query.get(sheet_id)
+                        if sheet:
+                            sheet_data = json.loads(sheet.sheet_data)
+                            
+                            # Initialize new rows dictionary if needed
+                            if not hasattr(sheet, '_new_rows'):
+                                sheet._new_rows = {}
+                            if new_row_idx not in sheet._new_rows:
+                                # Create new row with all columns from original structure
+                                if sheet_data and len(sheet_data) > 0:
+                                    sheet._new_rows[new_row_idx] = {col: '' for col in sheet_data[0].keys()}
+                                else:
+                                    sheet._new_rows[new_row_idx] = {}
+                            
+                            # Set the value for this column in the new row
+                            sheet._new_rows[new_row_idx][col_name] = value
+            
+            # Add completed new rows to sheet data
+            for sheet_id, sheet in [(s.id, s) for s in models.ExcelSheetData.query.all() if hasattr(s, '_new_rows')]:
+                sheet_data = json.loads(sheet.sheet_data)
+                for new_row_idx, new_row_data in sheet._new_rows.items():
+                    # Only add rows that have at least one non-empty value
+                    if any(v.strip() for v in new_row_data.values() if v):
+                        sheet_data.append(new_row_data)
+                        updated_count += 1
+                
+                # Update sheet with new data
+                sheet.sheet_data = json.dumps(sheet_data)
+                sheet.row_count = len(sheet_data)
             
             db.session.commit()
             log_audit_event('Edit Uploaded ROPA Excel', current_user.email, f'Updated {updated_count} uploaded file fields')
@@ -766,6 +812,82 @@ def export_complete_excel():
             return redirect(url_for('privacy_officer_dashboard'))
         else:
             return redirect(url_for('privacy_champion_dashboard'))
+
+@app.route('/view-saved-ropa')
+@login_required
+def view_saved_ropa():
+    """View saved ROPA records (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    try:
+        # Get all ROPA records with status 'Saved'
+        saved_records = models.ROPARecord.query.filter_by(status='Saved').all()
+        
+        log_audit_event('View Saved ROPA', current_user.email, 'Viewed saved ROPA records')
+        return render_template('view_saved_ropa.html', 
+                             saved_records=saved_records,
+                             total_saved=len(saved_records))
+    except Exception as e:
+        flash(f'Error loading saved ROPA records: {str(e)}', 'error')
+        return redirect(url_for('privacy_officer_dashboard'))
+
+@app.route('/system-help')
+@login_required
+def system_help():
+    """System help and error guidance (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    try:
+        # Get recent error logs and common issues
+        import traceback
+        from audit_logger import get_recent_errors
+        
+        # Get system status information
+        system_status = {
+            'total_users': models.User.query.count(),
+            'total_records': models.ROPARecord.query.count(),
+            'upload_files': models.ExcelFileData.query.count(),
+            'recent_logins': models.User.query.filter(models.User.last_login.isnot(None)).count(),
+        }
+        
+        # Common troubleshooting tips
+        troubleshooting_tips = [
+            {
+                'issue': 'Excel Upload Errors',
+                'solution': 'Ensure Excel files are in .xlsx or .xls format with proper headers. Check that sheet names don\'t contain special characters.',
+                'icon': 'fas fa-file-excel text-warning'
+            },
+            {
+                'issue': 'Login Issues',
+                'solution': 'Verify email and password are correct. Ensure consent checkbox is checked. Contact administrator if account is locked.',
+                'icon': 'fas fa-sign-in-alt text-info'
+            },
+            {
+                'issue': 'ROPA Record Creation Fails',
+                'solution': 'Required fields must be filled. Check that processing activity name is unique. Verify user has proper permissions.',
+                'icon': 'fas fa-file-alt text-danger'
+            },
+            {
+                'issue': 'Export Problems',
+                'solution': 'Check that records exist to export. Verify browser allows file downloads. Try different export formats.',
+                'icon': 'fas fa-download text-success'
+            },
+            {
+                'issue': 'Performance Issues',
+                'solution': 'Large Excel files may take time to process. Close unnecessary browser tabs. Clear browser cache if needed.',
+                'icon': 'fas fa-tachometer-alt text-primary'
+            }
+        ]
+        
+        log_audit_event('System Help Accessed', current_user.email, 'Accessed system help and troubleshooting')
+        return render_template('system_help.html', 
+                             system_status=system_status,
+                             troubleshooting_tips=troubleshooting_tips)
+    except Exception as e:
+        flash(f'Error loading system help: {str(e)}', 'error')
+        return redirect(url_for('privacy_officer_dashboard'))
 
 @app.route('/audit-logs')
 @login_required
