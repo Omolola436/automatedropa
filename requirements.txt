@@ -37,3 +37,16 @@ psycopg2-binary
 pyjwt
 sqlalchemy
 werkzeug
+email-validator
+flask
+flask-dance
+flask-login
+flask-sqlalchemy
+gunicorn
+oauthlib
+openpyxl
+pandas
+psycopg2-binary
+pyjwt
+sqlalchemy
+werkzeug
