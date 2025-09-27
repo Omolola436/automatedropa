@@ -304,7 +304,7 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
             sheets_written = 0
             workbook = writer.book
 
-            # Track all processed sheets globally to prevent duplicates across files
+            # Track all processed sheets globally to prevent duplicates by sheet name only
             global_processed_sheets = set()
 
             # Process each uploaded Excel file
@@ -317,11 +317,8 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                 sheets_dict = {sheet.sheet_name: sheet for sheet in sheets}
 
                 for original_name in original_sheet_names:
-                    # Create unique identifier for this sheet
-                    sheet_identifier = f"{original_name}_{excel_file.id}"
-
-                    # Skip if we've already processed this exact sheet
-                    if sheet_identifier in global_processed_sheets:
+                    # Skip if we've already processed a sheet with this name
+                    if original_name in global_processed_sheets:
                         continue
 
                     if original_name in sheets_dict:
@@ -377,8 +374,8 @@ def export_excel_with_all_sheets(user_email, user_role, include_updates=True):
                                 format_excel_sheet(worksheet, df, is_original_sheet=True, original_sheet_name=original_name)
                                 sheets_written += 1
 
-                                # Mark as processed globally
-                                global_processed_sheets.add(sheet_identifier)
+                                # Mark as processed globally by sheet name
+                                global_processed_sheets.add(original_name)
 
                                 print(f"Exported sheet: '{original_name}' as '{sheet_name}' with {len(df)} rows and {len(df.columns)} columns")
 

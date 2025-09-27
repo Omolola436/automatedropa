@@ -47,9 +47,8 @@
                 {% for sheet in file.sheets %}
                 {% if sheet.sheet_data %}
                     {% set sheet_data_list = sheet.sheet_data | from_json %}
-                    {% set sheet_identifier = sheet.sheet_name + "_" + file.id|string %}
-                    {% if sheet_data_list and sheet_identifier not in processed_sheets %}
-                    {% do processed_sheets.append(sheet_identifier) %}
+                    {% if sheet_data_list and sheet.sheet_name not in processed_sheets %}
+                    {% do processed_sheets.append(sheet.sheet_name) %}
                     <h6 class="mb-3">
                         <i class="fas fa-table me-2"></i>Sheet: {{ sheet.sheet_name }}
                         <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>

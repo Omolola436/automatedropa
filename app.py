@@ -827,7 +827,8 @@ def view_saved_ropa():
         log_audit_event('View Saved ROPA', current_user.email, 'Viewed saved ROPA records')
         return render_template('view_saved_ropa.html', 
                              saved_records=saved_records,
-                             total_saved=len(saved_records))
+                             total_saved=len(saved_records),
+                             current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     except Exception as e:
         flash(f'Error loading saved ROPA records: {str(e)}', 'error')
         return redirect(url_for('privacy_officer_dashboard'))
@@ -884,10 +885,12 @@ def system_help():
         log_audit_event('System Help Accessed', current_user.email, 'Accessed system help and troubleshooting')
         return render_template('system_help.html', 
                              system_status=system_status,
-                             troubleshooting_tips=troubleshooting_tips)
+                             troubleshooting_tips=troubleshooting_tips,
+                             current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     except Exception as e:
         flash(f'Error loading system help: {str(e)}', 'error')
         return redirect(url_for('privacy_officer_dashboard'))
+
 
 @app.route('/audit-logs')
 @login_required
