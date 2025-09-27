@@ -239,3 +239,41 @@ def get_audit_statistics():
             'recent_security_events': 0,
             'security_events': []
         }
+
+def get_recent_errors(limit=10):
+    """Get recent error events for system help"""
+    try:
+        from models import db, AuditLog
+        import json
+        
+        # Get recent error-related events
+        error_events = AuditLog.query.filter(
+            AuditLog.event_type.in_([
+                'Login Failed', 'Error', 'System Error', 'Upload Error',
+                'Database Error', 'Permission Denied', 'Access Denied',
+                'File Processing Error', 'Export Error', 'Import Error'
+            ])
+        ).order_by(AuditLog.timestamp.desc()).limit(limit).all()
+        
+        error_list = []
+        for error in error_events:
+            try:
+                additional_data = json.loads(error.additional_data) if error.additional_data else {}
+            except:
+                additional_data = {}
+            
+            error_entry = {
+                'timestamp': error.timestamp.strftime('%Y-%m-%d %H:%M:%S') if error.timestamp else 'N/A',
+                'event_type': error.event_type,
+                'user_email': error.user_email,
+                'description': error.description,
+                'ip_address': error.ip_address,
+                'user_agent': additional_data.get('user_agent', 'Unknown')
+            }
+            error_list.append(error_entry)
+        
+        return error_list
+        
+    except Exception as e:
+        print(f"Error retrieving recent errors: {str(e)}")
+        return []
