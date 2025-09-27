@@ -31,8 +31,6 @@
 </div>
 
 {% if uploaded_files %}
-    <!-- Track processed sheet names to avoid duplicates -->
-    {% set processed_sheets = [] %}
     {% for file in uploaded_files %}
     <!-- File {{ loop.index }} -->
     <div class="card mb-4">
@@ -56,8 +54,7 @@
                 {% for sheet in file.sheets %}
                 {% if sheet.sheet_data %}
                     {% set sheet_data_list = sheet.sheet_data | from_json %}
-                    {% if sheet_data_list and sheet.sheet_name not in processed_sheets %}
-                    {% do processed_sheets.append(sheet.sheet_name) %}
+                    {% if sheet_data_list %}
                     <h6 class="mb-3">
                         <i class="fas fa-table me-2"></i>Sheet: {{ sheet.sheet_name }}
                         <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>

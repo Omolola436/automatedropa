@@ -24,8 +24,6 @@
         <p class="mb-0">You are editing the original uploaded file data. Changes will be saved directly to the uploaded file records. Use the empty rows below to add new data.</p>
     </div>
 
-    <!-- Track processed sheet names to avoid duplicates -->
-    {% set processed_sheets = [] %}
     {% for file in uploaded_files %}
     <!-- File {{ loop.index }} -->
     <div class="card mb-4">
@@ -47,8 +45,7 @@
                 {% for sheet in file.sheets %}
                 {% if sheet.sheet_data %}
                     {% set sheet_data_list = sheet.sheet_data | from_json %}
-                    {% if sheet_data_list and sheet.sheet_name not in processed_sheets %}
-                    {% do processed_sheets.append(sheet.sheet_name) %}
+                    {% if sheet_data_list %}
                     <h6 class="mb-3">
                         <i class="fas fa-table me-2"></i>Sheet: {{ sheet.sheet_name }}
                         <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>
