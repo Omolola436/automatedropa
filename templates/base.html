@@ -55,19 +55,52 @@
                             <i class="fas fa-list me-1"></i>Audit Logs
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('subscription') }}">
+                            <i class="fas fa-credit-card me-1"></i>Subscriptions
+                        </a>
+                    </li>
                     {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ url_for('pricing') }}">
+                            <i class="fas fa-tags me-1"></i>Pricing
+                        </a>
+                    </li>
                 </ul>
-                
+
                 <ul class="navbar-nav">
+                    {% if sub_tier == 'trial' and sub_trial_days is not none %}
+                    <li class="nav-item d-flex align-items-center me-2">
+                        <a href="{{ url_for('pricing') }}" class="btn btn-sm btn-warning">
+                            <i class="fas fa-clock me-1"></i>Trial: {{ sub_trial_days }}d left
+                        </a>
+                    </li>
+                    {% elif sub_tier == 'expired' %}
+                    <li class="nav-item d-flex align-items-center me-2">
+                        <a href="{{ url_for('pricing') }}" class="btn btn-sm btn-danger">
+                            <i class="fas fa-exclamation-circle me-1"></i>Trial Expired – Upgrade
+                        </a>
+                    </li>
+                    {% elif sub_tier %}
+                    <li class="nav-item d-flex align-items-center me-2">
+                        <span class="badge bg-{{ sub_config.get('color', 'secondary') }} fs-6 px-3 py-2">
+                            <i class="fas fa-star me-1"></i>{{ sub_config.get('name', sub_tier|title) }}
+                        </span>
+                    </li>
+                    {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
                             <i class="fas fa-user me-1"></i>{{ current_user.email }}
                             <span class="badge bg-primary ms-1">{{ current_user.role }}</span>
                         </a>
-                        <ul class="dropdown-menu">
+                        <ul class="dropdown-menu dropdown-menu-end">
                             <li><span class="dropdown-item-text">
                                 <small class="text-muted">Department: {{ current_user.department or 'N/A' }}</small>
                             </span></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('pricing') }}">
+                                <i class="fas fa-tags me-1"></i>View Plans
+                            </a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="{{ url_for('logout') }}">
                                 <i class="fas fa-sign-out-alt me-1"></i>Logout

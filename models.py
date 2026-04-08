@@ -18,7 +18,13 @@ class User(UserMixin, db.Model):
     last_login = db.Column(DateTime)
     reset_token = db.Column(String(256), nullable=True)
     reset_token_expires = db.Column(DateTime, nullable=True)
-    
+
+    # Subscription fields
+    subscription_tier = db.Column(String(50), nullable=False, default='trial')
+    trial_start_date = db.Column(DateTime, default=datetime.utcnow)
+    subscription_start_date = db.Column(DateTime, nullable=True)
+    subscription_end_date = db.Column(DateTime, nullable=True)
+
     # Relationship
     ropa_records = db.relationship('ROPARecord', foreign_keys='ROPARecord.created_by', backref='creator', lazy=True)
 
@@ -176,3 +182,17 @@ class ROPACustomData(db.Model):
     # Relationships
     ropa_record = db.relationship('ROPARecord', backref='custom_data')
     custom_field = db.relationship('ApprovedCustomField', backref='ropa_data')
+
+
+class ROPAVersionHistory(db.Model):
+    __tablename__ = 'ropa_version_history'
+
+    id = db.Column(Integer, primary_key=True)
+    ropa_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=False)
+    changed_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    changed_at = db.Column(DateTime, default=datetime.utcnow)
+    change_summary = db.Column(String(500))
+    snapshot = db.Column(Text)
+
+    ropa_record = db.relationship('ROPARecord', backref='version_history')
+    user = db.relationship('User', backref='version_changes')

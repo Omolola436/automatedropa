@@ -38,5 +38,15 @@ A GDPR Record of Processing Activities (ROPA) management system for organization
 - Comprehensive audit logging
 - Session-based authentication with consent tracking
 
+## Subscription System
+- **Tiers**: Trial (7 days free), Starter ($29/mo, 3 activities), Growth ($99/mo, 15 activities), Enterprise ($299/mo, unlimited)
+- **Feature gating**: Activity limits enforced on add; Audit Logs locked to Enterprise; Version History for Growth+
+- **Version History**: Snapshots saved on record edit for Growth/Enterprise users
+- **Subscription Management**: Privacy Officers manage user tiers at `/subscription`
+- **Pricing Page**: Public page at `/pricing` with full feature comparison table
+- **Trial tracking**: 7-day countdown shown in navbar; expired trial blocks new activities
+- **Tier badge**: Shown in navbar for all logged-in users
+- Key files: `subscription.py` (tier config & helpers), `templates/pricing.html`, `templates/subscription_manage.html`, `templates/version_history.html`
+
 ## Environment Variables
 - `SESSION_SECRET` - Flask secret key (defaults to dev key if not set)

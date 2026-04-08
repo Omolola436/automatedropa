@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Subscription Management – Privacy ROPA Solution{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-credit-card me-2 text-primary"></i>Subscription Management</h1>
+    <a href="{{ url_for('pricing') }}" class="btn btn-outline-primary">
+        <i class="fas fa-tags me-1"></i>View Pricing Plans
+    </a>
+</div>
+
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            As Privacy Officer you can manage subscription tiers for all users. Tier limits are applied immediately on save.
+        </div>
+    </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row g-3 mb-4">
+    {% set tier_counts = {} %}
+    {% for user in users %}
+        {% set t = user.subscription_tier or 'trial' %}
+        {% if t in tier_counts %}
+            {% set _ = tier_counts.update({t: tier_counts[t] + 1}) %}
+        {% else %}
+            {% set _ = tier_counts.update({t: 1}) %}
+        {% endif %}
+    {% endfor %}
+
+    {% for tier_key, tier_info in tiers.items() %}
+    <div class="col-6 col-md-3">
+        <div class="card border-{{ tier_info.color }} text-center">
+            <div class="card-body py-3">
+                <h2 class="mb-0 fw-bold text-{{ tier_info.color }}">{{ tier_counts.get(tier_key, 0) }}</h2>
+                <small class="text-muted">{{ tier_info.name }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Users table -->
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="fas fa-users me-2"></i>User Subscriptions</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>User</th>
+                        <th>Role</th>
+                        <th>Department</th>
+                        <th>Current Plan</th>
+                        <th>Trial Start</th>
+                        <th>Subscription Since</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    {% set effective_tier = user.subscription_tier or 'trial' %}
+                    {% set tier_info = tiers.get(effective_tier, tiers['trial']) %}
+                    <tr>
+                        <td>
+                            <strong>{{ user.email }}</strong>
+                            {% if user.id == current_user.id %}
+                            <span class="badge bg-secondary ms-1">You</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="badge bg-primary">{{ user.role }}</span></td>
+                        <td>{{ user.department or '–' }}</td>
+                        <td>
+                            <span class="badge bg-{{ tier_info.color }} fs-6 px-2 py-1">
+                                {{ tier_info.name }}
+                            </span>
+                            {% if effective_tier == 'trial' and user.trial_start_date %}
+                                {% set days_used = ((now if now is defined else '') or '') %}
+                                <br><small class="text-muted">Started {{ user.trial_start_date.strftime('%d %b %Y') }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.trial_start_date %}
+                                {{ user.trial_start_date.strftime('%d %b %Y') }}
+                            {% else %}–{% endif %}
+                        </td>
+                        <td>
+                            {% if user.subscription_start_date %}
+                                {{ user.subscription_start_date.strftime('%d %b %Y') }}
+                            {% else %}–{% endif %}
+                        </td>
+                        <td>
+                            <form method="POST" action="{{ url_for('update_subscription', user_id=user.id) }}" class="d-flex gap-2 align-items-center">
+                                <select name="tier" class="form-select form-select-sm" style="width:140px;">
+                                    {% for tier_key, tier_info_opt in tiers.items() %}
+                                    <option value="{{ tier_key }}" {% if effective_tier == tier_key %}selected{% endif %}>
+                                        {{ tier_info_opt.name }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                                <button type="submit" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-save me-1"></i>Save
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Tier feature reference -->
+<h3 class="mt-5 mb-3 fw-bold"><i class="fas fa-list-check me-2 text-primary"></i>Plan Feature Reference</h3>
+<div class="row g-3">
+    {% for tier_key, tier_info in tiers.items() %}
+    <div class="col-md-6 col-lg-3">
+        <div class="card h-100 border-{{ tier_info.color }}">
+            <div class="card-header bg-{{ tier_info.color }} text-white text-center">
+                <strong>{{ tier_info.name }}</strong>
+                {% if tier_info.price_monthly > 0 %}
+                <br><small>${{ tier_info.price_monthly }}/mo</small>
+                {% else %}
+                <br><small>Free 7-day trial</small>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0 small">
+                    <li class="mb-1">
+                        <i class="fas fa-database me-1 text-muted"></i>
+                        Activities: <strong>{{ tier_info.max_activities if tier_info.max_activities else 'Unlimited' }}</strong>
+                    </li>
+                    {% set features = [
+                        ('has_dashboard', 'Dashboard Analytics'),
+                        ('has_version_history', 'Version History'),
+                        ('has_automation', 'Automation'),
+                        ('has_audit_logs', 'Audit Logs'),
+                        ('has_multi_user', 'Multi-user'),
+                        ('has_compliance_mapping', 'Compliance Mapping'),
+                    ] %}
+                    {% for key, label in features %}
+                    <li class="mb-1">
+                        {% if tier_info.get(key) %}
+                        <i class="fas fa-check text-success me-1"></i>{{ label }}
+                        {% else %}
+                        <i class="fas fa-times text-danger me-1"></i><span class="text-muted">{{ label }}</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

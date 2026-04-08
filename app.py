@@ -61,6 +61,23 @@ def load_user(user_id):
 
 # Import enhanced audit logging functions
 from audit_logger import log_audit_event, log_security_event, get_client_ip
+from subscription import (get_user_effective_tier, get_tier_config,
+                          get_trial_days_remaining, can_add_activity, has_feature,
+                          TIER_CONFIG)
+
+# Subscription context processor
+@app.context_processor
+def inject_subscription():
+    if current_user.is_authenticated:
+        tier = get_user_effective_tier(current_user)
+        config = get_tier_config(tier)
+        trial_days = get_trial_days_remaining(current_user)
+        return dict(
+            sub_tier=tier,
+            sub_config=config,
+            sub_trial_days=trial_days,
+        )
+    return dict(sub_tier=None, sub_config={}, sub_trial_days=None)
 
 # Add custom Jinja filters
 @app.template_filter('from_json')
@@ -410,6 +427,22 @@ def privacy_officer_dashboard():
 @login_required
 def add_activity():
     """Add new ROPA activity"""
+    # Enforce activity limit based on subscription tier
+    tier = get_user_effective_tier(current_user)
+    if tier == 'expired':
+        flash('Your free trial has expired. Please upgrade to continue adding activities.', 'error')
+        return redirect(url_for('pricing'))
+
+    current_count = models.ROPARecord.query.filter_by(created_by=current_user.id).count()
+    if not can_add_activity(current_user, current_count):
+        config = get_tier_config(tier)
+        flash(
+            f'You have reached the limit of {config["max_activities"]} processing activities for your '
+            f'{config["name"]} plan. Please upgrade to add more.',
+            'error'
+        )
+        return redirect(url_for('pricing'))
+
     if request.method == 'POST':
         # Get all form data
         form_data = request.form.to_dict()
@@ -560,6 +593,29 @@ def edit_activity(record_id):
 
         try:
             db.session.commit()
+
+            # Save version history snapshot for Growth+ tiers
+            if has_feature(current_user, 'has_version_history'):
+                try:
+                    snapshot = json.dumps({
+                        'processing_activity_name': record.processing_activity_name,
+                        'category': record.category,
+                        'description': record.description,
+                        'legal_basis': record.legal_basis,
+                        'risk_level': record.risk_level,
+                        'status': record.status,
+                    })
+                    history = models.ROPAVersionHistory(
+                        ropa_record_id=record.id,
+                        changed_by=current_user.id,
+                        change_summary=f'Updated by {current_user.email}',
+                        snapshot=snapshot,
+                    )
+                    db.session.add(history)
+                    db.session.commit()
+                except Exception:
+                    pass
+
             log_audit_event('ROPA Updated', current_user.email, f'Updated ROPA record: {record.processing_activity_name}')
             flash('ROPA record updated successfully in Excel format', 'success')
             return redirect(url_for('index'))
@@ -1020,11 +1076,15 @@ def system_help():
 @app.route('/audit-logs')
 @login_required
 def audit_logs():
-    """View audit logs (Privacy Officer only)"""
+    """View audit logs (Privacy Officer + Enterprise tier only)"""
     if current_user.role != 'Privacy Officer':
         log_security_event('Unauthorized Access', current_user.email, 
                           f'Attempted to access audit logs without Privacy Officer role')
         abort(403)
+
+    if not has_feature(current_user, 'has_audit_logs'):
+        flash('Audit Logs are available on the Enterprise plan. Please upgrade to access this feature.', 'error')
+        return redirect(url_for('pricing'))
 
     page = request.args.get('page', 1, type=int)
     per_page = request.args.get('per_page', 50, type=int)
@@ -1564,6 +1624,66 @@ def view_all_ropa():
                          records=records_list, 
                          current_status=status_filter,
                          user_role=current_user.role)
+
+
+@app.route('/pricing')
+def pricing():
+    """Public pricing page"""
+    return render_template('pricing.html', tiers=TIER_CONFIG)
+
+
+@app.route('/subscription')
+@login_required
+def subscription():
+    """Subscription management page (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    users = models.User.query.all()
+    return render_template('subscription_manage.html', users=users, tiers=TIER_CONFIG)
+
+
+@app.route('/subscription/update/<int:user_id>', methods=['POST'])
+@login_required
+def update_subscription(user_id):
+    """Update a user's subscription tier (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+
+    user = models.User.query.get_or_404(user_id)
+    new_tier = request.form.get('tier')
+    if new_tier not in TIER_CONFIG:
+        flash('Invalid subscription tier.', 'error')
+        return redirect(url_for('subscription'))
+
+    user.subscription_tier = new_tier
+    if new_tier != 'trial':
+        user.subscription_start_date = datetime.utcnow()
+    db.session.commit()
+
+    log_audit_event('Subscription Updated', current_user.email,
+                    f'Updated {user.email} subscription to {new_tier}')
+    flash(f'{user.email} subscription updated to {TIER_CONFIG[new_tier]["name"]}.', 'success')
+    return redirect(url_for('subscription'))
+
+
+@app.route('/version-history/<int:record_id>')
+@login_required
+def version_history(record_id):
+    """View version history for a ROPA record (Growth+ only)"""
+    if not has_feature(current_user, 'has_version_history'):
+        flash('Version History is available on the Growth and Enterprise plans. Please upgrade to access this feature.', 'error')
+        return redirect(url_for('pricing'))
+
+    record = models.ROPARecord.query.get_or_404(record_id)
+
+    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+        abort(403)
+
+    history = models.ROPAVersionHistory.query.filter_by(
+        ropa_record_id=record_id
+    ).order_by(models.ROPAVersionHistory.changed_at.desc()).all()
+
+    return render_template('version_history.html', record=record, history=history)
 
 
 if __name__ == '__main__':
