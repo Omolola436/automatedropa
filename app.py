@@ -934,6 +934,9 @@ def upload_file():
 @login_required
 def export_data():
     """Export ROPA data"""
+    if not has_feature(current_user, 'has_export'):
+        flash('Export functionality is not available on your current plan. Please upgrade to access Excel/PDF downloads.', 'error')
+        return redirect(url_for('pricing'))
     try:
         export_format = request.args.get('format', 'excel')
         include_drafts = request.args.get('include_drafts') == 'true'

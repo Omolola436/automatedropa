@@ -41,12 +41,11 @@
                 <ul class="list-unstyled flex-grow-1">
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 3 processing activities</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA template (standardised)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Excel / PDF download</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Email support</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No dashboard analytics</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No automation</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No multi-user access</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No audit logs</li>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No Email support</li>
                 </ul>
                 {% if current_user.is_authenticated and sub_tier == 'trial' %}
                 <div class="text-center mt-auto"><span class="badge bg-secondary fs-6 px-3 py-2">Your Current Plan</span></div>
@@ -194,7 +193,7 @@
             </tr>
             <tr>
                 <td class="text-start fw-semibold">Excel / PDF Export</td>
-                <td><i class="fas fa-check text-success"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
                 <td><i class="fas fa-check text-success"></i></td>
                 <td class="table-primary"><i class="fas fa-check text-success"></i></td>
                 <td style="background-color:#f3e8ff;"><i class="fas fa-check text-success"></i></td>
@@ -243,7 +242,7 @@
             </tr>
             <tr>
                 <td class="text-start fw-semibold">Support</td>
-                <td>Email</td>
+                <td><i class="fas fa-times text-danger"></i></td>
                 <td>Email</td>
                 <td class="table-primary">Priority</td>
                 <td style="background-color:#f3e8ff;">Dedicated</td>

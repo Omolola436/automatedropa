@@ -11,7 +11,7 @@ TIER_CONFIG = {
         'has_audit_logs': False,
         'has_multi_user': False,
         'has_compliance_mapping': False,
-        'has_export': True,
+        'has_export': False,
         'color': 'secondary',
         'price_monthly': 0,
         'price_annual': 0,
