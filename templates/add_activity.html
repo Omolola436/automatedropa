@@ -7,7 +7,17 @@
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h2><i class="fas fa-plus-circle me-2"></i>Add New Processing Activity</h2>
+                <div>
+                    <h2><i class="fas fa-plus-circle me-2"></i>Add New Processing Activity</h2>
+                    {% if max_activities is not none and max_activities != -1 %}
+                    <span class="text-muted small">
+                        <i class="fas fa-layer-group me-1"></i>
+                        {{ activity_count }} / {{ max_activities }} activities used on your {{ sub_tier | capitalize }} plan
+                    </span>
+                    {% else %}
+                    <span class="text-muted small"><i class="fas fa-infinity me-1"></i>Unlimited activities on your {{ sub_tier | capitalize }} plan</span>
+                    {% endif %}
+                </div>
                 <a href="{{ url_for('privacy_champion_dashboard' if current_user.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
                 </a>

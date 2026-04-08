@@ -512,7 +512,14 @@ def add_activity():
         return redirect(url_for('privacy_champion_dashboard'))
 
     options = get_predefined_options()
-    return render_template('add_activity.html', options=options)
+    tier = get_user_effective_tier(current_user)
+    tier_config = get_tier_config(tier)
+    return render_template(
+        'add_activity.html',
+        options=options,
+        activity_count=current_count,
+        max_activities=tier_config['max_activities']
+    )
 
 @app.route('/edit-activity/<int:record_id>', methods=['GET', 'POST'])
 @login_required
@@ -1097,9 +1104,13 @@ def audit_logs():
 @app.route('/user-management')
 @login_required
 def user_management():
-    """User management page (Privacy Officer only)"""
+    """User management page (Privacy Officer + Growth/Enterprise only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
+
+    if not has_feature(current_user, 'has_multi_user'):
+        flash('Multi-user management is available on the Growth and Enterprise plans. Please upgrade to add team members.', 'error')
+        return redirect(url_for('pricing'))
 
     users = models.User.query.all()
     return render_template('user_management.html', users=users)
@@ -1107,9 +1118,13 @@ def user_management():
 @app.route('/add-user', methods=['POST'])
 @login_required
 def add_user():
-    """Add new user (Privacy Officer only)"""
+    """Add new user (Privacy Officer + Growth/Enterprise only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
+
+    if not has_feature(current_user, 'has_multi_user'):
+        flash('Multi-user management is available on the Growth and Enterprise plans.', 'error')
+        return redirect(url_for('pricing'))
 
     email = request.form['email']
     password = request.form['password']
@@ -1156,9 +1171,12 @@ def add_user():
 @app.route('/edit-user/<int:user_id>', methods=['POST'])
 @login_required
 def edit_user(user_id):
-    """Edit user (Privacy Officer only)"""
+    """Edit user (Privacy Officer + Growth/Enterprise only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
+    if not has_feature(current_user, 'has_multi_user'):
+        flash('Multi-user management is available on the Growth and Enterprise plans.', 'error')
+        return redirect(url_for('pricing'))
 
     user = models.User.query.get_or_404(user_id)
 
@@ -1213,9 +1231,12 @@ def edit_user(user_id):
 @app.route('/delete-user/<int:user_id>', methods=['POST'])
 @login_required
 def delete_user(user_id):
-    """Delete user (Privacy Officer only)"""
+    """Delete user (Privacy Officer + Growth/Enterprise only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
+    if not has_feature(current_user, 'has_multi_user'):
+        flash('Multi-user management is available on the Growth and Enterprise plans.', 'error')
+        return redirect(url_for('pricing'))
 
     user = models.User.query.get_or_404(user_id)
 
@@ -1237,11 +1258,13 @@ def delete_user(user_id):
 
     return redirect(url_for('user_management'))
 
-# API endpoints for automation features
+# API endpoints for automation features — gated by subscription tier
 @app.route('/api/auto-classify', methods=['POST'])
 @login_required
 def api_auto_classify():
-    """API endpoint for auto-classification"""
+    """Auto-classification — Enterprise only"""
+    if not has_feature(current_user, 'has_automation'):
+        return jsonify({'error': 'upgrade_required', 'message': 'Full automation is available on the Enterprise plan.'}), 403
     data = request.get_json()
     description = data.get('description', '')
     classification = auto_classify_data(description)
@@ -1250,7 +1273,9 @@ def api_auto_classify():
 @app.route('/api/suggest-purpose', methods=['POST'])
 @login_required
 def api_suggest_purpose():
-    """API endpoint for purpose suggestion"""
+    """Purpose suggestion — Enterprise only"""
+    if not has_feature(current_user, 'has_automation'):
+        return jsonify({'error': 'upgrade_required', 'message': 'Full automation is available on the Enterprise plan.'}), 403
     data = request.get_json()
     department = data.get('department', '')
     category = data.get('category', '')
@@ -1260,7 +1285,9 @@ def api_suggest_purpose():
 @app.route('/api/assess-risk', methods=['POST'])
 @login_required
 def api_assess_risk():
-    """API endpoint for risk assessment"""
+    """Risk assessment — Growth+ (basic risk flagging)"""
+    if not has_feature(current_user, 'has_dashboard'):
+        return jsonify({'error': 'upgrade_required', 'message': 'Risk assessment is available on the Growth and Enterprise plans.'}), 403
     data = request.get_json()
     data_categories = data.get('data_categories', '')
     special_categories = data.get('special_categories', '')
@@ -1270,7 +1297,9 @@ def api_assess_risk():
 @app.route('/api/suggest-security', methods=['POST'])
 @login_required
 def api_suggest_security():
-    """API endpoint for security measures suggestion"""
+    """Security suggestions — Enterprise only"""
+    if not has_feature(current_user, 'has_automation'):
+        return jsonify({'error': 'upgrade_required', 'message': 'Full automation is available on the Enterprise plan.'}), 403
     data = request.get_json()
     data_categories = data.get('data_categories', '')
     risk_level = data.get('risk_level', 'Medium')
