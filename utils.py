@@ -80,6 +80,41 @@ def get_predefined_options():
             "Students",
             "Patients",
             "Members"
+        ],
+        
+        'safeguards': [
+            "Encryption",
+            "Anonymization",
+            "Pseudonymization",
+            "Access Controls",
+            "Data Minimization",
+            "Purpose Limitation",
+            "Storage Limitation",
+            "Processing Limitation",
+            "Integrity and Confidentiality",
+            "Contractual Safeguards",
+            "Standard Contractual Clauses",
+            "Binding Corporate Rules",
+            "Code of Conduct",
+            "Certification"
+        ],
+        
+        'security_measures': [
+            "Encryption (in transit)",
+            "Encryption (at rest)",
+            "Firewalls",
+            "Intrusion Detection Systems",
+            "Multi-factor Authentication",
+            "Access Control Lists",
+            "Role-based Access Control",
+            "Regular Backups",
+            "Security Patches",
+            "Penetration Testing",
+            "Vulnerability Scanning",
+            "Security Audits",
+            "Employee Training",
+            "Incident Response Plan",
+            "Data Protection by Design"
         ]
     }
 

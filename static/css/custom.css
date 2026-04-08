@@ -2,9 +2,13 @@
 
 /* Eye-friendly background and color improvements */
 body {
-    background-color: #f8f9fa;
-    color: #333;
+    background: linear-gradient(135deg, #FFE4B5, #FFE4B5, #FFE4B5);
+    min-height: 100vh;
+    margin: 0;
+    color: #2F2F2F;
+    font-family: 'Roboto', sans-serif;
 }
+
 
 /* Make dashboard cards clickable */
 .dashboard-card-clickable {
@@ -24,16 +28,19 @@ body {
 /* Additional spacing and layout improvements */
 .navbar-brand {
     font-weight: 600;
+    color: #FFA500 !important;
 }
 
 .card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
-    border: 1px solid rgba(0, 0, 0, 0.125);
+    background: #FFFDF9;
+    border: 1px solid #F4F4F4;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.08);
 }
 
 .card-header {
-    background-color: var(--bs-gray-100);
-    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    background-color: #FFF5E1;
+    border-bottom: 1px solid #F4F4F4;
+    color: #2F2F2F;
 }
 
 /* Progress bar styling */
@@ -100,17 +107,15 @@ body {
 
 /* File upload area */
 .file-upload-area {
-    border: 2px dashed var(--bs-gray-300);
-    border-radius: 0.5rem;
-    padding: 2rem;
-    text-align: center;
-    transition: all 0.3s ease;
+    border: 2px dashed #FFDAB9;
+    background-color: #FFFDF9;
 }
+
 
 .file-upload-area:hover,
 .file-upload-area.dragover {
-    border-color: var(--bs-primary);
-    background-color: var(--bs-light);
+    border-color: #FFA500;
+    background-color: #FFF5E1;
 }
 
 /* Responsive improvements */
@@ -208,13 +213,14 @@ body {
 
 /* Dark theme adjustments */
 [data-bs-theme="dark"] .card {
-    background-color: var(--bs-dark);
-    border-color: var(--bs-gray-800);
+    background-color: #2F2F2F;
+    border-color: #444;
 }
 
 [data-bs-theme="dark"] .card-header {
-    background-color: var(--bs-gray-800);
-    border-bottom-color: var(--bs-gray-700);
+    background-color: #3B3B3B;
+    border-bottom-color: #444;
+    color: #FFD700;
 }
 
 [data-bs-theme="dark"] .table {
@@ -222,12 +228,32 @@ body {
 }
 
 [data-bs-theme="dark"] .file-upload-area {
-    border-color: var(--bs-gray-600);
-    background-color: var(--bs-gray-800);
+    border-color: #555;
+    background-color: #2F2F2F;
 }
 
 [data-bs-theme="dark"] .file-upload-area:hover,
 [data-bs-theme="dark"] .file-upload-area.dragover {
-    border-color: var(--bs-primary);
-    background-color: var(--bs-gray-700);
+    border-color: #FFA500;
+    background-color: #3B3B3B;
+}
+
+/* Navbar (Header) styling */
+.navbar {
+    background-color: #f56a0c !important;  /* company orange */
+    color: #fff !important;
+}
+
+.navbar .nav-link,
+.navbar .navbar-brand {
+    color: #fff !important;  /* make text white for contrast */
+}
+
+.navbar .nav-link:hover {
+    color: #FFD700 !important; /* gold hover effect */
+}
+
+.navbar .fa-shield-alt {
+    color: #fff !important;  /* shield icon white */
+    margin-right: 8px;
 }

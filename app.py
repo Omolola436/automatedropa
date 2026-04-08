@@ -73,6 +73,39 @@ def from_json_filter(json_str):
     except (ValueError, TypeError):
         return []
 
+def cleanup_duplicate_sheets():
+    """Remove duplicate Excel sheets from database, keeping only the first occurrence"""
+    try:
+        # Get all Excel files
+        excel_files = models.ExcelFileData.query.all()
+        total_deleted = 0
+        
+        for file in excel_files:
+            # Track sheet names we've seen for this file
+            seen_sheet_names = set()
+            sheets_to_delete = []
+            
+            # Go through sheets in order of creation (earliest first)
+            for sheet in sorted(file.sheets, key=lambda s: s.id):
+                if sheet.sheet_name in seen_sheet_names:
+                    # This is a duplicate, mark for deletion
+                    sheets_to_delete.append(sheet)
+                    total_deleted += 1
+                else:
+                    # First occurrence, keep it
+                    seen_sheet_names.add(sheet.sheet_name)
+            
+            # Delete the duplicate sheets
+            for sheet in sheets_to_delete:
+                db.session.delete(sheet)
+        
+        db.session.commit()
+        return total_deleted
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error cleaning up duplicate sheets: {str(e)}")
+        return 0
+
 @app.route('/')
 def index():
     """Redirect to appropriate dashboard based on user role"""
@@ -426,17 +459,18 @@ def add_activity():
         # Process custom tabs if any were created
         custom_tab_counter = 1
         while f'custom_tab_name_{custom_tab_counter}' in request.form:
-            tab_name = request.form.get(f'custom_tab_name_{custom_tab_counter}')
-            tab_description = request.form.get(f'custom_tab_description_{custom_tab_counter}')
-            tab_processes = request.form.get(f'custom_tab_processes_{custom_tab_counter}')
+            tab_category = request.form.get(f'custom_tab_name_{custom_tab_counter}')
+            field_name = request.form.get(f'custom_tab_description_{custom_tab_counter}')
+            field_description = request.form.get(f'custom_tab_processes_{custom_tab_counter}')
 
-            if tab_name and tab_processes:  # Only create if required fields are filled
+            if tab_category and field_name:  # Only create if required fields are filled
                 custom_tab = models.CustomTab(
-                    tab_name=tab_name,
-                    tab_description=tab_description,
-                    processes=tab_processes,
-                    created_by=current_user.id,
-                    ropa_record_id=record.id
+                    tab_category=tab_category,
+                    field_name=field_name,
+                    field_description=field_description,
+                    field_type='text',
+                    status='Draft',
+                    created_by=current_user.id
                 )
                 db.session.add(custom_tab)
 
@@ -498,10 +532,20 @@ def edit_activity(record_id):
             
         record.recipients = request.form.get('recipients', '')
         record.third_country_transfers = request.form.get('third_country_transfers', '')
-        record.safeguards = request.form.get('safeguards', '')
+        
+        # Handle checkbox groups for safeguards and security measures
+        if request.form.getlist('safeguards'):
+            record.safeguards = ', '.join(request.form.getlist('safeguards'))
+        else:
+            record.safeguards = ''
+            
+        if request.form.getlist('security_measures'):
+            record.security_measures = ', '.join(request.form.getlist('security_measures'))
+        else:
+            record.security_measures = ''
+            
         record.retention_period = request.form.get('retention_period', '')
         record.deletion_procedures = request.form.get('deletion_procedures', '')
-        record.security_measures = request.form.get('security_measures', '')
         record.breach_likelihood = request.form.get('breach_likelihood', '')
         record.breach_impact = request.form.get('breach_impact', '')
         record.risk_level = request.form.get('risk_level', '')
@@ -556,9 +600,27 @@ def view_all_ropa_excel():
     if current_user.role != 'Privacy Officer':
         abort(403)
     
+    # Clean up any duplicate sheets in the database first
+    deleted_count = cleanup_duplicate_sheets()
+    if deleted_count > 0:
+        print(f"Cleaned up {deleted_count} duplicate sheets")
+    
     # Get all uploaded Excel files with their sheet data
     uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
-    
+    # Provide a fallback display name for unnamed sheets (A, B, C...)
+    import string
+    for file in uploaded_files:
+        for idx, sheet in enumerate(file.sheets):
+            raw_name = (sheet.sheet_name or '').strip()
+            lower_raw = raw_name.lower()
+            # Treat empty, generic 'unnamed' or patterns like 'unnamed: 0' as missing
+            if not raw_name or lower_raw.startswith('unnamed') or lower_raw in ['nan', 'none']:
+                letter = string.ascii_uppercase[idx % 26]
+                suffix = '' if idx < 26 else str((idx // 26))
+                sheet.display_name = f"{letter}{suffix}"
+            else:
+                sheet.display_name = raw_name
+
     log_audit_event('View Uploaded ROPA Excel', current_user.email, 'Viewed all uploaded ROPA files in Excel format')
     return render_template('view_all_ropa_excel.html', uploaded_files=uploaded_files, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -577,33 +639,19 @@ def edit_all_ropa_excel():
             # Get all form data
             form_data = request.form.to_dict()
             
-            # Process each sheet update (existing data)
+            # Process each sheet update - check new_row FIRST because _new_row_ contains _row_
             for key, value in form_data.items():
-                if key.startswith('sheet_') and '_row_' in key and '_col_' in key:
-                    # Parse sheet_ID_row_X_col_Y format
-                    parts = key.replace('sheet_', '').split('_')
-                    if len(parts) >= 4:
-                        sheet_id = int(parts[0])
-                        row_idx = int(parts[2])
-                        col_name = '_'.join(parts[4:])  # Join remaining parts for column name
-                        
-                        # Get the sheet and update the data
-                        sheet = models.ExcelSheetData.query.get(sheet_id)
-                        if sheet:
-                            sheet_data = json.loads(sheet.sheet_data)
-                            if row_idx < len(sheet_data) and col_name in sheet_data[row_idx]:
-                                sheet_data[row_idx][col_name] = value
-                                sheet.sheet_data = json.dumps(sheet_data)
-                                updated_count += 1
-                
-                # Process new rows data
-                elif key.startswith('sheet_') and '_new_row_' in key and '_col_' in key:
+                # Process new rows data FIRST (more specific pattern)
+                if key.startswith('sheet_') and '_new_row_' in key and '_col_' in key:
                     # Parse sheet_ID_new_row_X_col_Y format
                     parts = key.replace('sheet_', '').split('_')
                     if len(parts) >= 5 and value.strip():  # Only process if value is not empty
-                        sheet_id = int(parts[0])
-                        new_row_idx = int(parts[3])
-                        col_name = '_'.join(parts[5:])
+                        try:
+                            sheet_id = int(parts[0])
+                            new_row_idx = int(parts[3])
+                            col_name = '_'.join(parts[5:])
+                        except (ValueError, IndexError):
+                            continue
                         
                         # Get the sheet and add new data
                         sheet = models.ExcelSheetData.query.get(sheet_id)
@@ -622,6 +670,28 @@ def edit_all_ropa_excel():
                             
                             # Set the value for this column in the new row
                             sheet._new_rows[new_row_idx][col_name] = value
+                
+                # Process existing data rows (less specific pattern)
+                elif key.startswith('sheet_') and '_row_' in key and '_col_' in key:
+                    # Parse sheet_ID_row_X_col_Y format
+                    parts = key.replace('sheet_', '').split('_')
+                    if len(parts) >= 4:
+                        try:
+                            sheet_id = int(parts[0])
+                            row_idx = int(parts[2])
+                            col_name = '_'.join(parts[4:])  # Join remaining parts for column name
+                        except (ValueError, IndexError):
+                            continue
+                        
+                        # Get the sheet and update the data
+                        sheet = models.ExcelSheetData.query.get(sheet_id)
+                        if sheet:
+                            sheet_data = json.loads(sheet.sheet_data)
+                            if row_idx < len(sheet_data) and col_name in sheet_data[row_idx]:
+                                sheet_data[row_idx][col_name] = value
+                                sheet.sheet_data = json.dumps(sheet_data)
+                                db.session.add(sheet)  # Ensure the sheet is tracked
+                                updated_count += 1
             
             # Add completed new rows to sheet data
             for sheet_id, sheet in [(s.id, s) for s in models.ExcelSheetData.query.all() if hasattr(s, '_new_rows')]:
@@ -649,8 +719,63 @@ def edit_all_ropa_excel():
             print(f"Error updating uploaded files: {str(e)}")
     
     # Get all uploaded Excel files with their sheet data for editing
-    uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
+    # Clean up any duplicate sheets in the database first
+    deleted_count = cleanup_duplicate_sheets()
+    if deleted_count > 0:
+        print(f"Cleaned up {deleted_count} duplicate sheets")
     
+    uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
+    # Provide a fallback display name for unnamed sheets (A, B, C...)
+    import string
+    def excel_col_label(index):
+        # Convert 0-based index to Excel-style column labels: 0->A, 25->Z, 26->AA
+        label = ''
+        i = index
+        while True:
+            label = chr((i % 26) + 65) + label
+            i = i // 26 - 1
+            if i < 0:
+                break
+        return label
+
+    for file in uploaded_files:
+        for idx, sheet in enumerate(file.sheets):
+            raw_name = (sheet.sheet_name or '').strip()
+            lower_raw = raw_name.lower()
+            if not raw_name or lower_raw.startswith('unnamed') or lower_raw in ['nan', 'none']:
+                letter = string.ascii_uppercase[idx % 26]
+                suffix = '' if idx < 26 else str((idx // 26))
+                sheet.display_name = f"{letter}{suffix}"
+            else:
+                sheet.display_name = raw_name
+
+            # Build display column labels mapping for this sheet
+            try:
+                sheet_data = json.loads(sheet.sheet_data) if sheet.sheet_data else []
+            except Exception:
+                sheet_data = []
+
+            columns = []
+            if sheet_data and isinstance(sheet_data, list) and len(sheet_data) > 0:
+                columns = list(sheet_data[0].keys())
+            else:
+                # fall back to stored columns JSON
+                try:
+                    columns = json.loads(sheet.columns) if sheet.columns else []
+                except Exception:
+                    columns = []
+
+            display_columns = {}
+            for c_idx, col in enumerate(columns):
+                col_name = (col or '').strip()
+                lcol = col_name.lower()
+                if not col_name or lcol.startswith('unnamed') or lcol in ['nan', 'none']:
+                    display_columns[col] = excel_col_label(c_idx)
+                else:
+                    display_columns[col] = col_name
+
+            sheet.display_columns = display_columns
+
     return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])

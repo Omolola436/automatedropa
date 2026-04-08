@@ -246,7 +246,20 @@
                         <tr>
                             <td class="fw-bold bg-light">Safeguards</td>
                             <td>
-                                <textarea class="form-control" name="safeguards" rows="2">{{ record.safeguards or '' }}</textarea>
+                                <div class="row">
+                                    {% set selected_safeguards = (record.safeguards or '').split(', ') %}
+                                    {% for safeguard in options.safeguards %}
+                                    <div class="col-md-6 mb-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="checkbox" name="safeguards" value="{{ safeguard }}" 
+                                                   id="safeguard_{{ loop.index }}" {% if safeguard in selected_safeguards %}checked{% endif %}>
+                                            <label class="form-check-label" for="safeguard_{{ loop.index }}" style="font-size: 0.85rem;">
+                                                {{ safeguard }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
                             </td>
                         </tr>
                         <tr>
@@ -265,7 +278,21 @@
                         <tr>
                             <td class="fw-bold bg-light">Security Measures *</td>
                             <td>
-                                <textarea class="form-control" name="security_measures" rows="3" required>{{ record.security_measures or '' }}</textarea>
+                                <div class="row">
+                                    {% set selected_security_measures = (record.security_measures or '').split(', ') %}
+                                    {% for measure in options.security_measures %}
+                                    <div class="col-md-6 mb-1">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input security-measures-checkbox" type="checkbox" name="security_measures" value="{{ measure }}" 
+                                                   id="security_measure_{{ loop.index }}" {% if measure in selected_security_measures %}checked{% endif %}>
+                                            <label class="form-check-label" for="security_measure_{{ loop.index }}" style="font-size: 0.85rem;">
+                                                {{ measure }}
+                                            </label>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                <small class="text-danger" id="security_measures_error" style="display: none;">Please select at least one security measure.</small>
                             </td>
                         </tr>
                         <tr>
@@ -393,4 +420,151 @@
     background-color: #e2e3e5 !important;
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-classify category based on description
+document.querySelector('textarea[name="description"]').addEventListener('change', function() {
+    const description = this.value;
+    if (description.trim()) {
+        fetch('{{ url_for("api_auto_classify") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({description: description})
+        })
+        .then(r => r.json())
+        .then(data => {
+            const categorySelect = document.querySelector('select[name="category"]');
+            if (categorySelect && data.classification) {
+                categorySelect.value = data.classification;
+                categorySelect.dispatchEvent(new Event('change'));
+            }
+        })
+        .catch(e => console.log('Auto-classify error:', e));
+    }
+});
+
+// Suggest processing purpose when department or category changes
+function suggestPurpose() {
+    const department = document.querySelector('select[name="department_function"]').value;
+    const category = document.querySelector('select[name="category"]').value;
+    
+    if (department || category) {
+        fetch('{{ url_for("api_suggest_purpose") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({department: department, category: category})
+        })
+        .then(r => r.json())
+        .then(data => {
+            const purposeField = document.querySelector('textarea[name="processing_purpose"]');
+            if (purposeField && data.suggestion) {
+                purposeField.value = data.suggestion;
+            }
+        })
+        .catch(e => console.log('Purpose suggestion error:', e));
+    }
+}
+
+document.querySelector('select[name="department_function"]').addEventListener('change', suggestPurpose);
+document.querySelector('select[name="category"]').addEventListener('change', suggestPurpose);
+
+// Assess risk when data categories change
+function assessRiskAndSuggestMeasures() {
+    const dataCategories = Array.from(document.querySelectorAll('input[name="data_categories"]:checked'))
+        .map(cb => cb.value)
+        .join(', ');
+    const specialCategories = Array.from(document.querySelectorAll('input[name="special_categories"]:checked'))
+        .map(cb => cb.value)
+        .join(', ');
+    
+    if (dataCategories || specialCategories) {
+        fetch('{{ url_for("api_assess_risk") }}', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                data_categories: dataCategories,
+                special_categories: specialCategories
+            })
+        })
+        .then(r => r.json())
+        .then(data => {
+            const assessment = data.risk_assessment;
+            // Update Risk Level
+            const riskSelect = document.querySelector('select[name="risk_level"]');
+            if (riskSelect && assessment.risk_level) {
+                riskSelect.value = assessment.risk_level;
+            }
+            // Update Breach Likelihood based on risk
+            const breachSelect = document.querySelector('select[name="breach_likelihood"]');
+            if (breachSelect) {
+                breachSelect.value = assessment.risk_level;
+            }
+            // Update Breach Impact
+            const impactSelect = document.querySelector('select[name="breach_impact"]');
+            if (impactSelect) {
+                impactSelect.value = assessment.risk_level;
+            }
+            // Update DPIA Required
+            const dpiaSelect = document.querySelector('select[name="dpia_required"]');
+            if (dpiaSelect && assessment.dpia_required) {
+                dpiaSelect.value = assessment.dpia_required === 'Yes' ? '1' : '0';
+            }
+            
+            // Now suggest security measures based on risk level
+            suggestSecurityMeasures(dataCategories, assessment.risk_level);
+        })
+        .catch(e => console.log('Risk assessment error:', e));
+    }
+}
+
+function suggestSecurityMeasures(dataCategories, riskLevel) {
+    fetch('{{ url_for("api_suggest_security") }}', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            data_categories: dataCategories,
+            risk_level: riskLevel
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.suggestions) {
+            const measures = data.suggestions.split('; ');
+            // Auto-check security measures that match suggestions
+            const checkboxes = document.querySelectorAll('input[name="security_measures"]');
+            checkboxes.forEach(cb => {
+                if (measures.some(m => cb.value.toLowerCase().includes(m.toLowerCase().split(' ')[0]))) {
+                    cb.checked = true;
+                }
+            });
+        }
+    })
+    .catch(e => console.log('Security measures error:', e));
+}
+
+// Add event listeners to data category checkboxes
+document.querySelectorAll('input[name="data_categories"], input[name="special_categories"]').forEach(checkbox => {
+    checkbox.addEventListener('change', assessRiskAndSuggestMeasures);
+});
+
+// Form submission validation
+document.getElementById('ropaEditForm').addEventListener('submit', function(e) {
+    // Validate that at least one security measure is selected
+    const securityMeasuresCheckboxes = document.querySelectorAll('.security-measures-checkbox');
+    const anySelected = Array.from(securityMeasuresCheckboxes).some(cb => cb.checked);
+    
+    if (!anySelected) {
+        e.preventDefault();
+        document.getElementById('security_measures_error').style.display = 'block';
+        alert('Please select at least one security measure.');
+        return false;
+    }
+    
+    // Clear error message if valid
+    document.getElementById('security_measures_error').style.display = 'none';
+    return true;
+});
+</script>
 {% endblock %}

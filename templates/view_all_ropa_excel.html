@@ -56,7 +56,7 @@
                     {% set sheet_data_list = sheet.sheet_data | from_json %}
                     {% if sheet_data_list %}
                     <h6 class="mb-3">
-                        <i class="fas fa-table me-2"></i>Sheet: {{ sheet.sheet_name }}
+                        <i class="fas fa-table me-2"></i>Sheet: {{ sheet.display_name if sheet.display_name else sheet.sheet_name }}
                         <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>
                         <span class="badge bg-info ms-1">File: {{ file.filename }}</span>
                     </h6>
@@ -69,7 +69,7 @@
                                         <th style="background-color: #d4edda; width: 50px;">#</th>
                                         {% if sheet_data_list[0] %}
                                             {% for column in sheet_data_list[0].keys() %}
-                                            <th style="background-color: #d4edda; min-width: 120px;">{{ column }}</th>
+                                            <th style="background-color: #d4edda; min-width: 120px;">{{ sheet.display_columns[column] if sheet.display_columns and column in sheet.display_columns else column }}</th>
                                             {% endfor %}
                                         {% endif %}
                                     </tr>

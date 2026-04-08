@@ -254,7 +254,7 @@
                 {% endif %}
             </div>
             <div>
-                <a href="{{ url_for('generate_export', record_id=record.id, format='excel') }}" class="btn btn-outline-success me-2">
+                <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-success me-2">
                     <i class="fas fa-file-excel me-2"></i>Export to Excel
                 </a>
                 <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-primary">
