@@ -22,6 +22,13 @@
                 Record of Processing Activities 
             </a>
             
+            {% if not current_user.is_authenticated %}
+            <div class="ms-auto d-flex gap-2 align-items-center">
+                <a href="{{ url_for('pricing') }}" class="btn btn-outline-light btn-sm">Pricing</a>
+                <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm">Sign In</a>
+                <a href="{{ url_for('register') }}" class="btn btn-warning btn-sm fw-semibold">Start Free Trial</a>
+            </div>
+            {% endif %}
             {% if current_user.is_authenticated %}
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>

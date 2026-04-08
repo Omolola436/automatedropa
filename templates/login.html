@@ -1,112 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}Login - Privacy ROPA System{% endblock %}
+{% block title %}Sign In – Privacy ROPA Solution{% endblock %}
 
 {% block content %}
-<div class="row justify-content-center">
+<div class="row justify-content-center py-4">
     <div class="col-md-6 col-lg-4">
-        <div class="card">
-            <div class="card-body">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
                 <div class="text-center mb-4">
-                    <img src="{{ url_for('static', filename='logo.png') }}" 
-                        alt="logo" height="90" class="mb-3">
-                    <h3 class="fw-bold">Privacy ROPA Solution</h3>
-                    <p class="text-muted">Sign in to your account</p>
+                    <img src="{{ url_for('static', filename='logo.png') }}"
+                        alt="logo" height="70" class="mb-3">
+                    <h4 class="fw-bold">Privacy ROPA Solution</h4>
+                    <p class="text-muted small">Sign in to your account</p>
                 </div>
 
                 <form method="POST">
                     <div class="mb-3">
-                        <label for="email" class="form-label">Email Address</label>
+                        <label for="email" class="form-label fw-semibold">Email Address</label>
                         <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-envelope"></i>
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-envelope text-muted"></i>
                             </span>
-                            <input type="email" class="form-control" id="email" name="email" required>
+                            <input type="email" class="form-control" id="email" name="email" required autofocus>
                         </div>
                     </div>
 
                     <div class="mb-3">
-                        <label for="password" class="form-label">Password</label>
+                        <label for="password" class="form-label fw-semibold">Password</label>
                         <div class="input-group">
-                            <span class="input-group-text">
-                                <i class="fas fa-lock"></i>
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-lock text-muted"></i>
                             </span>
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
                     </div>
 
-                    <!-- Consent Section -->
-                    <div class="mb-3">
-                        <div class="card border-primary">
-                            <div class="card-body py-2">
+                    <div class="mb-4">
+                        <div class="card border-primary bg-primary bg-opacity-10">
+                            <div class="card-body py-2 px-3">
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="consent" name="consent" required>
-                                    <label class="form-check-label" for="consent">
-                                        <small>
-                                           <!-- <i class="fas fa-shield-alt text-primary me-1"></i>-->
-                                            I consent to using this ROPA Solution for managing processing activities and understand that my login activity will be logged for security and compliance purposes.
-                                        </small>
+                                    <label class="form-check-label small" for="consent">
+                                        I consent to using this ROPA Solution for managing processing activities
+                                        and understand that my login activity will be logged for compliance purposes.
                                     </label>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="d-grid gap-2 mb-3">
-                        <button type="submit" class="btn btn-primary" id="loginBtn" disabled>
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-primary fw-semibold" id="loginBtn" disabled>
                             <i class="fas fa-sign-in-alt me-2"></i>Sign In
                         </button>
                     </div>
                 </form>
 
                 <script>
-                // Enable/disable login button based on consent
                 document.getElementById('consent').addEventListener('change', function() {
                     document.getElementById('loginBtn').disabled = !this.checked;
                 });
                 </script>
 
                 <div class="text-center mb-3">
-                    <a href="{{ url_for('forgot_password') }}" class="btn btn-outline-secondary">
-                        <i class="fas fa-key me-2"></i>Forgot Password?
+                    <a href="{{ url_for('forgot_password') }}" class="text-muted small text-decoration-none">
+                        <i class="fas fa-key me-1"></i>Forgot your password?
                     </a>
                 </div>
 
+                <hr>
+
                 <div class="text-center">
-                    <div id="create-account-section">
-                        <!-- This will be populated by JavaScript -->
-                    </div>
-                    <p class="mb-0 text-muted">
-                        <i class="fas fa-info-circle me-1"></i>
-                        <span id="contact-message">Don't have access? Contact your Privacy Officer for account registration.</span>
-                    </p>
+                    <p class="text-muted small mb-2">Don't have an account?</p>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-rocket me-2"></i>Start Free Trial
+                    </a>
                 </div>
 
-                <script>
-                // Check if Privacy Officer exists
-                fetch('/api/check-privacy-officer')
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.exists) {
-                            document.getElementById('create-account-section').innerHTML = `
-                                <div class="mb-3">
-                                    <a href="{{ url_for('register') }}" class="btn btn-success">
-                                        <i class="fas fa-user-plus me-2"></i>Create Privacy Officer Account
-                                    </a>
-                                </div>
-                            `;
-                            document.getElementById('contact-message').textContent = 
-                                'No Privacy Officer account found. Create the first account to get started.';
-                        }
-                    })
-                    .catch(error => {
-                        console.log('Could not check Privacy Officer status:', error);
-                    });
-                </script>
+                <div class="text-center mt-3">
+                    <a href="{{ url_for('index') }}" class="text-muted small text-decoration-none">
+                        <i class="fas fa-arrow-left me-1"></i>Back to home
+                    </a>
+                </div>
             </div>
         </div>
-        
-
     </div>
 </div>
 {% endblock %}

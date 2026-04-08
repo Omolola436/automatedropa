@@ -125,13 +125,13 @@ def cleanup_duplicate_sheets():
 
 @app.route('/')
 def index():
-    """Redirect to appropriate dashboard based on user role"""
+    """Landing page for visitors; dashboard redirect for authenticated users"""
     if current_user.is_authenticated:
         if current_user.role == 'Privacy Officer':
             return redirect(url_for('privacy_officer_dashboard'))
         else:
             return redirect(url_for('privacy_champion_dashboard'))
-    return redirect(url_for('login'))
+    return render_template('landing.html')
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -162,58 +162,54 @@ def login():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """Register first Privacy Officer or redirect if already exists"""
-    # Check if any Privacy Officer exists
-    privacy_officer_exists = models.User.query.filter_by(role='Privacy Officer').first() is not None
-
-    if privacy_officer_exists:
-        flash('Registration is restricted. Please contact your Privacy Officer for account access.', 'info')
-        return redirect(url_for('login'))
+    """Open registration — each new signup creates a Privacy Officer (org admin) on a free trial"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
 
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
-        department = request.form.get('department')
+        organisation = request.form.get('organisation', '')
 
-        # Validation
-        if not all([email, password, confirm_password, department]):
-            flash('All fields are required', 'error')
-            return render_template('register.html', first_time_setup=True)
+        if not all([email, password, confirm_password]):
+            flash('All fields are required.', 'error')
+            return render_template('register.html')
 
         if password != confirm_password:
-            flash('Passwords do not match', 'error')
-            return render_template('register.html', first_time_setup=True)
+            flash('Passwords do not match.', 'error')
+            return render_template('register.html')
 
         if len(password) < 6:
-            flash('Password must be at least 6 characters long', 'error')
-            return render_template('register.html', first_time_setup=True)
+            flash('Password must be at least 6 characters long.', 'error')
+            return render_template('register.html')
 
-        # Check if email already exists
         if models.User.query.filter_by(email=email).first():
-            flash('Email already registered', 'error')
-            return render_template('register.html', first_time_setup=True)
+            flash('An account with that email already exists.', 'error')
+            return render_template('register.html')
 
         try:
-            # Create first Privacy Officer
             user = models.User(
                 email=email,
                 password_hash=generate_password_hash(password),
                 role='Privacy Officer',
-                department=department
+                department=organisation or 'General',
+                subscription_tier='trial',
+                trial_start_date=datetime.utcnow(),
             )
             db.session.add(user)
             db.session.commit()
 
-            log_audit_event('First Privacy Officer Created', email, 'First-time setup completed')
-            flash('Privacy Officer account created successfully! You can now log in.', 'success')
-            return redirect(url_for('login'))
+            login_user(user)
+            log_audit_event('New Account Created', email, 'New organisation signed up for free trial')
+            flash('Welcome! Your 7-day free trial has started.', 'success')
+            return redirect(url_for('index'))
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating account: {str(e)}', 'error')
 
-    return render_template('register.html', first_time_setup=True)
+    return render_template('register.html')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
