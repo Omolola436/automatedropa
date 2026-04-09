@@ -24,6 +24,7 @@
             
             {% if not current_user.is_authenticated %}
             <div class="ms-auto d-flex gap-2 align-items-center">
+                <a href="{{ url_for('index') }}" class="btn btn-outline-light btn-sm"><i class="fas fa-home me-1"></i>Home</a>
                 <a href="{{ url_for('pricing') }}" class="btn btn-outline-light btn-sm">Pricing</a>
                 <a href="{{ url_for('login') }}" class="btn btn-outline-light btn-sm">Sign In</a>
                 <a href="{{ url_for('register') }}" class="btn btn-warning btn-sm fw-semibold">Start Free Trial</a>
