@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Compliance Report - Privacy ROPA System{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-chart-pie me-2"></i>Compliance Report</h1>
+    <div>
+        <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-success me-2">
+            <i class="fas fa-file-excel me-1"></i>Export Excel
+        </a>
+        <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-danger">
+            <i class="fas fa-file-pdf me-1"></i>Export PDF
+        </a>
+    </div>
+</div>
+
+<!-- Org Overall Score -->
+{% if org_compliance %}
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card border-{{ org_compliance.color }} h-100">
+            <div class="card-body text-center py-4">
+                <h5 class="card-title text-muted mb-3">Overall Organisation Score</h5>
+                <div class="display-1 fw-bold text-{{ org_compliance.color }}">{{ org_compliance.score }}%</div>
+                <span class="badge bg-{{ org_compliance.color }} fs-6 mt-2 px-3 py-2">{{ org_compliance.label }}</span>
+                <p class="text-muted mt-3 mb-0">Across {{ org_compliance.record_count }} ROPA record(s)</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-body">
+                <h5 class="card-title">Score Interpretation</h5>
+                <div class="row g-3 mt-1">
+                    <div class="col-6">
+                        <div class="d-flex align-items-center p-2 bg-success bg-opacity-10 rounded">
+                            <div class="me-3 fs-4">✅</div>
+                            <div><strong>90–100%</strong><br><small class="text-muted">Excellent — Audit ready</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center p-2 bg-primary bg-opacity-10 rounded">
+                            <div class="me-3 fs-4">🔵</div>
+                            <div><strong>70–89%</strong><br><small class="text-muted">Good — Minor gaps</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center p-2 bg-warning bg-opacity-10 rounded">
+                            <div class="me-3 fs-4">⚠️</div>
+                            <div><strong>50–69%</strong><br><small class="text-muted">Needs Attention</small></div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="d-flex align-items-center p-2 bg-danger bg-opacity-10 rounded">
+                            <div class="me-3 fs-4">🔴</div>
+                            <div><strong>0–49%</strong><br><small class="text-muted">Critical — Action required</small></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Per-record table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-table me-2"></i>Per-Record Compliance Scores</h5>
+    </div>
+    <div class="card-body p-0">
+        {% if scored_records %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Activity</th>
+                        <th>Status</th>
+                        <th style="width:200px;">Score</th>
+                        <th>Rating</th>
+                        <th>Missing Fields</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in scored_records %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.record.processing_activity_name }}</strong>
+                            {% if item.record.department_function %}
+                            <br><small class="text-muted">{{ item.record.department_function }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.record.status == 'Approved' %}
+                                <span class="badge bg-success">Approved</span>
+                            {% elif item.record.status == 'Under Review' %}
+                                <span class="badge bg-warning">Under Review</span>
+                            {% elif item.record.status == 'Rejected' %}
+                                <span class="badge bg-danger">Rejected</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ item.record.status }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height:12px;">
+                                    <div class="progress-bar bg-{{ item.score.color }}"
+                                         style="width:{{ item.score.score }}%"
+                                         role="progressbar">
+                                    </div>
+                                </div>
+                                <strong class="text-{{ item.score.color }}" style="min-width:40px;">{{ item.score.score }}%</strong>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ item.score.color }}">{{ item.score.label }}</span>
+                        </td>
+                        <td>
+                            {% if item.score.missing_fields %}
+                            <small class="text-muted">
+                                {{ item.score.missing_fields | join(', ') | replace('_', ' ') | truncate(60) }}
+                            </small>
+                            {% else %}
+                            <small class="text-success"><i class="fas fa-check-circle"></i> Complete</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('view_activity', record_id=item.record.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_activity', record_id=item.record.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-chart-pie fa-3x mb-3"></i>
+            <p>No ROPA records found. <a href="{{ url_for('add_activity') }}">Add your first activity</a> to start scoring.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

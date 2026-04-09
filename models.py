@@ -196,3 +196,47 @@ class ROPAVersionHistory(db.Model):
 
     ropa_record = db.relationship('ROPARecord', backref='version_history')
     user = db.relationship('User', backref='version_changes')
+
+
+class Notification(db.Model):
+    __tablename__ = 'notifications'
+
+    id = db.Column(Integer, primary_key=True)
+    user_id = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(String(200), nullable=False)
+    message = db.Column(Text, nullable=False)
+    alert_type = db.Column(String(50), nullable=False, default='info')
+    related_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=True)
+    is_read = db.Column(Boolean, default=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+
+    user = db.relationship('User', backref='notifications')
+    related_record = db.relationship('ROPARecord', backref='notifications')
+
+
+class Vendor(db.Model):
+    __tablename__ = 'vendors'
+
+    id = db.Column(Integer, primary_key=True)
+    name = db.Column(String(200), nullable=False)
+    country = db.Column(String(100))
+    contract_expiry = db.Column(DateTime, nullable=True)
+    services = db.Column(Text)
+    risk_level = db.Column(String(50), default='Unknown')
+    created_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+    updated_at = db.Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = db.relationship('User', backref='vendors_created')
+
+
+class VendorActivity(db.Model):
+    __tablename__ = 'vendor_activities'
+
+    id = db.Column(Integer, primary_key=True)
+    vendor_id = db.Column(Integer, db.ForeignKey('vendors.id'), nullable=False)
+    ropa_record_id = db.Column(Integer, db.ForeignKey('ropa_records.id'), nullable=False)
+    created_at = db.Column(DateTime, default=datetime.utcnow)
+
+    vendor = db.relationship('Vendor', backref='linked_activities')
+    ropa_record = db.relationship('ROPARecord', backref='vendor_links')

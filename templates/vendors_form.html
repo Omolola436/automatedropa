@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Edit' if vendor else 'Add' }} Vendor - Privacy ROPA System{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-building me-2"></i>{{ 'Edit Vendor' if vendor else 'Add New Vendor' }}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Vendor Name <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control"
+                               value="{{ vendor.name if vendor else '' }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Country</label>
+                        <input type="text" name="country" class="form-control"
+                               value="{{ vendor.country if vendor else '' }}"
+                               placeholder="e.g. United Kingdom, United States">
+                        <div class="form-text">Vendors outside the EEA or adequacy list will be automatically flagged as High Risk.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Services Provided</label>
+                        <textarea name="services" class="form-control" rows="3"
+                                  placeholder="Describe what services or data processing this vendor provides...">{{ vendor.services if vendor else '' }}</textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Contract Expiry Date</label>
+                        <input type="date" name="contract_expiry" class="form-control"
+                               value="{{ vendor.contract_expiry.strftime('%Y-%m-%d') if vendor and vendor.contract_expiry else '' }}">
+                        <div class="form-text">You will receive an alert 30 days before expiry.</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>{{ 'Update Vendor' if vendor else 'Add Vendor' }}
+                        </button>
+                        <a href="{{ url_for('vendors') }}" class="btn btn-outline-secondary">Cancel</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

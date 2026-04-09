@@ -143,12 +143,15 @@
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Everything in Growth</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Unlimited</strong> processing activities</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Full automation workflows</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🔥 Compliance Score per record</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🔴 In-app alerts (high-risk, missing basis…)</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>💡 ROPA Health Engine (auto monitoring)</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🏢 Vendor / third-party risk tracking</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Role-based access control</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Third-party processor tracking</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Audit logs &amp; compliance reporting</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-jurisdiction mapping (NDPA, GDPR…)</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>DPIA triggers &amp; risk engine</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Dedicated account support</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>DPIA module integration (coming soon)</li>
                 </ul>
                 {% if current_user.is_authenticated and sub_tier == 'enterprise' %}
                 <div class="text-center mt-auto"><span class="badge fs-6 px-3 py-2" style="background-color: #6f42c1;">Your Current Plan</span></div>
@@ -235,6 +238,41 @@
             </tr>
             <tr>
                 <td class="text-start fw-semibold">Audit Logs</td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td class="table-primary"><i class="fas fa-times text-danger"></i></td>
+                <td style="background-color:#f3e8ff;"><i class="fas fa-check text-success"></i></td>
+            </tr>
+            <tr>
+                <td class="text-start fw-semibold">In-App Alerts &amp; Notifications</td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td class="table-primary">Basic Alerts</td>
+                <td style="background-color:#f3e8ff;"><strong>Full Alerting</strong></td>
+            </tr>
+            <tr>
+                <td class="text-start fw-semibold">Compliance Scoring</td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td class="table-primary"><i class="fas fa-times text-danger"></i></td>
+                <td style="background-color:#f3e8ff;"><i class="fas fa-check text-success"></i> Per-Record Score</td>
+            </tr>
+            <tr>
+                <td class="text-start fw-semibold">ROPA Health Engine</td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td class="table-primary"><i class="fas fa-times text-danger"></i></td>
+                <td style="background-color:#f3e8ff;"><i class="fas fa-check text-success"></i> Continuous Monitoring</td>
+            </tr>
+            <tr>
+                <td class="text-start fw-semibold">Vendor / Third-Party Tracking</td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td><i class="fas fa-times text-danger"></i></td>
+                <td class="table-primary"><i class="fas fa-times text-danger"></i></td>
+                <td style="background-color:#f3e8ff;"><i class="fas fa-check text-success"></i> Auto Risk Flagging</td>
+            </tr>
+            <tr>
+                <td class="text-start fw-semibold">DPIA Triggers</td>
                 <td><i class="fas fa-times text-danger"></i></td>
                 <td><i class="fas fa-times text-danger"></i></td>
                 <td class="table-primary"><i class="fas fa-times text-danger"></i></td>

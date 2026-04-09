@@ -64,20 +64,32 @@ from audit_logger import log_audit_event, log_security_event, get_client_ip
 from subscription import (get_user_effective_tier, get_tier_config,
                           get_trial_days_remaining, can_add_activity, has_feature,
                           TIER_CONFIG)
+from health_engine import (calculate_compliance_score, calculate_org_compliance_score,
+                           run_health_checks, notify_new_activity, check_vendor_alerts)
 
-# Subscription context processor
+# Subscription + notification context processor
 @app.context_processor
 def inject_subscription():
     if current_user.is_authenticated:
         tier = get_user_effective_tier(current_user)
         config = get_tier_config(tier)
         trial_days = get_trial_days_remaining(current_user)
+        unread_notifications = 0
+        if config.get('has_alerts'):
+            try:
+                unread_notifications = models.Notification.query.filter_by(
+                    user_id=current_user.id, is_read=False
+                ).count()
+            except Exception:
+                unread_notifications = 0
         return dict(
             sub_tier=tier,
             sub_config=config,
             sub_trial_days=trial_days,
+            unread_notifications=unread_notifications,
+            now_date=datetime.utcnow(),
         )
-    return dict(sub_tier=None, sub_config={}, sub_trial_days=None)
+    return dict(sub_tier=None, sub_config={}, sub_trial_days=None, unread_notifications=0, now_date=datetime.utcnow())
 
 # Add custom Jinja filters
 @app.template_filter('from_json')
@@ -387,6 +399,19 @@ def privacy_officer_dashboard():
         print(f"DEBUG: Status counts: {status_counts}")
         print(f"DEBUG: Pending count: {pending_count} (type: {type(pending_count)})")
 
+        # Compliance score (Enterprise only)
+        org_compliance = None
+        tier = get_user_effective_tier(current_user)
+        if get_tier_config(tier).get('has_compliance_score'):
+            org_compliance = calculate_org_compliance_score(all_records)
+
+        # Unread notifications (Growth+)
+        recent_notifications = []
+        if get_tier_config(tier).get('has_alerts'):
+            recent_notifications = models.Notification.query.filter_by(
+                user_id=current_user.id, is_read=False
+            ).order_by(models.Notification.created_at.desc()).limit(5).all()
+
         return render_template('privacy_officer_dashboard.html',
                              total_records=len(all_records),
                              pending_reviews=pending_count,
@@ -398,7 +423,9 @@ def privacy_officer_dashboard():
                              rejected_records=rejected_count,
                              recent_records=recent_records,
                              records=records_list,
-                             status_counts=status_counts)
+                             status_counts=status_counts,
+                             org_compliance=org_compliance,
+                             recent_notifications=recent_notifications)
 
     except Exception as e:
         print(f"Error in privacy_officer_dashboard: {str(e)}")
@@ -416,7 +443,9 @@ def privacy_officer_dashboard():
                              rejected_records=0,
                              recent_records=[],
                              records=[],
-                             status_counts={})
+                             status_counts={},
+                             org_compliance=None,
+                             recent_notifications=[])
 
 
 @app.route('/add-activity', methods=['GET', 'POST'])
@@ -484,6 +513,21 @@ def add_activity():
 
         db.session.add(record)
         db.session.commit()
+
+        # Trigger notifications for Growth+ users
+        try:
+            if has_feature(current_user, 'has_alerts') and record.status == 'Under Review':
+                officers = models.User.query.filter_by(role='Privacy Officer').all()
+                notify_new_activity(record, current_user, officers, db, models.Notification)
+        except Exception:
+            pass
+
+        # Run health engine for Enterprise users
+        try:
+            if has_feature(current_user, 'has_health_engine'):
+                run_health_checks([record], current_user, db, models.Notification)
+        except Exception:
+            pass
 
         # Process custom tabs if any were created
         custom_tab_counter = 1
@@ -620,6 +664,14 @@ def edit_activity(record_id):
                     pass
 
             log_audit_event('ROPA Updated', current_user.email, f'Updated ROPA record: {record.processing_activity_name}')
+
+            # Run health engine for Enterprise users after edit
+            try:
+                if has_feature(current_user, 'has_health_engine'):
+                    run_health_checks([record], current_user, db, models.Notification)
+            except Exception:
+                pass
+
             flash('ROPA record updated successfully in Excel format', 'success')
             return redirect(url_for('index'))
         except Exception as e:
@@ -1712,6 +1764,208 @@ def version_history(record_id):
     ).order_by(models.ROPAVersionHistory.changed_at.desc()).all()
 
     return render_template('version_history.html', record=record, history=history)
+
+
+@app.route('/notifications')
+@login_required
+def notifications():
+    """View all in-app notifications (Growth+ only)"""
+    if not has_feature(current_user, 'has_alerts'):
+        flash('In-app alerts are available on the Growth and Enterprise plans.', 'error')
+        return redirect(url_for('pricing'))
+
+    all_notifications = models.Notification.query.filter_by(
+        user_id=current_user.id
+    ).order_by(models.Notification.created_at.desc()).limit(100).all()
+
+    return render_template('notifications.html', notifications=all_notifications)
+
+
+@app.route('/notifications/read/<int:notif_id>', methods=['POST'])
+@login_required
+def mark_notification_read(notif_id):
+    notif = models.Notification.query.get_or_404(notif_id)
+    if notif.user_id != current_user.id:
+        abort(403)
+    notif.is_read = True
+    db.session.commit()
+    return redirect(request.referrer or url_for('notifications'))
+
+
+@app.route('/notifications/read-all', methods=['POST'])
+@login_required
+def mark_all_notifications_read():
+    models.Notification.query.filter_by(user_id=current_user.id, is_read=False).update({'is_read': True})
+    db.session.commit()
+    flash('All notifications marked as read.', 'success')
+    return redirect(url_for('notifications'))
+
+
+@app.route('/health-check', methods=['POST'])
+@login_required
+def run_health_check():
+    """Manually trigger the ROPA Health Engine (Enterprise only)"""
+    if not has_feature(current_user, 'has_health_engine'):
+        flash('The ROPA Health Engine is an Enterprise feature. Please upgrade.', 'error')
+        return redirect(url_for('pricing'))
+
+    if current_user.role == 'Privacy Officer':
+        records = models.ROPARecord.query.all()
+    else:
+        records = models.ROPARecord.query.filter_by(created_by=current_user.id).all()
+
+    alerts_created = run_health_checks(records, current_user, db, models.Notification)
+
+    # Also check vendors
+    vendors = models.Vendor.query.filter_by(created_by=current_user.id).all()
+    vendor_alerts = check_vendor_alerts(vendors, current_user, db, models.Notification)
+
+    total = alerts_created + vendor_alerts
+    if total:
+        flash(f'Health check complete — {total} new alert(s) created. Check your notifications.', 'warning')
+    else:
+        flash('Health check complete — no new issues found.', 'success')
+
+    return redirect(request.referrer or url_for('privacy_officer_dashboard'))
+
+
+@app.route('/compliance-report')
+@login_required
+def compliance_report():
+    """View per-record compliance scores (Enterprise only)"""
+    if not has_feature(current_user, 'has_compliance_score'):
+        flash('Compliance Scoring is an Enterprise feature. Please upgrade to access it.', 'error')
+        return redirect(url_for('pricing'))
+
+    if current_user.role == 'Privacy Officer':
+        records = models.ROPARecord.query.all()
+    else:
+        records = models.ROPARecord.query.filter_by(created_by=current_user.id).all()
+
+    scored_records = []
+    for record in records:
+        score_data = calculate_compliance_score(record)
+        scored_records.append({
+            'record': record,
+            'score': score_data,
+        })
+
+    scored_records.sort(key=lambda x: x['score']['score'])
+    org_compliance = calculate_org_compliance_score(records)
+
+    return render_template('compliance_report.html',
+                           scored_records=scored_records,
+                           org_compliance=org_compliance)
+
+
+@app.route('/vendors')
+@login_required
+def vendors():
+    """Vendor tracking page (Enterprise only)"""
+    if not has_feature(current_user, 'has_vendor_tracking'):
+        flash('Vendor Tracking is an Enterprise feature. Please upgrade to access it.', 'error')
+        return redirect(url_for('pricing'))
+
+    all_vendors = models.Vendor.query.order_by(models.Vendor.name).all()
+    return render_template('vendors.html', vendors=all_vendors)
+
+
+@app.route('/vendors/add', methods=['GET', 'POST'])
+@login_required
+def add_vendor():
+    """Add a vendor (Enterprise only)"""
+    if not has_feature(current_user, 'has_vendor_tracking'):
+        flash('Vendor Tracking is an Enterprise feature.', 'error')
+        return redirect(url_for('pricing'))
+
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        if not name:
+            flash('Vendor name is required.', 'error')
+            return render_template('vendors_form.html', vendor=None)
+
+        expiry_str = request.form.get('contract_expiry', '').strip()
+        contract_expiry = None
+        if expiry_str:
+            try:
+                contract_expiry = datetime.strptime(expiry_str, '%Y-%m-%d')
+            except ValueError:
+                pass
+
+        country = request.form.get('country', '').strip()
+        from health_engine import SAFE_COUNTRIES
+        risk = 'Low' if country in SAFE_COUNTRIES else ('High' if country else 'Unknown')
+
+        vendor = models.Vendor(
+            name=name,
+            country=country,
+            services=request.form.get('services', ''),
+            contract_expiry=contract_expiry,
+            risk_level=risk,
+            created_by=current_user.id,
+        )
+        db.session.add(vendor)
+        db.session.commit()
+
+        # Run vendor alerts immediately
+        check_vendor_alerts([vendor], current_user, db, models.Notification)
+
+        log_audit_event('Vendor Added', current_user.email, f'Added vendor: {name}')
+        flash(f'Vendor "{name}" added successfully.', 'success')
+        return redirect(url_for('vendors'))
+
+    return render_template('vendors_form.html', vendor=None)
+
+
+@app.route('/vendors/edit/<int:vendor_id>', methods=['GET', 'POST'])
+@login_required
+def edit_vendor(vendor_id):
+    """Edit a vendor (Enterprise only)"""
+    if not has_feature(current_user, 'has_vendor_tracking'):
+        flash('Vendor Tracking is an Enterprise feature.', 'error')
+        return redirect(url_for('pricing'))
+
+    vendor = models.Vendor.query.get_or_404(vendor_id)
+
+    if request.method == 'POST':
+        vendor.name = request.form.get('name', vendor.name).strip()
+        vendor.country = request.form.get('country', '').strip()
+        vendor.services = request.form.get('services', '')
+
+        expiry_str = request.form.get('contract_expiry', '').strip()
+        if expiry_str:
+            try:
+                vendor.contract_expiry = datetime.strptime(expiry_str, '%Y-%m-%d')
+            except ValueError:
+                vendor.contract_expiry = None
+        else:
+            vendor.contract_expiry = None
+
+        from health_engine import SAFE_COUNTRIES
+        vendor.risk_level = 'Low' if vendor.country in SAFE_COUNTRIES else ('High' if vendor.country else 'Unknown')
+        vendor.updated_at = datetime.utcnow()
+        db.session.commit()
+
+        log_audit_event('Vendor Updated', current_user.email, f'Updated vendor: {vendor.name}')
+        flash(f'Vendor "{vendor.name}" updated.', 'success')
+        return redirect(url_for('vendors'))
+
+    return render_template('vendors_form.html', vendor=vendor)
+
+
+@app.route('/vendors/delete/<int:vendor_id>', methods=['POST'])
+@login_required
+def delete_vendor(vendor_id):
+    """Delete a vendor (Enterprise only)"""
+    if not has_feature(current_user, 'has_vendor_tracking'):
+        abort(403)
+
+    vendor = models.Vendor.query.get_or_404(vendor_id)
+    name = vendor.name
+    db.session.delete(vendor)
+    db.session.commit()
+    flash(f'Vendor "{name}" deleted.', 'success')
+    return redirect(url_for('vendors'))
 
 
 if __name__ == '__main__':
