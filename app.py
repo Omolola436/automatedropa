@@ -491,6 +491,9 @@ def add_activity():
         }
 
     wizard_data = session['wizard_data']
+    # Ensure new keys exist for sessions created before this version
+    wizard_data.setdefault('activity_form', {})
+    wizard_data.setdefault('organization', {})
 
     if request.method == 'POST':
         action = request.form.get('action', 'next')
