@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Start Free Trial – Privacy ROPA Solution{% endblock %}
+{% block title %}Sign Up – Privacy ROPA Solution{% endblock %}
 
 {% block content %}
 <div class="row justify-content-center py-4">
@@ -10,12 +10,12 @@
             <!-- Left panel: value prop -->
             <div class="col-md-5 text-white p-5 d-flex flex-column justify-content-center"
                  style="background: linear-gradient(160deg, #0d6efd, #6610f2);">
-                <h3 class="fw-bold mb-3">Start your free 7-day trial</h3>
-                <p class="opacity-75 mb-4">No credit card required. Set up in minutes.</p>
+                <h3 class="fw-bold mb-3">Start your free 14-day trial</h3>
+                <p class="opacity-75 mb-4">Set up in minutes.</p>
                 <ul class="list-unstyled">
                     <li class="mb-3 d-flex align-items-start gap-2">
                         <i class="fas fa-check-circle mt-1 text-warning flex-shrink-0"></i>
-                        <span>Up to 3 processing activities — free</span>
+                        <span>Up to 5 processing activities — free</span>
                     </li>
                     <li class="mb-3 d-flex align-items-start gap-2">
                         <i class="fas fa-check-circle mt-1 text-warning flex-shrink-0"></i>
@@ -85,16 +85,22 @@
 
                     <div class="d-grid mb-3">
                         <button type="submit" class="btn btn-primary btn-lg fw-semibold">
-                            <i class="fas fa-rocket me-2"></i>Start Free Trial
+                            <i class="fas fa-user-plus me-2"></i>Sign Up
                         </button>
                     </div>
 
-                    <p class="text-center text-muted small mb-0">
-                        By creating an account you agree to our terms of service.
+                    <p class="text-center text-muted small mb-2">
+                        By creating an account you agree to our terms of service and privacy notice.
                     </p>
                 </form>
 
-                <hr class="my-4">
+                <!-- Privacy Notice -->
+                <div class="alert alert-light border small mb-3 p-2">
+                    <i class="fas fa-shield-alt text-primary me-1"></i>
+                    <strong>Privacy Notice:</strong> Your email and organisation name are collected to provide your ROPA workspace and are processed under a contract basis. We will not share your data with third parties without consent. You may request deletion at any time via <a href="mailto:privacy@example.com">privacy@example.com</a>.
+                </div>
+
+                <hr class="my-3">
                 <p class="text-center text-muted mb-0 small">
                     Already have an account?
                     <a href="{{ url_for('login') }}" class="fw-semibold text-decoration-none">Sign in</a>

@@ -4,8 +4,8 @@ from flask import session
 TIER_CONFIG = {
     'trial': {
         'name': 'Free Trial',
-        'max_activities': 3,
-        'duration_days': 7,
+        'max_activities': 5,
+        'duration_days': 14,
         'has_dashboard': False,
         'has_automation': False,
         'has_version_history': False,
@@ -26,7 +26,7 @@ TIER_CONFIG = {
     },
     'starter': {
         'name': 'Starter',
-        'max_activities': 3,
+        'max_activities': 5,
         'duration_days': None,
         'has_dashboard': False,
         'has_automation': False,
@@ -69,7 +69,7 @@ TIER_CONFIG = {
         'price_annual': 950,
     },
     'enterprise': {
-        'name': 'Enterprise',
+        'name': 'TEAM',
         'max_activities': None,
         'duration_days': None,
         'has_dashboard': True,
@@ -102,7 +102,7 @@ def get_user_effective_tier(user):
     tier = user.subscription_tier or 'trial'
     if tier == 'trial':
         trial_start = user.trial_start_date or user.created_at or datetime.utcnow()
-        if datetime.utcnow() > trial_start + timedelta(days=7):
+        if datetime.utcnow() > trial_start + timedelta(days=14):
             return 'expired'
     return tier
 
@@ -135,7 +135,7 @@ def get_trial_days_remaining(user):
     if user.subscription_tier != 'trial':
         return None
     trial_start = user.trial_start_date or user.created_at or datetime.utcnow()
-    expiry = trial_start + timedelta(days=7)
+    expiry = trial_start + timedelta(days=14)
     remaining = (expiry - datetime.utcnow()).days
     return max(0, remaining)
 

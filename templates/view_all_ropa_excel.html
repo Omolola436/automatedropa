@@ -3,6 +3,44 @@
 {% block title %}View Uploaded ROPA Files - Excel Format{% endblock %}
 
 {% block content %}
+
+<!-- Process Name Modal -->
+<div class="modal fade" id="processNameModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="processNameModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="processNameModalLabel">
+                    <i class="fas fa-tag me-2"></i>Enter Process Name
+                </h5>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted mb-3">Please provide a name for this ROPA process before viewing the uploaded data.</p>
+                <div class="mb-3">
+                    <label for="processNameInput" class="form-label fw-semibold">Process Name <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control form-control-lg" id="processNameInput"
+                           placeholder="e.g., HR Data Processing, Customer Onboarding..."
+                           autofocus>
+                    <div class="form-text">This will be used to identify the process in the ROPA records.</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                </a>
+                <button type="button" class="btn btn-primary" id="confirmProcessName">
+                    <i class="fas fa-check me-2"></i>Confirm &amp; View Data
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Process Name Banner (shown after modal is confirmed) -->
+<div id="processNameBanner" class="alert alert-primary d-none mb-3">
+    <i class="fas fa-tag me-2"></i>
+    <strong>Process Name:</strong> <span id="processNameDisplay"></span>
+</div>
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-table me-2"></i>Uploaded ROPA Files - Excel View</h1>
     <div>
@@ -201,4 +239,41 @@
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
 </style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Show the Process Name modal on page load
+    var processNameModal = new bootstrap.Modal(document.getElementById('processNameModal'));
+    processNameModal.show();
+
+    document.getElementById('confirmProcessName').addEventListener('click', function() {
+        var processName = document.getElementById('processNameInput').value.trim();
+        if (!processName) {
+            document.getElementById('processNameInput').classList.add('is-invalid');
+            if (!document.getElementById('processNameInput').nextElementSibling || !document.getElementById('processNameInput').nextElementSibling.classList.contains('invalid-feedback')) {
+                var err = document.createElement('div');
+                err.className = 'invalid-feedback';
+                err.textContent = 'Please enter a process name.';
+                document.getElementById('processNameInput').after(err);
+            }
+            return;
+        }
+        processNameModal.hide();
+        document.getElementById('processNameDisplay').textContent = processName;
+        document.getElementById('processNameBanner').classList.remove('d-none');
+    });
+
+    document.getElementById('processNameInput').addEventListener('input', function() {
+        this.classList.remove('is-invalid');
+    });
+
+    document.getElementById('processNameInput').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            document.getElementById('confirmProcessName').click();
+        }
+    });
+});
+</script>
 {% endblock %}

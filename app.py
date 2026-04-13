@@ -488,6 +488,7 @@ def add_activity():
             'step': 1,
             'organization': {},
             'activities': [],
+            'custom_activities': [],
             'purposes': {},
             'data_subjects': [],
             'data_categories': [],
@@ -506,35 +507,32 @@ def add_activity():
         action = request.form.get('action', 'next')
 
         if action == 'next':
-            # Save current step data
             step = int(request.form.get('current_step', 1))
             save_step_data(step, request.form, wizard_data)
-            wizard_data['step'] = min(step + 1, 10)
-            
+            wizard_data['step'] = min(step + 1, 3)
+
         elif action == 'back':
             step = int(request.form.get('current_step', 1))
             save_step_data(step, request.form, wizard_data)
             wizard_data['step'] = max(step - 1, 1)
-            
-        elif action == 'save_draft':
-            step = int(request.form.get('current_step', 1))
-            save_step_data(step, request.form, wizard_data)
-            # Save as draft (implement later)
-            flash('Progress saved as draft', 'info')
-            
+
         elif action == 'generate':
-            # Final step - generate ROPA records
+            # Final step - generate ROPA records and export to Excel
             step = int(request.form.get('current_step', 1))
             save_step_data(step, request.form, wizard_data)
-            
+
             # Generate ROPA records based on wizard data
             records_created = generate_ropa_records(wizard_data, current_user)
-            
+
             # Clear wizard data
             session.pop('wizard_data', None)
-            
-            flash(f'Successfully created {records_created} ROPA record(s)', 'success')
-            return redirect(url_for('view_saved_ropa'))
+
+            flash(f'Successfully created {records_created} ROPA record(s). Downloading your Excel file...', 'success')
+            # Redirect to Excel export so file downloads immediately
+            return redirect(url_for('export_data', format='excel'))
+
+        session.modified = True
+
     return render_template(
         'create_ropa_wizard.html',
         wizard_data=wizard_data,
@@ -546,7 +544,7 @@ def add_activity():
 
 def save_step_data(step, form, wizard_data):
     """Save form data for the current step"""
-    if step == 1:  # Organization Overview
+    if step == 1:  # Organization Overview + DPO
         wizard_data['organization'] = {
             'name': form.get('org_name'),
             'industry': form.get('industry'),
@@ -568,6 +566,10 @@ def save_step_data(step, form, wizard_data):
                 activities.append(activity)
             activity_counter += 1
         wizard_data['activities'] = activities
+        # Handle custom activities
+        custom_raw = form.get('custom_activities', '')
+        custom_activities = [a.strip() for a in custom_raw.split(',') if a.strip()] if custom_raw else []
+        wizard_data['custom_activities'] = custom_activities
         
     elif step == 3:  # Purpose of Processing
         purposes = {}
@@ -638,8 +640,9 @@ def save_step_data(step, form, wizard_data):
 def generate_ropa_records(wizard_data, user):
     """Generate ROPA records based on wizard data"""
     records_created = 0
-    
-    for activity in wizard_data.get('activities', []):
+    all_activities = wizard_data.get('activities', []) + wizard_data.get('custom_activities', [])
+
+    for activity in all_activities:
         # Calculate risk level first
         risk_level = assess_risk_level(activity, wizard_data)
         
@@ -662,22 +665,22 @@ def generate_ropa_records(wizard_data, user):
             'dpo_address': wizard_data['organization'].get('dpo_address', ''),
             
             # Processor information
-            'processor_name': wizard_data['third_parties_data'].get('processor_name', ''),
-            'processor_contact': wizard_data['third_parties_data'].get('processor_contact', ''),
-            'processor_address': wizard_data['third_parties_data'].get('processor_address', ''),
-            
+            'processor_name': wizard_data.get('third_parties_data', {}).get('processor_name', ''),
+            'processor_contact': wizard_data.get('third_parties_data', {}).get('processor_contact', ''),
+            'processor_address': wizard_data.get('third_parties_data', {}).get('processor_address', ''),
+
             # Map wizard data to record fields
-            'processing_purpose': wizard_data['purposes'].get(activity, ''),
-            'legal_basis': wizard_data['legal_basis'].get(activity, ''),
-            'legitimate_interests': wizard_data['legal_basis_data'].get('legitimate_interests', ''),
+            'processing_purpose': wizard_data.get('purposes', {}).get(activity, ''),
+            'legal_basis': wizard_data.get('legal_basis', {}).get(activity, ''),
+            'legitimate_interests': wizard_data.get('legal_basis_data', {}).get('legitimate_interests', ''),
             'data_subjects': ', '.join(wizard_data.get('data_subjects', [])),
             'data_categories': ', '.join(wizard_data.get('data_categories', [])),
-            'special_categories': wizard_data['data_categories_data'].get('special_categories', ''),
+            'special_categories': wizard_data.get('data_categories_data', {}).get('special_categories', ''),
             'recipients': ', '.join(wizard_data.get('third_parties', [])),
-            'third_country_transfers': wizard_data['transfers'].get('international_transfers', 'no'),
-            'safeguards': wizard_data['transfers'].get('safeguards', ''),
-            'retention_period': wizard_data['retention'].get('period', ''),
-            'deletion_procedures': wizard_data['retention'].get('deletion_procedures', ''),
+            'third_country_transfers': wizard_data.get('transfers', {}).get('international_transfers', 'no'),
+            'safeguards': wizard_data.get('transfers', {}).get('safeguards', ''),
+            'retention_period': wizard_data.get('retention', {}).get('period', ''),
+            'deletion_procedures': wizard_data.get('retention', {}).get('deletion_procedures', ''),
             
             # Auto-fill based on activity type
             'security_measures': suggest_security_measures(wizard_data.get('data_categories', []), risk_level),

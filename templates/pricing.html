@@ -35,11 +35,11 @@
             </div>
             <div class="card-body d-flex flex-column">
                 <div class="text-center mb-3">
-                    <span class="display-6 fw-bold">$0</span><span class="text-muted"> / 7 days</span>
+                    <span class="display-6 fw-bold">$0</span><span class="text-muted"> / 14 days</span>
                 </div>
-                <p class="text-muted small text-center">Get started instantly. No payment required.</p>
+                <p class="text-muted small text-center">Get started instantly.</p>
                 <ul class="list-unstyled flex-grow-1">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 3 processing activities</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 5 processing activities</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA template (standardised)</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No dashboard analytics</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No automation</li>
@@ -51,7 +51,7 @@
                 <div class="text-center mt-auto"><span class="badge bg-secondary fs-6 px-3 py-2">Your Current Plan</span></div>
                 {% else %}
                 <div class="text-center mt-auto">
-                    <a href="{{ url_for('register') }}" class="btn btn-outline-secondary w-100">Get Started Free</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-outline-secondary w-100">Sign Up Free</a>
                 </div>
                 {% endif %}
             </div>
@@ -71,7 +71,7 @@
                 <p class="text-center text-muted small mb-3">$278 / year <span class="badge bg-success">Save 20%</span></p>
                 <p class="text-muted small text-center">Perfect for small businesses &amp; startups.</p>
                 <ul class="list-unstyled flex-grow-1">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 3 processing activities</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 5 processing activities</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA template (standardised)</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Guided onboarding</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Excel / PDF download</li>
@@ -84,8 +84,10 @@
                 <div class="text-center mt-auto"><span class="badge bg-success fs-6 px-3 py-2">Your Current Plan</span></div>
                 {% else %}
                 <div class="text-center mt-auto">
-                    <a href="mailto:sales@example.com?subject=Starter Plan" class="btn btn-success w-100">Choose Starter</a>
-                    <a href="{{ url_for('test_tier', tier='starter') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
+                    <button class="btn btn-success w-100" disabled>
+                        <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
+                    </button>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
                 </div>
                 {% endif %}
             </div>
@@ -121,19 +123,21 @@
                 <div class="text-center mt-auto"><span class="badge bg-primary fs-6 px-3 py-2">Your Current Plan</span></div>
                 {% else %}
                 <div class="text-center mt-auto">
-                    <a href="mailto:sales@example.com?subject=Growth Plan" class="btn btn-primary w-100">Choose Growth</a>
-                    <a href="{{ url_for('test_tier', tier='growth') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
+                    <button class="btn btn-primary w-100" disabled>
+                        <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
+                    </button>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
                 </div>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- Enterprise -->
+    <!-- TEAM (formerly Enterprise) -->
     <div class="col-md-6 col-lg-3">
         <div class="card h-100 {% if current_user.is_authenticated and sub_tier == 'enterprise' %}border-3 shadow{% endif %}" style="border-color: #6f42c1 !important; border-width: 1px; border-style: solid;">
             <div class="card-header text-white text-center py-3" style="background-color: #6f42c1;">
-                <h5 class="mb-0"><i class="fas fa-building me-2"></i>Enterprise</h5>
+                <h5 class="mb-0"><i class="fas fa-users me-2"></i>TEAM</h5>
             </div>
             <div class="card-body d-flex flex-column">
                 <div class="text-center mb-1">
@@ -159,8 +163,10 @@
                 <div class="text-center mt-auto"><span class="badge fs-6 px-3 py-2" style="background-color: #6f42c1;">Your Current Plan</span></div>
                 {% else %}
                 <div class="text-center mt-auto">
-                    <a href="mailto:sales@example.com?subject=Enterprise Plan" class="btn w-100 text-white" style="background-color: #6f42c1;">Contact Sales</a>
-                    <a href="{{ url_for('test_tier', tier='enterprise') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
+                    <button class="btn w-100 text-white" style="background-color: #6f42c1;" disabled>
+                        <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
+                    </button>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
                 </div>
                 {% endif %}
             </div>
@@ -179,14 +185,14 @@
                 <th>Free Trial</th>
                 <th>Starter</th>
                 <th class="table-primary">Growth</th>
-                <th style="background-color:#6f42c1; color:#fff;">Enterprise</th>
+                <th style="background-color:#6f42c1; color:#fff;">TEAM</th>
             </tr>
         </thead>
         <tbody>
             <tr>
                 <td class="text-start fw-semibold">Processing Activities</td>
-                <td>3</td>
-                <td>3</td>
+                <td>5</td>
+                <td>5</td>
                 <td class="table-primary">15</td>
                 <td style="background-color:#f3e8ff;"><strong>Unlimited</strong></td>
             </tr>
@@ -292,18 +298,16 @@
     </table>
 </div>
 
-<!-- Payment methods -->
+<!-- Privacy Notice -->
 <div class="card mt-5 border-0 bg-light">
-    <div class="card-body text-center py-4">
-        <h4 class="fw-bold mb-3"><i class="fas fa-credit-card me-2 text-primary"></i>Payment Methods</h4>
-        <div class="d-flex flex-wrap justify-content-center gap-3">
-            <span class="badge bg-white text-dark border fs-6 px-3 py-2"><i class="fab fa-cc-visa me-1 text-primary"></i>Visa</span>
-            <span class="badge bg-white text-dark border fs-6 px-3 py-2"><i class="fab fa-cc-mastercard me-1 text-danger"></i>Mastercard</span>
-            <span class="badge bg-white text-dark border fs-6 px-3 py-2"><i class="fab fa-stripe me-1" style="color:#635bff;"></i>Stripe</span>
-            <span class="badge bg-white text-dark border fs-6 px-3 py-2"><i class="fas fa-mobile-alt me-1 text-success"></i>Paystack</span>
-            <span class="badge bg-white text-dark border fs-6 px-3 py-2"><i class="fas fa-university me-1 text-secondary"></i>Bank Transfer (Enterprise)</span>
-        </div>
-        <p class="text-muted mt-3 mb-0">To upgrade your plan, please contact us at <a href="mailto:sales@example.com">sales@example.com</a></p>
+    <div class="card-body py-4 px-4">
+        <h5 class="fw-bold mb-2"><i class="fas fa-shield-alt me-2 text-primary"></i>Privacy Notice</h5>
+        <p class="text-muted small mb-2">
+            We are committed to protecting your personal data. Information collected during sign-up is processed on the lawful basis of <strong>contract</strong> and is used solely to provide the ROPA management service. Your data is never sold or shared with unauthorised third parties.
+        </p>
+        <p class="text-muted small mb-0">
+            You have the right to access, rectify, or erase your data at any time. Contact us at <a href="mailto:privacy@example.com">privacy@example.com</a> for any data privacy requests.
+        </p>
     </div>
 </div>
 {% endblock %}
