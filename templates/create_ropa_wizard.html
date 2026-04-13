@@ -8,14 +8,14 @@
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <div>
-                    <h2><i class="fas fa-plus-circle me-2"></i>Create ROPA</h2>
+                    <h2><i class="fas fa-plus-circle me-2"></i>Create ROPA Record</h2>
                     {% if max_activities is not none and max_activities != -1 %}
                     <span class="text-muted small">
                         <i class="fas fa-layer-group me-1"></i>
                         {{ activity_count }} / {{ max_activities }} activities used on your {{ sub_tier | capitalize }} plan
                     </span>
                     {% else %}
-                    <span class="text-muted small"><i class="fas fa-infinity me-1"></i>Unlimited activities on your {{ sub_tier | capitalize }} plan</span>
+                    <span class="text-muted small"><i class="fas fa-infinity me-1"></i>Unlimited activities</span>
                     {% endif %}
                 </div>
                 <a href="{{ url_for('privacy_champion_dashboard' if current_user.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
@@ -23,261 +23,358 @@
                 </a>
             </div>
 
-            <!-- Progress Bar -->
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <span class="fw-bold">Wizard Progress</span>
-                        <span id="progressText">
-                            {% if current_step == 1 %}33%
-                            {% elif current_step == 2 %}66%
-                            {% else %}100%{% endif %}
-                        </span>
-                    </div>
-                    <div class="progress">
-                        <div class="progress-bar" role="progressbar"
-                             style="width: {% if current_step == 1 %}33{% elif current_step == 2 %}66{% else %}100{% endif %}%"
-                             id="formProgress"></div>
-                    </div>
-                    <div class="d-flex justify-content-between mt-2">
-                        <small class="text-muted">Step {{ current_step }} of 3</small>
-                        <small class="text-muted">Required fields marked with *</small>
-                    </div>
-                </div>
-            </div>
-
             <!-- Step indicators -->
             <div class="d-flex justify-content-center gap-3 mb-4">
                 <div class="text-center">
                     <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold"
-                         style="width:40px;height:40px;background-color:{% if current_step >= 1 %}#0d6efd{% else %}#dee2e6{% endif %};color:white;">1</div>
-                    <div class="small mt-1 {% if current_step == 1 %}fw-bold text-primary{% else %}text-muted{% endif %}">Organisation & DPO</div>
+                         style="width:42px;height:42px;background-color:{% if current_step >= 1 %}#0d6efd{% else %}#dee2e6{% endif %};color:white;">1</div>
+                    <div class="small mt-1 {% if current_step == 1 %}fw-bold text-primary{% else %}text-muted{% endif %}">Organisation &amp; DPO</div>
                 </div>
                 <div class="d-flex align-items-center pb-4"><i class="fas fa-arrow-right text-muted"></i></div>
                 <div class="text-center">
                     <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold"
-                         style="width:40px;height:40px;background-color:{% if current_step >= 2 %}#0d6efd{% else %}#dee2e6{% endif %};color:white;">2</div>
-                    <div class="small mt-1 {% if current_step == 2 %}fw-bold text-primary{% else %}text-muted{% endif %}">Processing Activity</div>
+                         style="width:42px;height:42px;background-color:{% if current_step >= 2 %}#0d6efd{% else %}#dee2e6{% endif %};color:white;">2</div>
+                    <div class="small mt-1 {% if current_step == 2 %}fw-bold text-primary{% else %}text-muted{% endif %}">Activity Details</div>
                 </div>
                 <div class="d-flex align-items-center pb-4"><i class="fas fa-arrow-right text-muted"></i></div>
                 <div class="text-center">
                     <div class="rounded-circle d-inline-flex align-items-center justify-content-center fw-bold"
-                         style="width:40px;height:40px;background-color:{% if current_step >= 3 %}#28a745{% else %}#dee2e6{% endif %};color:white;">
-                        <i class="fas fa-file-excel"></i>
+                         style="width:42px;height:42px;background-color:{% if current_step >= 3 %}#28a745{% else %}#dee2e6{% endif %};color:white;">
+                        <i class="fas fa-file-excel" style="font-size:0.85rem;"></i>
                     </div>
                     <div class="small mt-1 {% if current_step == 3 %}fw-bold text-success{% else %}text-muted{% endif %}">Generate Excel</div>
+                </div>
+            </div>
+
+            <!-- Progress bar -->
+            <div class="mb-4">
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar {% if current_step == 3 %}bg-success{% endif %}"
+                         style="width:{% if current_step == 1 %}33{% elif current_step == 2 %}66{% else %}100{% endif %}%"></div>
+                </div>
+                <div class="d-flex justify-content-between mt-1">
+                    <small class="text-muted">Step {{ current_step }} of 3</small>
+                    <small class="text-muted">* Required fields</small>
                 </div>
             </div>
 
             <form method="POST" id="ropaWizardForm">
                 <input type="hidden" name="current_step" value="{{ current_step }}">
 
-                <div class="card">
-                    <div class="card-header">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
                         <h5 class="mb-0">
                             {% if current_step == 1 %}
-                                <i class="fas fa-building me-2"></i>STEP 1: Organisation Overview &amp; DPO Information
+                                <i class="fas fa-building me-2"></i>Step 1: Organisation Information &amp; DPO Details
                             {% elif current_step == 2 %}
-                                <i class="fas fa-cogs me-2"></i>STEP 2: Processing Activity
+                                <i class="fas fa-clipboard-list me-2"></i>Step 2: Processing Activity Details
                             {% elif current_step == 3 %}
-                                <i class="fas fa-file-excel me-2 text-success"></i>STEP 3: Review &amp; Generate Excel
+                                <i class="fas fa-file-excel me-2"></i>Step 3: Review &amp; Generate Excel
                             {% endif %}
                         </h5>
                     </div>
 
                     <div class="card-body">
 
-                        <!-- Step 1: Organization Overview + DPO -->
+                        <!-- ===== STEP 1: Organisation + DPO ===== -->
                         {% if current_step == 1 %}
-                        <h6 class="fw-bold mb-3">Organisation Information</h6>
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="org_name" class="form-label">Organisation Name *</label>
-                                <input type="text" class="form-control" id="org_name" name="org_name"
+
+                        <h6 class="fw-bold text-primary mb-3"><i class="fas fa-building me-2"></i>Organisation Information</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Organisation Name *</label>
+                                <input type="text" class="form-control" name="org_name"
                                        value="{{ wizard_data.organization.get('name', '') }}" required>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="industry" class="form-label">Industry *</label>
-                                <select class="form-select" id="industry" name="industry" required>
+                            <div class="col-md-6">
+                                <label class="form-label">Industry *</label>
+                                <select class="form-select" name="industry" required>
                                     <option value="">Select Industry</option>
-                                    <option value="Technology" {% if wizard_data.organization.get('industry') == 'Technology' %}selected{% endif %}>Technology</option>
-                                    <option value="Healthcare" {% if wizard_data.organization.get('industry') == 'Healthcare' %}selected{% endif %}>Healthcare</option>
-                                    <option value="Finance" {% if wizard_data.organization.get('industry') == 'Finance' %}selected{% endif %}>Finance</option>
-                                    <option value="Retail" {% if wizard_data.organization.get('industry') == 'Retail' %}selected{% endif %}>Retail</option>
-                                    <option value="Education" {% if wizard_data.organization.get('industry') == 'Education' %}selected{% endif %}>Education</option>
-                                    <option value="Other" {% if wizard_data.organization.get('industry') == 'Other' %}selected{% endif %}>Other</option>
+                                    {% for opt in ['Technology','Healthcare','Finance','Retail','Education','Government','Legal','Non-Profit','Other'] %}
+                                    <option value="{{ opt }}" {% if wizard_data.organization.get('industry') == opt %}selected{% endif %}>{{ opt }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="country" class="form-label">Country / Jurisdiction *</label>
-                                <select class="form-select" id="country" name="country" required>
+                            <div class="col-md-6">
+                                <label class="form-label">Country / Jurisdiction *</label>
+                                <select class="form-select" name="country" required>
                                     <option value="">Select Country</option>
-                                    <option value="EU/EEA" {% if wizard_data.organization.get('country') == 'EU/EEA' %}selected{% endif %}>EU/EEA - GDPR</option>
-                                    <option value="UK" {% if wizard_data.organization.get('country') == 'UK' %}selected{% endif %}>UK - UK GDPR + Data Protection Act</option>
-                                    <option value="Nigeria" {% if wizard_data.organization.get('country') == 'Nigeria' %}selected{% endif %}>Nigeria - NDPA</option>
-                                    <option value="South Africa" {% if wizard_data.organization.get('country') == 'South Africa' %}selected{% endif %}>South Africa - POPIA</option>
-                                    <option value="Brazil" {% if wizard_data.organization.get('country') == 'Brazil' %}selected{% endif %}>Brazil - LGPD</option>
-                                    <option value="Canada" {% if wizard_data.organization.get('country') == 'Canada' %}selected{% endif %}>Canada - PIPEDA</option>
-                                    <option value="India" {% if wizard_data.organization.get('country') == 'India' %}selected{% endif %}>India - DPDP Act</option>
+                                    <option value="EU/EEA" {% if wizard_data.organization.get('country') == 'EU/EEA' %}selected{% endif %}>EU/EEA – GDPR</option>
+                                    <option value="UK" {% if wizard_data.organization.get('country') == 'UK' %}selected{% endif %}>UK – UK GDPR + DPA</option>
+                                    <option value="Nigeria" {% if wizard_data.organization.get('country') == 'Nigeria' %}selected{% endif %}>Nigeria – NDPA</option>
+                                    <option value="South Africa" {% if wizard_data.organization.get('country') == 'South Africa' %}selected{% endif %}>South Africa – POPIA</option>
+                                    <option value="Brazil" {% if wizard_data.organization.get('country') == 'Brazil' %}selected{% endif %}>Brazil – LGPD</option>
+                                    <option value="Canada" {% if wizard_data.organization.get('country') == 'Canada' %}selected{% endif %}>Canada – PIPEDA</option>
+                                    <option value="India" {% if wizard_data.organization.get('country') == 'India' %}selected{% endif %}>India – DPDP Act</option>
                                     <option value="Other" {% if wizard_data.organization.get('country') == 'Other' %}selected{% endif %}>Other</option>
                                 </select>
                             </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="employee_count" class="form-label">Number of Employees *</label>
-                                <select class="form-select" id="employee_count" name="employee_count" required>
+                            <div class="col-md-6">
+                                <label class="form-label">Number of Employees *</label>
+                                <select class="form-select" name="employee_count" required>
                                     <option value="">Select Range</option>
-                                    <option value="1-10" {% if wizard_data.organization.get('employee_count') == '1-10' %}selected{% endif %}>1-10</option>
-                                    <option value="11-50" {% if wizard_data.organization.get('employee_count') == '11-50' %}selected{% endif %}>11-50</option>
-                                    <option value="51-200" {% if wizard_data.organization.get('employee_count') == '51-200' %}selected{% endif %}>51-200</option>
-                                    <option value="201-1000" {% if wizard_data.organization.get('employee_count') == '201-1000' %}selected{% endif %}>201-1000</option>
-                                    <option value="1000+" {% if wizard_data.organization.get('employee_count') == '1000+' %}selected{% endif %}>1000+</option>
+                                    {% for opt in ['1-10','11-50','51-200','201-1000','1000+'] %}
+                                    <option value="{{ opt }}" {% if wizard_data.organization.get('employee_count') == opt %}selected{% endif %}>{{ opt }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
-                        </div>
-
-                        <h6 class="fw-bold mt-3 mb-3">Controller Information</h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="controller_name" class="form-label">Controller Name</label>
-                                <input type="text" class="form-control" id="controller_name" name="controller_name"
-                                       value="{{ wizard_data.organization.get('controller_name', '') }}">
-                            </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="controller_contact" class="form-label">Controller Contact</label>
-                                <input type="text" class="form-control" id="controller_contact" name="controller_contact"
+                            <div class="col-md-6">
+                                <label class="form-label">Controller Contact</label>
+                                <input type="text" class="form-control" name="controller_contact"
+                                       placeholder="e.g., +44 20 1234 5678 / contact@company.com"
                                        value="{{ wizard_data.organization.get('controller_contact', '') }}">
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="controller_address" class="form-label">Controller Address</label>
-                                <textarea class="form-control" id="controller_address" name="controller_address" rows="2">{{ wizard_data.organization.get('controller_address', '') }}</textarea>
+                            <div class="col-md-6">
+                                <label class="form-label">Controller Address</label>
+                                <textarea class="form-control" name="controller_address" rows="2"
+                                          placeholder="Registered address of the data controller">{{ wizard_data.organization.get('controller_address', '') }}</textarea>
                             </div>
                         </div>
 
-                        <h6 class="fw-bold mt-3 mb-3">Data Protection Officer (DPO)</h6>
-                        <div class="row">
-                            <div class="col-md-4 mb-3">
-                                <label for="dpo_name" class="form-label">DPO Name</label>
-                                <input type="text" class="form-control" id="dpo_name" name="dpo_name"
+                        <hr>
+                        <h6 class="fw-bold text-info mb-3 mt-3"><i class="fas fa-user-shield me-2"></i>Data Protection Officer (DPO)</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">DPO Name</label>
+                                <input type="text" class="form-control" name="dpo_name"
+                                       placeholder="Full name of DPO"
                                        value="{{ wizard_data.organization.get('dpo_name', '') }}">
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="dpo_contact" class="form-label">DPO Contact</label>
-                                <input type="text" class="form-control" id="dpo_contact" name="dpo_contact"
+                            <div class="col-md-4">
+                                <label class="form-label">DPO Contact</label>
+                                <input type="text" class="form-control" name="dpo_contact"
+                                       placeholder="Email or phone"
                                        value="{{ wizard_data.organization.get('dpo_contact', '') }}">
                             </div>
-                            <div class="col-md-4 mb-3">
-                                <label for="dpo_address" class="form-label">DPO Address</label>
-                                <textarea class="form-control" id="dpo_address" name="dpo_address" rows="2">{{ wizard_data.organization.get('dpo_address', '') }}</textarea>
+                            <div class="col-md-4">
+                                <label class="form-label">DPO Address</label>
+                                <textarea class="form-control" name="dpo_address" rows="2"
+                                          placeholder="DPO's office address">{{ wizard_data.organization.get('dpo_address', '') }}</textarea>
                             </div>
                         </div>
 
-                        <!-- Step 2: Processing Activity -->
+
+                        <!-- ===== STEP 2: Activity Details ===== -->
                         {% elif current_step == 2 %}
-                        <p class="text-muted mb-4">Select or enter the processing activities that involve personal data in your organisation.</p>
 
-                        <h6 class="fw-semibold mb-3">Common Processing Activities (select all that apply):</h6>
-                        <div class="row mb-4">
-                            {% set activities = ['Customer onboarding', 'Employee management', 'Marketing & communications', 'Website analytics', 'Vendor management', 'Payroll processing', 'Recruitment', 'Customer support'] %}
-                            {% for activity in activities %}
-                            <div class="col-md-6 mb-2">
-                                <div class="form-check">
-                                    <input class="form-check-input activity-checkbox" type="checkbox"
-                                           id="activity_{{ loop.index }}" name="activity_{{ loop.index }}" value="{{ activity }}"
-                                           {% if activity in wizard_data.activities %}checked{% endif %}>
-                                    <label class="form-check-label" for="activity_{{ loop.index }}">{{ activity }}</label>
-                                </div>
+                        <p class="text-muted mb-4">Complete all fields below for this processing activity. All information will be included in your ROPA Excel export.</p>
+
+                        <div class="row g-3">
+
+                            <!-- Processing Activity Name -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Processing Activity Name *</label>
+                                <input type="text" class="form-control" name="activity_name"
+                                       placeholder="e.g., Employee Payroll Processing, Customer Onboarding..."
+                                       value="{{ wizard_data.activity_form.get('activity_name', '') }}" required>
                             </div>
-                            {% endfor %}
-                        </div>
 
-                        <h6 class="fw-semibold mb-2">Add a Custom Activity:</h6>
-                        <div class="input-group mb-2">
-                            <input type="text" class="form-control" id="customActivityInput" placeholder="e.g., CCTV Monitoring">
-                            <button type="button" class="btn btn-outline-primary" onclick="addCustomActivity()">
-                                <i class="fas fa-plus me-1"></i>Add
-                            </button>
-                        </div>
-                        <div id="customActivitiesContainer"></div>
-                        <input type="hidden" id="customActivitiesHidden" name="custom_activities" value="{{ wizard_data.custom_activities|join(',') if wizard_data.custom_activities else '' }}">
-
-                        {% if wizard_data.custom_activities %}
-                        <div class="mt-2">
-                            <small class="text-muted">Previously added custom activities:</small>
-                            {% for ca in wizard_data.custom_activities %}
-                            <span class="badge bg-secondary me-1">{{ ca }}</span>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-
-                        <div class="alert alert-info mt-3">
-                            <i class="fas fa-info-circle me-2"></i>
-                            After selecting your activities, click <strong>Generate Excel</strong> to download a pre-filled ROPA spreadsheet with all your organisation and DPO details.
-                        </div>
-
-                        <!-- Step 3: Review & Generate -->
-                        {% elif current_step == 3 %}
-                        <div class="alert alert-success mb-4">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>Ready to generate your ROPA Excel file!</strong> Review the summary below, then click <strong>Generate &amp; Download Excel</strong>.
-                        </div>
-
-                        <div class="row g-3 mb-4">
+                            <!-- Department/Function -->
                             <div class="col-md-6">
-                                <div class="card border-primary">
-                                    <div class="card-header bg-primary text-white py-2">
-                                        <i class="fas fa-building me-2"></i>Organisation
-                                    </div>
-                                    <div class="card-body py-2">
+                                <label class="form-label fw-semibold">Department/Function</label>
+                                <input type="text" class="form-control" name="department_function"
+                                       placeholder="e.g., HR, Finance, Marketing..."
+                                       value="{{ wizard_data.activity_form.get('department_function', '') }}">
+                            </div>
+
+                            <!-- Purpose -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Purpose?</label>
+                                <input type="text" class="form-control" name="processing_purpose"
+                                       placeholder="e.g., Managing employee contracts and payroll..."
+                                       value="{{ wizard_data.activity_form.get('processing_purpose', '') }}">
+                            </div>
+
+                            <!-- Categories of Data Subjects -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Categories of Data Subjects</label>
+                                <input type="text" class="form-control" name="data_subjects"
+                                       placeholder="e.g., Employees, Customers, Contractors..."
+                                       value="{{ wizard_data.activity_form.get('data_subjects', '') }}">
+                                <div class="form-text">Who the personal data belongs to</div>
+                            </div>
+
+                            <!-- Categories of Personal Data -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Categories of Personal Data</label>
+                                <input type="text" class="form-control" name="data_categories"
+                                       placeholder="e.g., Name, Email, NIN, Bank Details, Health Data..."
+                                       value="{{ wizard_data.activity_form.get('data_categories', '') }}">
+                                <div class="form-text">Types of personal data being processed</div>
+                            </div>
+
+                            <!-- Retention Period -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Retention Period</label>
+                                <input type="text" class="form-control" name="retention_period"
+                                       placeholder="e.g., 6 years after contract end, 7 years..."
+                                       value="{{ wizard_data.activity_form.get('retention_period', '') }}">
+                            </div>
+
+                            <!-- Recipients -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Recipients</label>
+                                <input type="text" class="form-control" name="recipients"
+                                       placeholder="e.g., HMRC, Payroll provider, Internal HR only..."
+                                       value="{{ wizard_data.activity_form.get('recipients', '') }}">
+                                <div class="form-text">Who has access to or receives this data</div>
+                            </div>
+
+                            <!-- Security Measures Used -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Security Measures Used</label>
+                                <textarea class="form-control" name="security_measures" rows="2"
+                                          placeholder="e.g., Encryption at rest and in transit, access controls, MFA, regular audits...">{{ wizard_data.activity_form.get('security_measures', '') }}</textarea>
+                            </div>
+
+                            <!-- Legal Basis for Processing -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Legal Basis for Processing</label>
+                                <select class="form-select" name="legal_basis">
+                                    <option value="">Select legal basis</option>
+                                    {% set bases = [
+                                        ('Consent', 'Consent (Art. 6(1)(a))'),
+                                        ('Contract', 'Contract (Art. 6(1)(b))'),
+                                        ('Legal obligation', 'Legal Obligation (Art. 6(1)(c))'),
+                                        ('Vital interests', 'Vital Interests (Art. 6(1)(d))'),
+                                        ('Public task', 'Public Task (Art. 6(1)(e))'),
+                                        ('Legitimate interest', 'Legitimate Interests (Art. 6(1)(f))')
+                                    ] %}
+                                    {% for val, label in bases %}
+                                    <option value="{{ val }}" {% if wizard_data.activity_form.get('legal_basis') == val %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <!-- Crossborder Transfer? -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Crossborder Transfer?</label>
+                                <select class="form-select" name="crossborder_transfer" id="crossborderSelect">
+                                    <option value="">Select option</option>
+                                    <option value="Yes" {% if wizard_data.activity_form.get('crossborder_transfer') == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if wizard_data.activity_form.get('crossborder_transfer') == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            </div>
+
+                            <!-- Name & Contact Details of Recipient (shown when Crossborder = Yes) -->
+                            <div class="col-md-6" id="recipientDetailsDiv" {% if wizard_data.activity_form.get('crossborder_transfer') != 'Yes' %}style="display:none;"{% endif %}>
+                                <label class="form-label fw-semibold">Name &amp; Contact Details of Recipient</label>
+                                <textarea class="form-control" name="recipient_details" rows="2"
+                                          placeholder="Name, address and contact of the overseas recipient...">{{ wizard_data.activity_form.get('recipient_details', '') }}</textarea>
+                            </div>
+
+                            <!-- Safeguards & Measures -->
+                            <div class="col-md-6" id="safeguardsDiv" {% if wizard_data.activity_form.get('crossborder_transfer') != 'Yes' %}style="display:none;"{% endif %}>
+                                <label class="form-label fw-semibold">Safeguards &amp; Measures</label>
+                                <textarea class="form-control" name="safeguards" rows="2"
+                                          placeholder="e.g., Standard Contractual Clauses, Adequacy Decision, BCRs...">{{ wizard_data.activity_form.get('safeguards', '') }}</textarea>
+                            </div>
+
+                            <!-- Is Data Retained/Erased in Accordance with Policy? -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Is Data Retained/Erased in Accordance with Policy?</label>
+                                <select class="form-select" name="retained_in_accordance" id="retentionPolicySelect">
+                                    <option value="">Select option</option>
+                                    <option value="Yes" {% if wizard_data.activity_form.get('retained_in_accordance') == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if wizard_data.activity_form.get('retained_in_accordance') == 'No' %}selected{% endif %}>No</option>
+                                </select>
+                            </div>
+
+                            <!-- Reasons For Not Adhering to Policy (shown when No) -->
+                            <div class="col-md-6" id="reasonsDiv" {% if wizard_data.activity_form.get('retained_in_accordance') != 'No' %}style="display:none;"{% endif %}>
+                                <label class="form-label fw-semibold">Reasons For Not Adhering to Policy <span class="text-muted">(if applicable)</span></label>
+                                <textarea class="form-control" name="reasons_not_adhering" rows="2"
+                                          placeholder="Explain why the data is not retained/erased per policy...">{{ wizard_data.activity_form.get('reasons_not_adhering', '') }}</textarea>
+                            </div>
+
+                            <!-- Notes/Comments -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Notes/Comments</label>
+                                <textarea class="form-control" name="notes_comments" rows="3"
+                                          placeholder="Any additional notes, observations, or comments about this processing activity...">{{ wizard_data.activity_form.get('notes_comments', '') }}</textarea>
+                            </div>
+
+                        </div><!-- end row -->
+
+
+                        <!-- ===== STEP 3: Review & Generate ===== -->
+                        {% elif current_step == 3 %}
+
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Ready to generate!</strong> Review the summary below and click <strong>Generate &amp; Download Excel</strong>.
+                        </div>
+
+                        <!-- Organisation Summary -->
+                        <div class="card border-primary mb-3">
+                            <div class="card-header bg-primary text-white py-2">
+                                <i class="fas fa-building me-2"></i>Organisation &amp; DPO
+                            </div>
+                            <div class="card-body py-2">
+                                <div class="row">
+                                    <div class="col-md-6">
                                         <table class="table table-sm mb-0">
-                                            <tr><td class="text-muted">Name</td><td><strong>{{ wizard_data.organization.get('name', '—') }}</strong></td></tr>
+                                            <tr><td class="text-muted" style="width:45%">Organisation</td><td><strong>{{ wizard_data.organization.get('name', '—') }}</strong></td></tr>
                                             <tr><td class="text-muted">Industry</td><td>{{ wizard_data.organization.get('industry', '—') }}</td></tr>
                                             <tr><td class="text-muted">Country</td><td>{{ wizard_data.organization.get('country', '—') }}</td></tr>
                                             <tr><td class="text-muted">Employees</td><td>{{ wizard_data.organization.get('employee_count', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Controller Contact</td><td>{{ wizard_data.organization.get('controller_contact', '—') }}</td></tr>
                                         </table>
                                     </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-info">
-                                    <div class="card-header bg-info text-white py-2">
-                                        <i class="fas fa-user-shield me-2"></i>DPO Information
-                                    </div>
-                                    <div class="card-body py-2">
+                                    <div class="col-md-6">
                                         <table class="table table-sm mb-0">
-                                            <tr><td class="text-muted">DPO Name</td><td><strong>{{ wizard_data.organization.get('dpo_name', '—') }}</strong></td></tr>
+                                            <tr><td class="text-muted" style="width:45%">DPO Name</td><td><strong>{{ wizard_data.organization.get('dpo_name', '—') }}</strong></td></tr>
                                             <tr><td class="text-muted">DPO Contact</td><td>{{ wizard_data.organization.get('dpo_contact', '—') }}</td></tr>
-                                            <tr><td class="text-muted">Controller</td><td>{{ wizard_data.organization.get('controller_name', '—') }}</td></tr>
+                                            <tr><td class="text-muted">DPO Address</td><td>{{ wizard_data.organization.get('dpo_address', '—') }}</td></tr>
                                         </table>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="card border-success mb-4">
+                        <!-- Activity Summary -->
+                        {% set af = wizard_data.activity_form %}
+                        <div class="card border-success mb-3">
                             <div class="card-header bg-success text-white py-2">
-                                <i class="fas fa-cogs me-2"></i>Processing Activities ({{ wizard_data.activities|length + (wizard_data.custom_activities|length if wizard_data.custom_activities else 0) }})
+                                <i class="fas fa-clipboard-list me-2"></i>Processing Activity: <strong>{{ af.get('activity_name', '—') }}</strong>
                             </div>
                             <div class="card-body py-2">
-                                {% set all_activities = wizard_data.activities + (wizard_data.custom_activities if wizard_data.custom_activities else []) %}
-                                {% if all_activities %}
-                                    {% for activity in all_activities %}
-                                    <span class="badge bg-success me-1 mb-1 px-3 py-2">{{ activity }}</span>
-                                    {% endfor %}
-                                {% else %}
-                                <p class="text-muted mb-0">No activities selected. <a href="{{ url_for('add_activity') }}">Go back</a> to add activities.</p>
-                                {% endif %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <table class="table table-sm mb-0">
+                                            <tr><td class="text-muted" style="width:50%">Department/Function</td><td>{{ af.get('department_function', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Purpose</td><td>{{ af.get('processing_purpose', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Data Subjects</td><td>{{ af.get('data_subjects', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Personal Data Categories</td><td>{{ af.get('data_categories', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Retention Period</td><td>{{ af.get('retention_period', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Recipients</td><td>{{ af.get('recipients', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Legal Basis</td><td>{{ af.get('legal_basis', '—') }}</td></tr>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <table class="table table-sm mb-0">
+                                            <tr><td class="text-muted" style="width:50%">Crossborder Transfer?</td><td>{{ af.get('crossborder_transfer', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Recipient Details</td><td>{{ af.get('recipient_details', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Safeguards</td><td>{{ af.get('safeguards', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Retained per Policy?</td><td>{{ af.get('retained_in_accordance', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Reasons Not Adhering</td><td>{{ af.get('reasons_not_adhering', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Security Measures</td><td>{{ af.get('security_measures', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Notes/Comments</td><td>{{ af.get('notes_comments', '—') }}</td></tr>
+                                        </table>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="alert alert-warning">
-                            <i class="fas fa-info-circle me-2"></i>
-                            The Excel file will be pre-filled with your organisation &amp; DPO details. Each processing activity will have its own row. You can fill in the remaining fields (purpose, legal basis, data categories, retention, etc.) directly in the spreadsheet.
+                        <div class="alert alert-info">
+                            <i class="fas fa-file-excel me-2 text-success"></i>
+                            Your Excel file will be downloaded immediately. It will contain all the above data in a structured ROPA spreadsheet format.
                         </div>
-                        {% endif %}
 
+                        {% endif %}
                     </div><!-- end card-body -->
 
-                    <!-- Navigation Buttons -->
+                    <!-- Navigation -->
                     <div class="card-footer d-flex justify-content-between">
                         <div>
                             {% if current_step > 1 %}
@@ -288,7 +385,7 @@
                         </div>
                         <div>
                             {% if current_step < 3 %}
-                            <button type="submit" name="action" value="next" class="btn btn-primary">
+                            <button type="submit" name="action" value="next" class="btn btn-primary px-4">
                                 Next <i class="fas fa-arrow-right ms-2"></i>
                             </button>
                             {% else %}
@@ -308,45 +405,23 @@
 
 {% block scripts %}
 <script>
-function addCustomActivity() {
-    const input = document.getElementById('customActivityInput');
-    const val = input.value.trim();
-    if (!val) return;
-
-    const container = document.getElementById('customActivitiesContainer');
-    const badge = document.createElement('span');
-    badge.className = 'badge bg-primary me-1 mb-1 px-3 py-2';
-    badge.innerHTML = val + ' <span style="cursor:pointer;" onclick="removeCustomActivity(this, \'' + val.replace(/'/g, "\\'") + '\')"><i class="fas fa-times ms-1"></i></span>';
-    container.appendChild(badge);
-
-    updateCustomActivitiesHidden();
-    input.value = '';
-}
-
-function removeCustomActivity(el, val) {
-    el.parentElement.remove();
-    updateCustomActivitiesHidden();
-}
-
-function updateCustomActivitiesHidden() {
-    const badges = document.querySelectorAll('#customActivitiesContainer .badge');
-    const vals = Array.from(badges).map(b => b.textContent.trim());
-    document.getElementById('customActivitiesHidden').value = vals.join(',');
-}
-
-// Re-populate existing custom activities on load
+// Show/hide crossborder recipient fields
 document.addEventListener('DOMContentLoaded', function() {
-    const hidden = document.getElementById('customActivitiesHidden');
-    if (hidden && hidden.value) {
-        const vals = hidden.value.split(',').filter(v => v.trim());
-        vals.forEach(val => {
-            const container = document.getElementById('customActivitiesContainer');
-            if (container) {
-                const badge = document.createElement('span');
-                badge.className = 'badge bg-primary me-1 mb-1 px-3 py-2';
-                badge.innerHTML = val + ' <span style="cursor:pointer;" onclick="removeCustomActivity(this, \'' + val.replace(/'/g, "\\'") + '\')"><i class="fas fa-times ms-1"></i></span>';
-                container.appendChild(badge);
-            }
+    var crossborderSelect = document.getElementById('crossborderSelect');
+    var retentionPolicySelect = document.getElementById('retentionPolicySelect');
+
+    if (crossborderSelect) {
+        crossborderSelect.addEventListener('change', function() {
+            var show = this.value === 'Yes';
+            document.getElementById('recipientDetailsDiv').style.display = show ? '' : 'none';
+            document.getElementById('safeguardsDiv').style.display = show ? '' : 'none';
+        });
+    }
+
+    if (retentionPolicySelect) {
+        retentionPolicySelect.addEventListener('change', function() {
+            var show = this.value === 'No';
+            document.getElementById('reasonsDiv').style.display = show ? '' : 'none';
         });
     }
 });

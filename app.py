@@ -487,18 +487,7 @@ def add_activity():
         session['wizard_data'] = {
             'step': 1,
             'organization': {},
-            'activities': [],
-            'custom_activities': [],
-            'purposes': {},
-            'data_subjects': [],
-            'data_categories': [],
-            'data_categories_data': {},
-            'legal_basis': {},
-            'legal_basis_data': {},
-            'third_parties': [],
-            'third_parties_data': {},
-            'transfers': {},
-            'retention': {}
+            'activity_form': {}
         }
 
     wizard_data = session['wizard_data']
@@ -538,7 +527,8 @@ def add_activity():
         wizard_data=wizard_data,
         current_step=wizard_data.get('step', 1),
         activity_count=current_count,
-        max_activities=config['max_activities']
+        max_activities=config['max_activities'],
+        sub_tier=current_user.subscription_tier
     )
 
 
@@ -550,168 +540,105 @@ def save_step_data(step, form, wizard_data):
             'industry': form.get('industry'),
             'country': form.get('country'),
             'employee_count': form.get('employee_count'),
-            'controller_name': form.get('controller_name'),
-            'controller_contact': form.get('controller_contact'),
-            'controller_address': form.get('controller_address'),
+            'controller_contact': form.get('controller_contact', ''),
+            'controller_address': form.get('controller_address', ''),
             'dpo_name': form.get('dpo_name'),
             'dpo_contact': form.get('dpo_contact'),
             'dpo_address': form.get('dpo_address')
         }
-    elif step == 2:  # Processing Activity Setup
-        activities = []
-        activity_counter = 1
-        while f'activity_{activity_counter}' in form:
-            activity = form.get(f'activity_{activity_counter}')
-            if activity:
-                activities.append(activity)
-            activity_counter += 1
-        wizard_data['activities'] = activities
-        # Handle custom activities
-        custom_raw = form.get('custom_activities', '')
-        custom_activities = [a.strip() for a in custom_raw.split(',') if a.strip()] if custom_raw else []
-        wizard_data['custom_activities'] = custom_activities
-        
-    elif step == 3:  # Purpose of Processing
-        purposes = {}
-        for i, activity in enumerate(wizard_data.get('activities', [])):
-            purpose_key = f'purpose_{i+1}'
-            purposes[activity] = form.get(purpose_key, '')
-        wizard_data['purposes'] = purposes
-        
-    elif step == 4:  # Data Subjects
-        data_subjects = []
-        if 'customers' in form: data_subjects.append('Customers')
-        if 'employees' in form: data_subjects.append('Employees')
-        if 'vendors' in form: data_subjects.append('Vendors')
-        if 'website_users' in form: data_subjects.append('Website users')
-        wizard_data['data_subjects'] = data_subjects
-        
-    elif step == 5:  # Data Categories
-        data_categories = []
-        if 'name' in form: data_categories.append('Name')
-        if 'email' in form: data_categories.append('Email')
-        if 'phone' in form: data_categories.append('Phone number')
-        if 'financial' in form: data_categories.append('Financial data')
-        if 'health' in form: data_categories.append('Health data (sensitive)')
-        
-        wizard_data['data_categories'] = data_categories
-        wizard_data['data_categories_data'] = {
-            'special_categories': form.get('special_categories', '')
-        }
-        
-    elif step == 6:  # Legal Basis
-        legal_basis = {}
-        for i, activity in enumerate(wizard_data.get('activities', [])):
-            basis_key = f'legal_basis_{i+1}'
-            legal_basis[activity] = form.get(basis_key, '')
-        
-        wizard_data['legal_basis'] = legal_basis
-        wizard_data['legal_basis_data'] = {
-            'legitimate_interests': form.get('legitimate_interests', '')
-        }
-        
-    elif step == 7:  # Third Parties
-        third_parties = []
-        if 'cloud_providers' in form: third_parties.append('Cloud providers')
-        if 'payment_processors' in form: third_parties.append('Payment processors')
-        if 'crm_tools' in form: third_parties.append('CRM tools')
-        
-        wizard_data['third_parties'] = third_parties
-        wizard_data['third_parties_data'] = {
-            'processor_name': form.get('processor_name', ''),
-            'processor_contact': form.get('processor_contact', ''),
-            'processor_address': form.get('processor_address', '')
-        }
-        
-    elif step == 8:  # Data Transfer & Storage
-        wizard_data['transfers'] = {
-            'storage_location': form.get('storage_location'),
-            'international_transfers': 'yes' if 'international_transfers' in form else 'no',
-            'safeguards': form.get('safeguards', '')
-        }
-        
-    elif step == 9:  # Retention Period
-        wizard_data['retention'] = {
-            'period': form.get('retention_period'),
-            'deletion_procedures': form.get('deletion_procedures', '')
+    elif step == 2:  # Processing Activity Details
+        wizard_data['activity_form'] = {
+            'activity_name': form.get('activity_name', ''),
+            'department_function': form.get('department_function', ''),
+            'processing_purpose': form.get('processing_purpose', ''),
+            'data_subjects': form.get('data_subjects', ''),
+            'data_categories': form.get('data_categories', ''),
+            'retention_period': form.get('retention_period', ''),
+            'recipients': form.get('recipients', ''),
+            'security_measures': form.get('security_measures', ''),
+            'legal_basis': form.get('legal_basis', ''),
+            'crossborder_transfer': form.get('crossborder_transfer', ''),
+            'recipient_details': form.get('recipient_details', ''),
+            'safeguards': form.get('safeguards', ''),
+            'retained_in_accordance': form.get('retained_in_accordance', ''),
+            'reasons_not_adhering': form.get('reasons_not_adhering', ''),
+            'notes_comments': form.get('notes_comments', '')
         }
 
 
 def generate_ropa_records(wizard_data, user):
     """Generate ROPA records based on wizard data"""
     records_created = 0
-    all_activities = wizard_data.get('activities', []) + wizard_data.get('custom_activities', [])
+    af = wizard_data.get('activity_form', {})
+    org = wizard_data.get('organization', {})
 
-    for activity in all_activities:
-        # Calculate risk level first
-        risk_level = assess_risk_level(activity, wizard_data)
-        
-        # Create one record per activity
-        record_data = {
-            'processing_activity_name': activity,
-            'created_by': user.id,
-            'category': 'Automated',  # Could be enhanced
-            'description': f'Processing activity: {activity}',
-            'department_function': user.department or '',
-            
-            # Controller information
-            'controller_name': wizard_data['organization'].get('controller_name', ''),
-            'controller_contact': wizard_data['organization'].get('controller_contact', ''),
-            'controller_address': wizard_data['organization'].get('controller_address', ''),
-            
-            # DPO information
-            'dpo_name': wizard_data['organization'].get('dpo_name', ''),
-            'dpo_contact': wizard_data['organization'].get('dpo_contact', ''),
-            'dpo_address': wizard_data['organization'].get('dpo_address', ''),
-            
-            # Processor information
-            'processor_name': wizard_data.get('third_parties_data', {}).get('processor_name', ''),
-            'processor_contact': wizard_data.get('third_parties_data', {}).get('processor_contact', ''),
-            'processor_address': wizard_data.get('third_parties_data', {}).get('processor_address', ''),
+    activity_name = af.get('activity_name') or 'Unnamed Activity'
 
-            # Map wizard data to record fields
-            'processing_purpose': wizard_data.get('purposes', {}).get(activity, ''),
-            'legal_basis': wizard_data.get('legal_basis', {}).get(activity, ''),
-            'legitimate_interests': wizard_data.get('legal_basis_data', {}).get('legitimate_interests', ''),
-            'data_subjects': ', '.join(wizard_data.get('data_subjects', [])),
-            'data_categories': ', '.join(wizard_data.get('data_categories', [])),
-            'special_categories': wizard_data.get('data_categories_data', {}).get('special_categories', ''),
-            'recipients': ', '.join(wizard_data.get('third_parties', [])),
-            'third_country_transfers': wizard_data.get('transfers', {}).get('international_transfers', 'no'),
-            'safeguards': wizard_data.get('transfers', {}).get('safeguards', ''),
-            'retention_period': wizard_data.get('retention', {}).get('period', ''),
-            'deletion_procedures': wizard_data.get('retention', {}).get('deletion_procedures', ''),
-            
-            # Auto-fill based on activity type
-            'security_measures': suggest_security_measures(wizard_data.get('data_categories', []), risk_level),
-            'risk_level': risk_level,
-            
-            'status': 'Under Review'
-        }
-        
-        # Auto-suggest legal basis if missing
-        if not record_data['legal_basis']:
-            record_data['legal_basis'] = suggest_legal_basis(activity)
-        
-        # Create record
-        record = models.ROPARecord(**record_data)
-        db.session.add(record)
-        records_created += 1
-        
-        # Trigger notifications and health checks
-        try:
-            if has_feature(user, 'has_alerts'):
-                officers = models.User.query.filter_by(role='Privacy Officer').all()
-                notify_new_activity(record, user, officers, db, models.Notification)
-        except Exception:
-            pass
+    # Build deletion_procedures from retention policy answers
+    retained = af.get('retained_in_accordance', '')
+    reasons = af.get('reasons_not_adhering', '')
+    if retained == 'No' and reasons:
+        deletion_procedures = f"Not in accordance with policy. Reason: {reasons}"
+    else:
+        deletion_procedures = f"In accordance with policy: {retained}" if retained else ''
 
-        try:
-            if has_feature(user, 'has_health_engine'):
-                run_health_checks([record], user, db, models.Notification)
-        except Exception:
-            pass
-    
+    record_data = {
+        'processing_activity_name': activity_name,
+        'created_by': user.id,
+        'category': org.get('industry', 'General'),
+        'description': af.get('notes_comments', ''),
+        'department_function': af.get('department_function', ''),
+
+        # Controller information (from org step)
+        'controller_name': org.get('name', ''),
+        'controller_contact': org.get('controller_contact', ''),
+        'controller_address': org.get('controller_address', ''),
+
+        # DPO information
+        'dpo_name': org.get('dpo_name', ''),
+        'dpo_contact': org.get('dpo_contact', ''),
+        'dpo_address': org.get('dpo_address', ''),
+
+        # Processor / recipient details
+        'processor_name': af.get('recipient_details', ''),
+        'processor_contact': '',
+        'processor_address': '',
+
+        # Processing details from activity form
+        'processing_purpose': af.get('processing_purpose', ''),
+        'legal_basis': af.get('legal_basis', ''),
+        'legitimate_interests': af.get('reasons_not_adhering', ''),
+        'data_subjects': af.get('data_subjects', ''),
+        'data_categories': af.get('data_categories', ''),
+        'special_categories': '',
+        'recipients': af.get('recipients', ''),
+        'third_country_transfers': af.get('crossborder_transfer', ''),
+        'safeguards': af.get('safeguards', ''),
+        'retention_period': af.get('retention_period', ''),
+        'deletion_procedures': deletion_procedures,
+        'security_measures': af.get('security_measures', ''),
+
+        'status': 'Under Review'
+    }
+
+    record = models.ROPARecord(**record_data)
+    db.session.add(record)
+    records_created += 1
+
+    # Trigger notifications and health checks
+    try:
+        if has_feature(user, 'has_alerts'):
+            officers = models.User.query.filter_by(role='Privacy Officer').all()
+            notify_new_activity(record, user, officers, db, models.Notification)
+    except Exception:
+        pass
+
+    try:
+        if has_feature(user, 'has_health_engine'):
+            run_health_checks([record], user, db, models.Notification)
+    except Exception:
+        pass
+
     db.session.commit()
     return records_created
 
