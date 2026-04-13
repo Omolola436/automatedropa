@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta
+from flask import session
 
 TIER_CONFIG = {
     'trial': {
@@ -93,6 +94,11 @@ TIER_CONFIG = {
 
 
 def get_user_effective_tier(user):
+    # Check for test tier in session
+    test_tier = session.get('test_tier')
+    if test_tier and test_tier in TIER_CONFIG:
+        return test_tier
+    
     tier = user.subscription_tier or 'trial'
     if tier == 'trial':
         trial_start = user.trial_start_date or user.created_at or datetime.utcnow()

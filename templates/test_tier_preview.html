@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}{{ tier_config.name }} Plan Preview – Privacy ROPA Solution{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Back to Pricing -->
+            <a href="{{ url_for('pricing') }}" class="btn btn-outline-secondary mb-4">
+                <i class="fas fa-arrow-left me-2"></i>Back to Pricing
+            </a>
+
+            <!-- Plan Header -->
+            <div class="card border-0 shadow-lg mb-5" style="border-top: 4px solid {% if tier == 'starter' %}#28a745{% elif tier == 'growth' %}#007bff{% elif tier == 'enterprise' %}#6f42c1{% else %}#6c757d{% endif %};">
+                <div class="card-body p-5 text-center">
+                    <h1 class="display-4 fw-bold mb-3">{{ tier_config.name }}</h1>
+                    
+                    {% if tier == 'trial' %}
+                    <p class="text-muted lead mb-4">Get started with your free trial</p>
+                    {% elif tier == 'starter' %}
+                    <p class="text-muted lead mb-4">Perfect for small businesses & startups</p>
+                    {% elif tier == 'growth' %}
+                    <p class="text-muted lead mb-4">For growing companies & SMEs</p>
+                    {% elif tier == 'enterprise' %}
+                    <p class="text-muted lead mb-4">For large organisations & multi-jurisdiction compliance</p>
+                    {% endif %}
+
+                    <div class="mb-4">
+                        {% if tier == 'trial' %}
+                        <span class="display-5 fw-bold">$0</span><span class="text-muted fs-5"> / 7 days</span>
+                        {% elif tier == 'starter' %}
+                        <span class="display-5 fw-bold">${{ tier_config.price_monthly }}</span><span class="text-muted fs-5"> / month</span>
+                        <p class="text-muted small mt-2">${{ tier_config.price_annual }} / year <span class="badge bg-success">Save 20%</span></p>
+                        {% elif tier == 'growth' %}
+                        <span class="display-5 fw-bold">${{ tier_config.price_monthly }}</span><span class="text-muted fs-5"> / month</span>
+                        <p class="text-muted small mt-2">${{ tier_config.price_annual }} / year <span class="badge bg-success">Save 20%</span></p>
+                        {% elif tier == 'enterprise' %}
+                        <span class="display-5 fw-bold">${{ tier_config.price_monthly }}</span><span class="text-muted fs-5"> / month</span>
+                        <p class="text-muted small mt-2">${{ tier_config.price_annual }} / year <span class="badge bg-success">Save 20%</span></p>
+                        {% endif %}
+                    </div>
+
+                    <p class="text-muted">You are previewing the <strong>{{ tier_config.name }}</strong> plan to see what features users on this plan will have access to.</p>
+                </div>
+            </div>
+
+            <!-- Features List -->
+            <div class="card shadow mb-5">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Plan Features</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-success mb-3"><i class="fas fa-check-circle me-2"></i>Included Features</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="fas fa-check text-success me-2"></i>
+                                    <strong>Processing Activities:</strong> 
+                                    {% if tier_config.max_activities == -1 or tier_config.max_activities > 50 %}
+                                    Unlimited
+                                    {% else %}
+                                    Up to {{ tier_config.max_activities }}
+                                    {% endif %}
+                                </li>
+                                
+                                {% if tier_config.has_export %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Excel / PDF Export</strong></li>
+                                {% endif %}
+
+                                {% if tier != 'trial' %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Guided Onboarding</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_version_history %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Version History Tracking</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_dashboard %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Dashboard Analytics</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_automation %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Full Automation Workflows</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_compliance_score %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Compliance Scoring</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_alerts %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>In-App Alerts</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_health_engine %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>ROPA Health Engine</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_vendor_tracking %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Vendor / Third-Party Risk Tracking</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_multi_user %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Multi-User Access</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_audit_logs %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Audit Logs & Compliance Reporting</strong></li>
+                                {% endif %}
+
+                                {% if tier_config.has_dpia_triggers %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>DPIA Triggers & Risk Engine</strong></li>
+                                {% endif %}
+
+                                {% if tier != 'trial' %}
+                                <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Email Support</strong></li>
+                                {% endif %}
+                            </ul>
+                        </div>
+
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-danger mb-3"><i class="fas fa-times-circle me-2"></i>Not Included</h6>
+                            <ul class="list-unstyled">
+                                {% if not tier_config.has_dashboard and tier != 'enterprise' %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Dashboard Analytics</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_automation %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Full Automation</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_compliance_score %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Compliance Scoring</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_alerts %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>In-App Alerts</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_health_engine %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>ROPA Health Engine</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_vendor_tracking %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Vendor Tracking</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_multi_user and tier == 'trial' %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Multi-User Access</li>
+                                {% endif %}
+
+                                {% if not tier_config.has_audit_logs %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Audit Logs</li>
+                                {% endif %}
+
+                                {% if tier == 'trial' %}
+                                <li class="mb-2"><i class="fas fa-times text-danger me-2"></i>Email Support</li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="card border-warning bg-light">
+                <div class="card-body text-center">
+                    <h5 class="card-title mb-3">Ready to get started?</h5>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary me-2">
+                        <i class="fas fa-user-plus me-2"></i>Create Account
+                    </a>
+                    <a href="{{ url_for('pricing') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-tags me-2"></i>View All Plans
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

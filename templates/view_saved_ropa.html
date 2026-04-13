@@ -37,6 +37,7 @@
                 <thead>
                     <tr>
                         <th>Processing Activity Name</th>
+                        <th>Status</th>
                         <th>Created By</th>
                         <th>Department</th>
                         <th>Created Date</th>
@@ -50,6 +51,19 @@
                         <td>
                             <strong>{{ record.processing_activity_name }}</strong>
                             <br><small class="text-muted">{{ record.description[:60] }}{% if record.description|length > 60 %}...{% endif %}</small>
+                        </td>
+                        <td>
+                            {% set status_class = 'secondary' %}
+                            {% if record.status == 'Under Review' %}
+                                {% set status_class = 'warning' %}
+                            {% elif record.status == 'Approved' %}
+                                {% set status_class = 'success' %}
+                            {% elif record.status == 'Draft' %}
+                                {% set status_class = 'info' %}
+                            {% elif record.status == 'Rejected' %}
+                                {% set status_class = 'danger' %}
+                            {% endif %}
+                            <span class="badge bg-{{ status_class }}">{{ record.status or 'Unknown' }}</span>
                         </td>
                         <td>
                             {% set creator = record.creator if record.creator else None %}

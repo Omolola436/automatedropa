@@ -323,12 +323,19 @@ def privacy_champion_dashboard():
     pending_records = len([r for r in records if r.status == 'Under Review'])
     approved_records = len([r for r in records if r.status == 'Approved'])
 
+    # Get current tier and plan name
+    current_tier = get_user_effective_tier(current_user)
+    current_tier_config = get_tier_config(current_tier)
+
     return render_template('privacy_champion_dashboard.html', 
                          records=records,
                          total_records=total_records,
                          draft_records=draft_records,
                          pending_records=pending_records,
-                         approved_records=approved_records)
+                         approved_records=approved_records,
+                         current_tier_name=current_tier_config.get('name'),
+                         current_tier=current_tier,
+                         tiers=TIER_CONFIG)
 
 @app.route('/privacy-officer-dashboard')
 @login_required
@@ -412,6 +419,10 @@ def privacy_officer_dashboard():
                 user_id=current_user.id, is_read=False
             ).order_by(models.Notification.created_at.desc()).limit(5).all()
 
+        # Get current tier and plan name
+        current_tier = get_user_effective_tier(current_user)
+        current_tier_config = get_tier_config(current_tier)
+
         return render_template('privacy_officer_dashboard.html',
                              total_records=len(all_records),
                              pending_reviews=pending_count,
@@ -425,7 +436,10 @@ def privacy_officer_dashboard():
                              records=records_list,
                              status_counts=status_counts,
                              org_compliance=org_compliance,
-                             recent_notifications=recent_notifications)
+                             recent_notifications=recent_notifications,
+                             tiers=TIER_CONFIG,
+                             current_tier_name=current_tier_config.get('name'),
+                             current_tier=current_tier)
 
     except Exception as e:
         print(f"Error in privacy_officer_dashboard: {str(e)}")
@@ -451,16 +465,16 @@ def privacy_officer_dashboard():
 @app.route('/add-activity', methods=['GET', 'POST'])
 @login_required
 def add_activity():
-    """Add new ROPA activity"""
+    """Add new ROPA activity with step-by-step wizard"""
     # Enforce activity limit based on subscription tier
     tier = get_user_effective_tier(current_user)
     if tier == 'expired':
         flash('Your free trial has expired. Please upgrade to continue adding activities.', 'error')
         return redirect(url_for('pricing'))
 
+    config = get_tier_config(tier)
     current_count = models.ROPARecord.query.filter_by(created_by=current_user.id).count()
     if not can_add_activity(current_user, current_count):
-        config = get_tier_config(tier)
         flash(
             f'You have reached the limit of {config["max_activities"]} processing activities for your '
             f'{config["name"]} plan. Please upgrade to add more.',
@@ -468,102 +482,277 @@ def add_activity():
         )
         return redirect(url_for('pricing'))
 
-    if request.method == 'POST':
-        # Get all form data
-        form_data = request.form.to_dict()
-
-        # Validate required field
-        if not form_data.get('processing_activity_name'):
-            flash('Processing Activity Name is required.', 'error')
-            options = get_predefined_options()
-            return render_template('add_activity.html', options=options)
-
-        # Build record data dynamically
-        record_data = {
-            'processing_activity_name': form_data.get('processing_activity_name'),
-            'created_by': current_user.id,
-            'category': form_data.get('category', ''),
-            'description': form_data.get('description', ''),
-            'department_function': current_user.department if hasattr(current_user, 'department') else ''
+    # Initialize wizard data in session if not exists
+    if 'wizard_data' not in session:
+        session['wizard_data'] = {
+            'step': 1,
+            'organization': {},
+            'activities': [],
+            'purposes': {},
+            'data_subjects': [],
+            'data_categories': [],
+            'data_categories_data': {},
+            'legal_basis': {},
+            'legal_basis_data': {},
+            'third_parties': [],
+            'third_parties_data': {},
+            'transfers': {},
+            'retention': {}
         }
 
-        # Add all other fields that exist in the model
-        model_columns = [column.name for column in models.ROPARecord.__table__.columns]
-        for field_name, value in form_data.items():
-            if field_name in model_columns and field_name not in ['id', 'created_by', 'created_at', 'updated_at']:
-                record_data[field_name] = value
+    wizard_data = session['wizard_data']
 
-        # Create new ROPA record with dynamic fields
-        record = models.ROPARecord(**record_data)
+    if request.method == 'POST':
+        action = request.form.get('action', 'next')
 
-        # Check the action type from the form
-        action = request.form.get('action', 'submit')
-        if action == 'draft':
-            record.status = 'Draft'
-            message = 'ROPA record saved as draft'
-        elif action == 'submit':
-            record.status = 'Under Review'
-            message = 'ROPA record submitted for review'
-        elif action == 'approve' and current_user.role == 'Privacy Officer':
-            record.status = 'Approved'
-            message = 'ROPA record created and approved'
-        else:
-            record.status = 'Under Review'
-            message = 'ROPA record submitted for review'
-
-        db.session.add(record)
-        db.session.commit()
-
-        # Trigger notifications for Growth+ users
-        try:
-            if has_feature(current_user, 'has_alerts') and record.status == 'Under Review':
-                officers = models.User.query.filter_by(role='Privacy Officer').all()
-                notify_new_activity(record, current_user, officers, db, models.Notification)
-        except Exception:
-            pass
-
-        # Run health engine for Enterprise users
-        try:
-            if has_feature(current_user, 'has_health_engine'):
-                run_health_checks([record], current_user, db, models.Notification)
-        except Exception:
-            pass
-
-        # Process custom tabs if any were created
-        custom_tab_counter = 1
-        while f'custom_tab_name_{custom_tab_counter}' in request.form:
-            tab_category = request.form.get(f'custom_tab_name_{custom_tab_counter}')
-            field_name = request.form.get(f'custom_tab_description_{custom_tab_counter}')
-            field_description = request.form.get(f'custom_tab_processes_{custom_tab_counter}')
-
-            if tab_category and field_name:  # Only create if required fields are filled
-                custom_tab = models.CustomTab(
-                    tab_category=tab_category,
-                    field_name=field_name,
-                    field_description=field_description,
-                    field_type='text',
-                    status='Draft',
-                    created_by=current_user.id
-                )
-                db.session.add(custom_tab)
-
-            custom_tab_counter += 1
-
-        db.session.commit()
-
-        log_audit_event('ROPA Created', current_user.email, f'Created ROPA record: {record.processing_activity_name}')
-        flash(message, 'success')
-        return redirect(url_for('privacy_champion_dashboard'))
-
-    options = get_predefined_options()
-    tier = get_user_effective_tier(current_user)
-    tier_config = get_tier_config(tier)
+        if action == 'next':
+            # Save current step data
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            wizard_data['step'] = min(step + 1, 10)
+            
+        elif action == 'back':
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            wizard_data['step'] = max(step - 1, 1)
+            
+        elif action == 'save_draft':
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            # Save as draft (implement later)
+            flash('Progress saved as draft', 'info')
+            
+        elif action == 'generate':
+            # Final step - generate ROPA records
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            
+            # Generate ROPA records based on wizard data
+            records_created = generate_ropa_records(wizard_data, current_user)
+            
+            # Clear wizard data
+            session.pop('wizard_data', None)
+            
+            flash(f'Successfully created {records_created} ROPA record(s)', 'success')
+            return redirect(url_for('view_saved_ropa'))
     return render_template(
-        'add_activity.html',
-        options=options,
+        'create_ropa_wizard.html',
+        wizard_data=wizard_data,
+        current_step=wizard_data.get('step', 1),
         activity_count=current_count,
-        max_activities=tier_config['max_activities']
+        max_activities=config['max_activities']
     )
+
+
+def save_step_data(step, form, wizard_data):
+    """Save form data for the current step"""
+    if step == 1:  # Organization Overview
+        wizard_data['organization'] = {
+            'name': form.get('org_name'),
+            'industry': form.get('industry'),
+            'country': form.get('country'),
+            'employee_count': form.get('employee_count'),
+            'controller_name': form.get('controller_name'),
+            'controller_contact': form.get('controller_contact'),
+            'controller_address': form.get('controller_address'),
+            'dpo_name': form.get('dpo_name'),
+            'dpo_contact': form.get('dpo_contact'),
+            'dpo_address': form.get('dpo_address')
+        }
+    elif step == 2:  # Processing Activity Setup
+        activities = []
+        activity_counter = 1
+        while f'activity_{activity_counter}' in form:
+            activity = form.get(f'activity_{activity_counter}')
+            if activity:
+                activities.append(activity)
+            activity_counter += 1
+        wizard_data['activities'] = activities
+        
+    elif step == 3:  # Purpose of Processing
+        purposes = {}
+        for i, activity in enumerate(wizard_data.get('activities', [])):
+            purpose_key = f'purpose_{i+1}'
+            purposes[activity] = form.get(purpose_key, '')
+        wizard_data['purposes'] = purposes
+        
+    elif step == 4:  # Data Subjects
+        data_subjects = []
+        if 'customers' in form: data_subjects.append('Customers')
+        if 'employees' in form: data_subjects.append('Employees')
+        if 'vendors' in form: data_subjects.append('Vendors')
+        if 'website_users' in form: data_subjects.append('Website users')
+        wizard_data['data_subjects'] = data_subjects
+        
+    elif step == 5:  # Data Categories
+        data_categories = []
+        if 'name' in form: data_categories.append('Name')
+        if 'email' in form: data_categories.append('Email')
+        if 'phone' in form: data_categories.append('Phone number')
+        if 'financial' in form: data_categories.append('Financial data')
+        if 'health' in form: data_categories.append('Health data (sensitive)')
+        
+        wizard_data['data_categories'] = data_categories
+        wizard_data['data_categories_data'] = {
+            'special_categories': form.get('special_categories', '')
+        }
+        
+    elif step == 6:  # Legal Basis
+        legal_basis = {}
+        for i, activity in enumerate(wizard_data.get('activities', [])):
+            basis_key = f'legal_basis_{i+1}'
+            legal_basis[activity] = form.get(basis_key, '')
+        
+        wizard_data['legal_basis'] = legal_basis
+        wizard_data['legal_basis_data'] = {
+            'legitimate_interests': form.get('legitimate_interests', '')
+        }
+        
+    elif step == 7:  # Third Parties
+        third_parties = []
+        if 'cloud_providers' in form: third_parties.append('Cloud providers')
+        if 'payment_processors' in form: third_parties.append('Payment processors')
+        if 'crm_tools' in form: third_parties.append('CRM tools')
+        
+        wizard_data['third_parties'] = third_parties
+        wizard_data['third_parties_data'] = {
+            'processor_name': form.get('processor_name', ''),
+            'processor_contact': form.get('processor_contact', ''),
+            'processor_address': form.get('processor_address', '')
+        }
+        
+    elif step == 8:  # Data Transfer & Storage
+        wizard_data['transfers'] = {
+            'storage_location': form.get('storage_location'),
+            'international_transfers': 'yes' if 'international_transfers' in form else 'no',
+            'safeguards': form.get('safeguards', '')
+        }
+        
+    elif step == 9:  # Retention Period
+        wizard_data['retention'] = {
+            'period': form.get('retention_period'),
+            'deletion_procedures': form.get('deletion_procedures', '')
+        }
+
+
+def generate_ropa_records(wizard_data, user):
+    """Generate ROPA records based on wizard data"""
+    records_created = 0
+    
+    for activity in wizard_data.get('activities', []):
+        # Calculate risk level first
+        risk_level = assess_risk_level(activity, wizard_data)
+        
+        # Create one record per activity
+        record_data = {
+            'processing_activity_name': activity,
+            'created_by': user.id,
+            'category': 'Automated',  # Could be enhanced
+            'description': f'Processing activity: {activity}',
+            'department_function': user.department or '',
+            
+            # Controller information
+            'controller_name': wizard_data['organization'].get('controller_name', ''),
+            'controller_contact': wizard_data['organization'].get('controller_contact', ''),
+            'controller_address': wizard_data['organization'].get('controller_address', ''),
+            
+            # DPO information
+            'dpo_name': wizard_data['organization'].get('dpo_name', ''),
+            'dpo_contact': wizard_data['organization'].get('dpo_contact', ''),
+            'dpo_address': wizard_data['organization'].get('dpo_address', ''),
+            
+            # Processor information
+            'processor_name': wizard_data['third_parties_data'].get('processor_name', ''),
+            'processor_contact': wizard_data['third_parties_data'].get('processor_contact', ''),
+            'processor_address': wizard_data['third_parties_data'].get('processor_address', ''),
+            
+            # Map wizard data to record fields
+            'processing_purpose': wizard_data['purposes'].get(activity, ''),
+            'legal_basis': wizard_data['legal_basis'].get(activity, ''),
+            'legitimate_interests': wizard_data['legal_basis_data'].get('legitimate_interests', ''),
+            'data_subjects': ', '.join(wizard_data.get('data_subjects', [])),
+            'data_categories': ', '.join(wizard_data.get('data_categories', [])),
+            'special_categories': wizard_data['data_categories_data'].get('special_categories', ''),
+            'recipients': ', '.join(wizard_data.get('third_parties', [])),
+            'third_country_transfers': wizard_data['transfers'].get('international_transfers', 'no'),
+            'safeguards': wizard_data['transfers'].get('safeguards', ''),
+            'retention_period': wizard_data['retention'].get('period', ''),
+            'deletion_procedures': wizard_data['retention'].get('deletion_procedures', ''),
+            
+            # Auto-fill based on activity type
+            'security_measures': suggest_security_measures(wizard_data.get('data_categories', []), risk_level),
+            'risk_level': risk_level,
+            
+            'status': 'Under Review'
+        }
+        
+        # Auto-suggest legal basis if missing
+        if not record_data['legal_basis']:
+            record_data['legal_basis'] = suggest_legal_basis(activity)
+        
+        # Create record
+        record = models.ROPARecord(**record_data)
+        db.session.add(record)
+        records_created += 1
+        
+        # Trigger notifications and health checks
+        try:
+            if has_feature(user, 'has_alerts'):
+                officers = models.User.query.filter_by(role='Privacy Officer').all()
+                notify_new_activity(record, user, officers, db, models.Notification)
+        except Exception:
+            pass
+
+        try:
+            if has_feature(user, 'has_health_engine'):
+                run_health_checks([record], user, db, models.Notification)
+        except Exception:
+            pass
+    
+    db.session.commit()
+    return records_created
+
+
+def suggest_legal_basis(activity):
+    """Suggest legal basis based on activity type"""
+    suggestions = {
+        'marketing': 'Consent',
+        'hr': 'Contract',
+        'customer_onboarding': 'Contract',
+        'analytics': 'Legitimate interest'
+    }
+    
+    activity_lower = activity.lower()
+    for key, basis in suggestions.items():
+        if key in activity_lower:
+            return basis
+    
+    return 'Legitimate interest'  # Default
+
+
+def assess_risk_level(activity, wizard_data):
+    """Assess risk level based on activity and data"""
+    risk_factors = []
+    
+    # Check for sensitive data
+    data_categories = wizard_data.get('data_categories', [])
+    if 'Health data (sensitive)' in data_categories:
+        risk_factors.append('sensitive_data')
+    
+    # Check for international transfers
+    if wizard_data.get('transfers', {}).get('international_transfers') == 'yes':
+        risk_factors.append('international_transfer')
+    
+    # Check for third parties
+    if wizard_data.get('third_parties'):
+        risk_factors.append('third_party_sharing')
+    
+    if len(risk_factors) >= 2:
+        return 'High'
+    elif len(risk_factors) == 1:
+        return 'Medium'
+    else:
+        return 'Low'
 
 @app.route('/edit-activity/<int:record_id>', methods=['GET', 'POST'])
 @login_required
@@ -732,8 +921,9 @@ def view_all_ropa_excel():
             else:
                 sheet.display_name = raw_name
 
+    generated_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
     log_audit_event('View Uploaded ROPA Excel', current_user.email, 'Viewed all uploaded ROPA files in Excel format')
-    return render_template('view_all_ropa_excel.html', uploaded_files=uploaded_files, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
+    return render_template('view_all_ropa_excel.html', uploaded_files=uploaded_files, generated_records=generated_records, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
 @app.route('/edit-all-ropa-excel', methods=['GET', 'POST'])
 @login_required
@@ -887,7 +1077,8 @@ def edit_all_ropa_excel():
 
             sheet.display_columns = display_columns
 
-    return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files)
+    generated_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
+    return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files, generated_records=generated_records)
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required
@@ -1060,8 +1251,8 @@ def view_saved_ropa():
         abort(403)
     
     try:
-        # Get all ROPA records with status 'Saved'
-        saved_records = models.ROPARecord.query.filter_by(status='Saved').all()
+        # Get all ROPA records for review and management
+        saved_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
         
         log_audit_event('View Saved ROPA', current_user.email, 'Viewed saved ROPA records')
         return render_template('view_saved_ropa.html', 
@@ -1710,6 +1901,41 @@ def view_all_ropa():
 def pricing():
     """Public pricing page"""
     return render_template('pricing.html', tiers=TIER_CONFIG)
+
+
+@app.route('/test_tier/<tier>')
+def test_tier(tier):
+    """Test a subscription tier - preview without login required"""
+    if tier not in TIER_CONFIG:
+        abort(404)
+    session['test_tier'] = tier
+    session['test_mode'] = True
+    flash(f'Testing {TIER_CONFIG[tier]["name"]} plan. You can now see what users on this plan experience.', 'info')
+    return redirect(url_for('test_tier_preview', tier=tier))
+
+
+@app.route('/test-tier-preview/<tier>')
+def test_tier_preview(tier):
+    """Public preview of a subscription tier"""
+    if tier not in TIER_CONFIG:
+        abort(404)
+    
+    tier_config = TIER_CONFIG[tier]
+    
+    return render_template('test_tier_preview.html', 
+                         tier=tier,
+                         tier_config=tier_config,
+                         tiers=TIER_CONFIG)
+
+
+@app.route('/exit_test_mode')
+@login_required
+def exit_test_mode():
+    """Exit test mode and return to actual subscription tier"""
+    if 'test_tier' in session:
+        del session['test_tier']
+        flash('Exited test mode. Returned to your actual subscription tier.', 'info')
+    return redirect(url_for('privacy_officer_dashboard'))
 
 
 @app.route('/subscription')

@@ -85,6 +85,7 @@
                 {% else %}
                 <div class="text-center mt-auto">
                     <a href="mailto:sales@example.com?subject=Starter Plan" class="btn btn-success w-100">Choose Starter</a>
+                    <a href="{{ url_for('test_tier', tier='starter') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
                 </div>
                 {% endif %}
             </div>
@@ -121,6 +122,7 @@
                 {% else %}
                 <div class="text-center mt-auto">
                     <a href="mailto:sales@example.com?subject=Growth Plan" class="btn btn-primary w-100">Choose Growth</a>
+                    <a href="{{ url_for('test_tier', tier='growth') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
                 </div>
                 {% endif %}
             </div>
@@ -158,6 +160,7 @@
                 {% else %}
                 <div class="text-center mt-auto">
                     <a href="mailto:sales@example.com?subject=Enterprise Plan" class="btn w-100 text-white" style="background-color: #6f42c1;">Contact Sales</a>
+                    <a href="{{ url_for('test_tier', tier='enterprise') }}" class="btn btn-outline-secondary btn-sm mt-2">Test Plan</a>
                 </div>
                 {% endif %}
             </div>

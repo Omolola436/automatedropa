@@ -24,11 +24,61 @@
         <div class="col-md-6">
             <strong><i class="fas fa-info-circle me-2"></i>Total Files:</strong> {{ uploaded_files|length }}
         </div>
-        <div class="col-md-6">
+        <div class="col-md-6 text-end">
+            <strong><i class="fas fa-folder-open me-2"></i>Generated ROPA Records:</strong> {{ generated_records|length }}
+        </div>
+        <div class="col-md-12 mt-3">
             <strong><i class="fas fa-clock me-2"></i>Last Updated:</strong> {{ current_time }}
         </div>
     </div>
 </div>
+
+{% if generated_records %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-save me-2"></i>Generated ROPA Records
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover table-sm">
+                <thead>
+                    <tr>
+                        <th>Processing Activity</th>
+                        <th>Status</th>
+                        <th>Created By</th>
+                        <th>Updated</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in generated_records %}
+                    <tr>
+                        <td>{{ record.processing_activity_name }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if record.status == 'Approved' else 'warning' if record.status == 'Under Review' else 'info' if record.status == 'Draft' else 'danger' }}">
+                                {{ record.status or 'Unknown' }}
+                            </span>
+                        </td>
+                        <td>{{ record.creator.email if record.creator else 'System' }}</td>
+                        <td>{{ record.updated_at.strftime('%Y-%m-%d') if record.updated_at else 'N/A' }}</td>
+                        <td>
+                            <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
 
 {% if uploaded_files %}
     {% for file in uploaded_files %}
