@@ -164,6 +164,8 @@ def login():
             login_user(user)
             user.last_login = datetime.utcnow()
             db.session.commit()
+            # Clear any leftover wizard session data from a previous user
+            session.pop('wizard_data', None)
             log_audit_event('Login Success', email, 'User logged in successfully with consent')
             return redirect(url_for('index'))
         else:
@@ -344,18 +346,18 @@ def privacy_officer_dashboard():
         abort(403)
 
     try:
-        # Get all records
-        all_records = models.ROPARecord.query.all()
+        # Get all records for the current user's organization (same department)
+        all_records = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).all()
 
         # Calculate status counts
         status_counts = {}
         for record in all_records:
             status_counts[record.status] = status_counts.get(record.status, 0) + 1
 
-        # Get recent records (last 10)
+        # Get recent records (last 10) for the organization
         recent_records = []
         try:
-            recent_records_list = models.ROPARecord.query.order_by(models.ROPARecord.created_at.desc()).limit(10).all()
+            recent_records_list = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).order_by(models.ROPARecord.created_at.desc()).limit(10).all()
 
             for record in recent_records_list:
                 try:
@@ -1184,8 +1186,8 @@ def view_saved_ropa():
         abort(403)
     
     try:
-        # Get all ROPA records for review and management
-        saved_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
+        # Get all ROPA records for the current user's organization
+        saved_records = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).order_by(models.ROPARecord.updated_at.desc()).all()
         
         log_audit_event('View Saved ROPA', current_user.email, 'Viewed saved ROPA records')
         return render_template('view_saved_ropa.html', 
@@ -1202,6 +1204,12 @@ def system_help():
     """System help and error guidance (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
+
+    # Check if user has access to help & support (not trial)
+    tier = get_user_effective_tier(current_user)
+    if tier == 'trial':
+        flash('Help & Support is available on paid plans. Please upgrade for access to troubleshooting guides and system monitoring.', 'error')
+        return redirect(url_for('pricing'))
     
     try:
         # Get recent error logs and common issues

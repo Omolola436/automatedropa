@@ -1,5 +1,14 @@
 {% extends "base.html" %}
 
+{% macro excel_column_name(n) %}
+{%- set letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' -%}
+{%- if n < 26 -%}
+{{ letters[n] }}
+{%- else -%}
+{{ excel_column_name((n // 26) - 1) }}{{ letters[n % 26] }}
+{%- endif -%}
+{% endmacro %}
+
 {% block title %}View ROPA Record - Excel Format{% endblock %}
 
 {% block content %}
@@ -54,188 +63,734 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-bordered table-hover mb-0" style="font-size: 0.9rem;">
-                <thead class="table-success">
+            <table class="excel-table mb-0" style="font-size: 0.9rem;">
+                <thead>
                     <tr>
-                        <th style="min-width: 150px; background-color: #d4edda;">Field</th>
-                        <th style="background-color: #d4edda;">Value</th>
+                        <th class="excel-header"></th>
+                        <th class="excel-col-header">A</th>
+                        <th class="excel-col-header">B</th>
+                        <th class="excel-col-header">C</th>
+                        <th class="excel-col-header">D</th>
+                        <th class="excel-col-header">E</th>
+                        <th class="excel-col-header">F</th>
+                        <th class="excel-col-header">G</th>
+                        <th class="excel-col-header">H</th>
+                        <th class="excel-col-header">I</th>
+                        <th class="excel-col-header">J</th>
+                        <th class="excel-col-header">K</th>
+                        <th class="excel-col-header">L</th>
+                        <th class="excel-col-header">M</th>
+                        <th class="excel-col-header">N</th>
+                        <th class="excel-col-header">O</th>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
+                        <td class="excel-row-header">1</td>
                         <td class="fw-bold bg-light">ID</td>
                         <td>{{ record.id }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">2</td>
                         <td class="fw-bold bg-light">Processing Activity Name</td>
                         <td>{{ record.processing_activity_name or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">3</td>
                         <td class="fw-bold bg-light">Category</td>
                         <td>{{ record.category or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">4</td>
                         <td class="fw-bold bg-light">Description</td>
                         <td>{{ record.description or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">5</td>
                         <td class="fw-bold bg-light">Department/Function</td>
                         <td>{{ record.department_function or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">6</td>
                         <td class="fw-bold bg-light">Controller Name</td>
                         <td>{{ record.controller_name or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">7</td>
                         <td class="fw-bold bg-light">Controller Contact</td>
                         <td>{{ record.controller_contact or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">8</td>
                         <td class="fw-bold bg-light">Controller Address</td>
                         <td style="white-space: pre-wrap;">{{ record.controller_address or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">9</td>
                         <td class="fw-bold bg-light">DPO Name</td>
                         <td>{{ record.dpo_name or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">10</td>
                         <td class="fw-bold bg-light">DPO Contact</td>
                         <td>{{ record.dpo_contact or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">11</td>
                         <td class="fw-bold bg-light">DPO Address</td>
                         <td style="white-space: pre-wrap;">{{ record.dpo_address or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">12</td>
                         <td class="fw-bold bg-light">Processor Name</td>
                         <td>{{ record.processor_name or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">13</td>
                         <td class="fw-bold bg-light">Processor Contact</td>
                         <td>{{ record.processor_contact or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">14</td>
                         <td class="fw-bold bg-light">Processor Address</td>
                         <td style="white-space: pre-wrap;">{{ record.processor_address or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">15</td>
                         <td class="fw-bold bg-light">Purpose of Processing</td>
                         <td style="white-space: pre-wrap;">{{ record.processing_purpose or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">16</td>
                         <td class="fw-bold bg-light">Legal Basis</td>
                         <td>{{ record.legal_basis or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">17</td>
                         <td class="fw-bold bg-light">Legitimate Interests</td>
                         <td style="white-space: pre-wrap;">{{ record.legitimate_interests or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">18</td>
                         <td class="fw-bold bg-light">Data Categories</td>
                         <td>{{ record.data_categories or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">19</td>
                         <td class="fw-bold bg-light">Special Categories</td>
                         <td>{{ record.special_categories or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">20</td>
                         <td class="fw-bold bg-light">Data Subjects</td>
                         <td>{{ record.data_subjects or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">21</td>
                         <td class="fw-bold bg-light">Recipients</td>
                         <td style="white-space: pre-wrap;">{{ record.recipients or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">22</td>
                         <td class="fw-bold bg-light">Third Country Transfers</td>
                         <td style="white-space: pre-wrap;">{{ record.third_country_transfers or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">23</td>
                         <td class="fw-bold bg-light">Safeguards</td>
                         <td style="white-space: pre-wrap;">{{ record.safeguards or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">24</td>
                         <td class="fw-bold bg-light">Retention Period</td>
                         <td>{{ record.retention_period or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">25</td>
                         <td class="fw-bold bg-light">Deletion Procedures</td>
                         <td style="white-space: pre-wrap;">{{ record.deletion_procedures or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">26</td>
                         <td class="fw-bold bg-light">Security Measures</td>
                         <td style="white-space: pre-wrap;">{{ record.security_measures or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">27</td>
                         <td class="fw-bold bg-light">Breach Likelihood</td>
                         <td>
                             <span class="badge bg-{% if record.breach_likelihood == 'High' %}danger{% elif record.breach_likelihood == 'Medium' %}warning{% else %}success{% endif %}">
                                 {{ record.breach_likelihood or 'Not specified' }}
                             </span>
                         </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">28</td>
                         <td class="fw-bold bg-light">Breach Impact</td>
                         <td>
                             <span class="badge bg-{% if record.breach_impact == 'High' %}danger{% elif record.breach_impact == 'Medium' %}warning{% else %}success{% endif %}">
                                 {{ record.breach_impact or 'Not specified' }}
                             </span>
                         </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">29</td>
                         <td class="fw-bold bg-light">Risk Level</td>
                         <td>
                             <span class="badge bg-{% if record.risk_level == 'High' %}danger{% elif record.risk_level == 'Medium' %}warning{% else %}success{% endif %}">
                                 {{ record.risk_level or 'Not specified' }}
                             </span>
                         </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">30</td>
                         <td class="fw-bold bg-light">DPIA Required</td>
                         <td>
                             <span class="badge bg-{% if record.dpia_required %}warning{% else %}success{% endif %}">
                                 {{ 'Yes' if record.dpia_required else 'No' }}
                             </span>
                         </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">31</td>
                         <td class="fw-bold bg-light">DPIA Outcome</td>
                         <td style="white-space: pre-wrap;">{{ record.dpia_outcome or '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">32</td>
                         <td class="fw-bold bg-light">Status</td>
                         <td>
                             <span class="badge bg-{% if record.status == 'Approved' %}success{% elif record.status == 'Under Review' %}warning{% elif record.status == 'Rejected' %}danger{% else %}secondary{% endif %}">
                                 {{ record.status or 'Draft' }}
                             </span>
                         </td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">33</td>
                         <td class="fw-bold bg-light">Created By</td>
                         <td>{{ record.creator.email if record.creator else 'Unknown' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">34</td>
                         <td class="fw-bold bg-light">Created Date</td>
                         <td>{{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') if record.created_at else '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">35</td>
                         <td class="fw-bold bg-light">Updated Date</td>
                         <td>{{ record.updated_at.strftime('%Y-%m-%d %H:%M:%S') if record.updated_at else '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     {% if record.reviewed_by %}
                     <tr>
+                        <td class="excel-row-header">36</td>
                         <td class="fw-bold bg-light">Reviewed By</td>
                         <td>{{ record.reviewer.email if record.reviewer else 'Unknown' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     <tr>
+                        <td class="excel-row-header">37</td>
                         <td class="fw-bold bg-light">Reviewed Date</td>
                         <td>{{ record.reviewed_at.strftime('%Y-%m-%d %H:%M:%S') if record.reviewed_at else '' }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     {% endif %}
                     {% if record.review_comments %}
                     <tr>
+                        <td class="excel-row-header">38</td>
                         <td class="fw-bold bg-light">Review Comments</td>
                         <td style="white-space: pre-wrap;">{{ record.review_comments }}</td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td></td>
                     </tr>
                     {% endif %}
                 </tbody>
@@ -274,15 +829,48 @@
 
 {% block styles %}
 <style>
-.table td {
+.excel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.excel-table th,
+.excel-table td {
+    border: 1px solid #d0d7dd;
+    padding: 0.65rem 0.9rem;
+}
+.excel-table thead th.excel-header {
+    background-color: #d4edda;
+    width: 48px;
+}
+.excel-table thead th.excel-col-header {
+    background-color: #d4edda;
+    text-align: center;
+    font-weight: bold;
+}
+.excel-table tbody tr { counter-increment: rowNumber; }
+.excel-table tbody { counter-reset: rowNumber; }
+.excel-table tbody td:first-child {
+    position: relative;
+    padding-left: 2.6rem;
+    background-color: #f4f5f7;
+    font-weight: 600;
+}
+.excel-table tbody td:first-child::before {
+    content: counter(rowNumber);
+    position: absolute;
+    left: 0.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #495057;
+    font-weight: bold;
+}
+.excel-table tbody tr:hover {
+    background-color: #eef6ff;
+}
+.excel-table td {
     vertical-align: top;
-}
-.table td.fw-bold {
-    width: 25%;
-    min-width: 200px;
-}
-.table tbody tr:hover {
-    background-color: #f8f9fa;
+    white-space: pre-wrap;
 }
 </style>
 {% endblock %}

@@ -1,45 +1,17 @@
 {% extends "base.html" %}
 
+{% macro excel_column_name(n) %}
+{%- set letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' -%}
+{%- if n < 26 -%}
+{{ letters[n] }}
+{%- else -%}
+{{ excel_column_name((n // 26) - 1) }}{{ letters[n % 26] }}
+{%- endif -%}
+{% endmacro %}
+
 {% block title %}View Uploaded ROPA Files - Excel Format{% endblock %}
 
 {% block content %}
-
-<!-- Process Name Modal -->
-<div class="modal fade" id="processNameModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false" aria-labelledby="processNameModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="processNameModalLabel">
-                    <i class="fas fa-tag me-2"></i>Enter Process Name
-                </h5>
-            </div>
-            <div class="modal-body">
-                <p class="text-muted mb-3">Please provide a name for this ROPA process before viewing the uploaded data.</p>
-                <div class="mb-3">
-                    <label for="processNameInput" class="form-label fw-semibold">Process Name <span class="text-danger">*</span></label>
-                    <input type="text" class="form-control form-control-lg" id="processNameInput"
-                           placeholder="e.g., HR Data Processing, Customer Onboarding..."
-                           autofocus>
-                    <div class="form-text">This will be used to identify the process in the ROPA records.</div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
-                </a>
-                <button type="button" class="btn btn-primary" id="confirmProcessName">
-                    <i class="fas fa-check me-2"></i>Confirm &amp; View Data
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Process Name Banner (shown after modal is confirmed) -->
-<div id="processNameBanner" class="alert alert-primary d-none mb-3">
-    <i class="fas fa-tag me-2"></i>
-    <strong>Process Name:</strong> <span id="processNameDisplay"></span>
-</div>
 
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="fas fa-table me-2"></i>Uploaded ROPA Files - Excel View</h1>
@@ -150,14 +122,14 @@
                     </h6>
                     
                     <div class="table-responsive mb-4">
-                        <table class="table table-bordered table-hover table-sm" style="font-size: 0.85rem;">
+                        <table class="excel-table" style="font-size: 0.85rem;">
                             {% if sheet_data_list %}
-                                <thead class="table-success">
+                                <thead>
                                     <tr>
-                                        <th style="background-color: #d4edda; width: 50px;">#</th>
+                                        <th class="excel-row-header"></th>
                                         {% if sheet_data_list[0] %}
                                             {% for column in sheet_data_list[0].keys() %}
-                                            <th style="background-color: #d4edda; min-width: 120px;">{{ sheet.display_columns[column] if sheet.display_columns and column in sheet.display_columns else column }}</th>
+                                            <th>{{ excel_column_name(loop.index0) }}</th>
                                             {% endfor %}
                                         {% endif %}
                                     </tr>
@@ -165,7 +137,7 @@
                                 <tbody>
                                     {% for row in sheet_data_list %}
                                     <tr>
-                                        <td class="fw-bold bg-light text-center">{{ loop.index }}</td>
+                                        <td class="excel-row-header">{{ loop.index }}</td>
                                         {% for column, value in row.items() %}
                                         <td>{{ value if value is not none else '' }}</td>
                                         {% endfor %}
@@ -222,18 +194,41 @@
 
 {% block styles %}
 <style>
-.table td {
-    vertical-align: top;
-    word-wrap: break-word;
-    max-width: 200px;
+.excel-table {
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
 }
-.table th {
+.excel-table th {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    text-align: center;
+    font-weight: bold;
     position: sticky;
     top: 0;
     z-index: 10;
 }
-.table tbody tr:hover {
-    background-color: #f8f9fa;
+.excel-table td {
+    border: 1px solid #ccc;
+    padding: 4px 8px;
+    vertical-align: top;
+    word-wrap: break-word;
+    max-width: 150px;
+    min-height: 20px;
+}
+.excel-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.excel-table tbody tr:hover {
+    background-color: #e6f3ff;
+}
+.excel-row-header {
+    background-color: #f0f0f0 !important;
+    text-align: center;
+    font-weight: bold;
+    width: 40px;
+    min-width: 40px;
 }
 .card {
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
@@ -242,38 +237,4 @@
 {% endblock %}
 
 {% block scripts %}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Show the Process Name modal on page load
-    var processNameModal = new bootstrap.Modal(document.getElementById('processNameModal'));
-    processNameModal.show();
-
-    document.getElementById('confirmProcessName').addEventListener('click', function() {
-        var processName = document.getElementById('processNameInput').value.trim();
-        if (!processName) {
-            document.getElementById('processNameInput').classList.add('is-invalid');
-            if (!document.getElementById('processNameInput').nextElementSibling || !document.getElementById('processNameInput').nextElementSibling.classList.contains('invalid-feedback')) {
-                var err = document.createElement('div');
-                err.className = 'invalid-feedback';
-                err.textContent = 'Please enter a process name.';
-                document.getElementById('processNameInput').after(err);
-            }
-            return;
-        }
-        processNameModal.hide();
-        document.getElementById('processNameDisplay').textContent = processName;
-        document.getElementById('processNameBanner').classList.remove('d-none');
-    });
-
-    document.getElementById('processNameInput').addEventListener('input', function() {
-        this.classList.remove('is-invalid');
-    });
-
-    document.getElementById('processNameInput').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') {
-            document.getElementById('confirmProcessName').click();
-        }
-    });
-});
-</script>
 {% endblock %}
