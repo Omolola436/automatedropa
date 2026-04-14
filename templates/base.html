@@ -180,29 +180,26 @@
 
                 {% if current_user.role == 'Privacy Officer' %}
                 <div class="sidebar-divider"></div>
+                <div class="sidebar-brand">Data</div>
 
                 <a class="nav-link {% if request.endpoint == 'upload_file' %}active{% endif %}"
                    href="{{ url_for('upload_file') }}">
                     <i class="fas fa-upload"></i> Upload File
                 </a>
 
-                <a class="nav-link {% if request.endpoint == 'audit_logs' %}active{% endif %}"
-                   href="{{ url_for('audit_logs') }}">
-                    <i class="fas fa-list-alt"></i> Audit Logs
+                <a class="nav-link {% if request.endpoint == 'view_all_ropa_excel' %}active{% endif %}"
+                   href="{{ url_for('view_all_ropa_excel') }}">
+                    <i class="fas fa-table"></i> View All Data
                 </a>
 
-                <a class="nav-link {% if request.endpoint == 'subscription' %}active{% endif %}"
-                   href="{{ url_for('subscription') }}">
-                    <i class="fas fa-credit-card"></i> Subscriptions
+                <a class="nav-link {% if request.endpoint == 'view_saved_ropa' %}active{% endif %}"
+                   href="{{ url_for('view_saved_ropa') }}">
+                    <i class="fas fa-save"></i> View Saved Data
                 </a>
                 {% endif %}
 
                 <div class="sidebar-divider"></div>
-
-                <a class="nav-link {% if request.endpoint == 'pricing' %}active{% endif %}"
-                   href="{{ url_for('pricing') }}">
-                    <i class="fas fa-tags"></i> Pricing
-                </a>
+                <div class="sidebar-brand">Reports</div>
 
                 {% if sub_config.get('has_compliance_score') %}
                 <a class="nav-link {% if request.endpoint == 'compliance_report' %}active{% endif %}"
@@ -218,18 +215,25 @@
                 </a>
                 {% endif %}
 
-                {% if current_user.role == 'Privacy Officer' %}
-                <div class="sidebar-divider"></div>
-                <div class="sidebar-brand">View Data</div>
+                {% if current_user.role == 'Privacy Officer' and sub_config.get('has_audit_logs') %}
+                <a class="nav-link {% if request.endpoint == 'audit_logs' %}active{% endif %}"
+                   href="{{ url_for('audit_logs') }}">
+                    <i class="fas fa-list-alt"></i> Audit Logs
+                </a>
+                {% endif %}
 
-                <a class="nav-link {% if request.endpoint == 'view_all_ropa_excel' %}active{% endif %}"
-                   href="{{ url_for('view_all_ropa_excel') }}">
-                    <i class="fas fa-table"></i> View All Data
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-brand">Account</div>
+
+                <a class="nav-link {% if request.endpoint == 'pricing' %}active{% endif %}"
+                   href="{{ url_for('pricing') }}">
+                    <i class="fas fa-tags"></i> Pricing
                 </a>
 
-                <a class="nav-link {% if request.endpoint == 'view_saved_ropa' %}active{% endif %}"
-                   href="{{ url_for('view_saved_ropa') }}">
-                    <i class="fas fa-save"></i> View Saved Data
+                {% if current_user.role == 'Privacy Officer' %}
+                <a class="nav-link {% if request.endpoint == 'subscription' %}active{% endif %}"
+                   href="{{ url_for('subscription') }}">
+                    <i class="fas fa-credit-card"></i> Subscriptions
                 </a>
                 {% endif %}
 
@@ -245,6 +249,11 @@
                 <a class="nav-link {% if request.endpoint == 'admin_activity' %}active{% endif %}"
                    href="{{ url_for('admin_activity') }}">
                     <i class="fas fa-chart-line"></i> Activity Tracker
+                </a>
+
+                <a class="nav-link {% if request.endpoint == 'audit_logs' %}active{% endif %}"
+                   href="{{ url_for('audit_logs') }}">
+                    <i class="fas fa-list-alt"></i> Audit Logs
                 </a>
                 {% endif %}
             </div>

@@ -28,7 +28,6 @@
     </div>
 </div>
 
-<!-- Summary Information -->
 <div class="alert alert-info mb-4">
     <div class="row">
         <div class="col-md-6">
@@ -43,41 +42,90 @@
     </div>
 </div>
 
+{# ── GENERATED ROPA RECORDS in full A-Z Excel format ── #}
 {% if generated_records %}
+{% set ropa_columns = [
+    ('A', 'Processing Activity', 'processing_activity_name'),
+    ('B', 'Category', 'category'),
+    ('C', 'Description', 'description'),
+    ('D', 'Department / Function', 'department_function'),
+    ('E', 'Controller Name', 'controller_name'),
+    ('F', 'Controller Contact', 'controller_contact'),
+    ('G', 'Controller Address', 'controller_address'),
+    ('H', 'DPO Name', 'dpo_name'),
+    ('I', 'DPO Contact', 'dpo_contact'),
+    ('J', 'Processor Name', 'processor_name'),
+    ('K', 'Processor Contact', 'processor_contact'),
+    ('L', 'Processor Address', 'processor_address'),
+    ('M', 'Processing Purpose', 'processing_purpose'),
+    ('N', 'Legal Basis', 'legal_basis'),
+    ('O', 'Data Categories', 'data_categories'),
+    ('P', 'Special Categories', 'special_categories'),
+    ('Q', 'Data Subjects', 'data_subjects'),
+    ('R', 'Recipients', 'recipients'),
+    ('S', 'Third Country Transfers', 'third_country_transfers'),
+    ('T', 'Safeguards', 'safeguards'),
+    ('U', 'Retention Period', 'retention_period'),
+    ('V', 'Deletion Procedures', 'deletion_procedures'),
+    ('W', 'Security Measures', 'security_measures'),
+    ('X', 'Risk Level', 'risk_level'),
+    ('Y', 'Status', 'status'),
+    ('Z', 'Last Updated', 'updated_at')
+] %}
 <div class="card mb-4">
     <div class="card-header">
         <h5 class="mb-0">
             <i class="fas fa-save me-2"></i>Generated ROPA Records
+            <span class="badge bg-primary ms-2">{{ generated_records|length }} record(s)</span>
         </h5>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover table-sm">
+    <div class="card-body p-0">
+        <div class="px-3 pt-3">
+            <small class="scroll-hint">
+                <i class="fas fa-arrow-right me-1"></i>Scroll right to see all columns A – Z &nbsp;(Column A stays fixed)
+            </small>
+        </div>
+        <div class="excel-scroll-wrapper mb-0">
+            <table class="excel-table">
                 <thead>
                     <tr>
-                        <th>Processing Activity</th>
-                        <th>Status</th>
-                        <th>Created By</th>
-                        <th>Updated</th>
-                        <th>Actions</th>
+                        <th class="excel-row-header sticky-col sticky-top-left">#</th>
+                        {% for col_letter, col_label, _ in ropa_columns %}
+                        <th class="sticky-header" title="{{ col_label }}">
+                            {{ col_letter }}
+                        </th>
+                        {% endfor %}
+                        <th class="sticky-header action-col">Actions</th>
+                    </tr>
+                    {# Sub-header row with field names #}
+                    <tr class="field-names-row">
+                        <th class="excel-row-header sticky-col sticky-top-left-2"></th>
+                        {% for _, col_label, _ in ropa_columns %}
+                        <th class="field-name-header" title="{{ col_label }}">{{ col_label }}</th>
+                        {% endfor %}
+                        <th class="field-name-header"></th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for record in generated_records %}
                     <tr>
-                        <td>{{ record.processing_activity_name }}</td>
-                        <td>
-                            <span class="badge bg-{{ 'success' if record.status == 'Approved' else 'warning' if record.status == 'Under Review' else 'info' if record.status == 'Draft' else 'danger' }}">
-                                {{ record.status or 'Unknown' }}
-                            </span>
+                        <td class="excel-row-header sticky-col">{{ loop.index }}</td>
+                        {% for col_letter, col_label, field in ropa_columns %}
+                        <td title="{{ col_label }}">
+                            {%- if field == 'updated_at' -%}
+                                {{ record.updated_at.strftime('%Y-%m-%d') if record.updated_at else '' }}
+                            {%- elif field == 'risk_level' -%}
+                                {{ record.risk_level or '' }}
+                            {%- else -%}
+                                {{ record[field] if record[field] else '' }}
+                            {%- endif -%}
                         </td>
-                        <td>{{ record.creator.email if record.creator else 'System' }}</td>
-                        <td>{{ record.updated_at.strftime('%Y-%m-%d') if record.updated_at else 'N/A' }}</td>
-                        <td>
-                            <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1">
+                        {% endfor %}
+                        <td class="action-col text-center">
+                            <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-xs-icon" title="View">
                                 <i class="fas fa-eye"></i>
                             </a>
-                            <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-secondary">
+                            <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-xs-icon btn-edit" title="Edit">
                                 <i class="fas fa-edit"></i>
                             </a>
                         </td>
@@ -90,6 +138,7 @@
 </div>
 {% endif %}
 
+{# ── UPLOADED EXCEL FILES ── #}
 {% if uploaded_files %}
     {% for file in uploaded_files %}
     <div class="card mb-4">
@@ -135,6 +184,14 @@
                                         {% if sheet_data_list[0] %}
                                             {% for column in sheet_data_list[0].keys() %}
                                             <th class="sticky-header">{{ excel_column_name(loop.index0) }}</th>
+                                            {% endfor %}
+                                        {% endif %}
+                                    </tr>
+                                    <tr class="field-names-row">
+                                        <th class="excel-row-header sticky-col sticky-top-left-2"></th>
+                                        {% if sheet_data_list[0] %}
+                                            {% for column in sheet_data_list[0].keys() %}
+                                            <th class="field-name-header" title="{{ column }}">{{ column }}</th>
                                             {% endfor %}
                                         {% endif %}
                                     </tr>
@@ -194,19 +251,20 @@
 
 {% block styles %}
 <style>
-/* Excel scroll wrapper with horizontal scrolling support */
+/* ── Excel scroll wrapper ── */
 .excel-scroll-wrapper {
     overflow-x: auto;
     overflow-y: visible;
     position: relative;
     border: 1px solid #dee2e6;
-    border-radius: 4px;
+    border-radius: 0 0 4px 4px;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Main Excel table styling */
+/* ── Main table ── */
 .excel-table {
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 12px;
     min-width: max-content;
@@ -215,95 +273,150 @@
 }
 
 .excel-table th {
-    background-color: #f0f0f0;
-    border: 1px solid #ccc;
+    background-color: #e8eaf0;
+    border-right: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    border-top: 1px solid #ccc;
     padding: 6px 10px;
     text-align: center;
     font-weight: bold;
     white-space: nowrap;
     height: 30px;
-    min-width: 80px;
-    max-width: 150px;
-    word-break: break-word;
+    min-width: 90px;
 }
 
 .excel-table td {
-    border: 1px solid #ccc;
+    border-right: 1px solid #d0d0d0;
+    border-bottom: 1px solid #d0d0d0;
     padding: 5px 8px;
     vertical-align: top;
     white-space: normal;
     word-wrap: break-word;
-    min-width: 80px;
-    max-width: 150px;
+    min-width: 90px;
+    max-width: 180px;
     height: auto;
+    font-size: 11.5px;
 }
 
-/* Row alternating colors */
-.excel-table tbody tr:nth-child(even) { 
-    background-color: #f9f9f9; 
-}
+/* ── Alternating row colours ── */
+.excel-table tbody tr:nth-child(even) { background-color: #f8f9fb; }
+.excel-table tbody tr:hover           { background-color: #e6f0ff; }
 
-/* Hover effect on rows */
-.excel-table tbody tr:hover { 
-    background-color: #e6f3ff; 
-}
-
-/* Sticky header row (column letters) */
+/* ── Sticky header row (column letters A-Z) ── */
 .sticky-header {
     position: sticky;
     top: 0;
     z-index: 10;
-    background-color: #f0f0f0;
+    background-color: #e8eaf0;
+    color: #333;
+    font-weight: 700;
+    letter-spacing: 0.04em;
 }
 
-/* Sticky first column (row numbers) - COLUMN A STAYS STATIC */
+/* ── Sub-header row with field names ── */
+.field-names-row th {
+    position: sticky;
+    top: 30px;
+    z-index: 10;
+}
+.field-name-header {
+    background-color: #f4f5f8 !important;
+    font-weight: 600;
+    font-size: 10.5px;
+    color: #555;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    padding: 4px 8px !important;
+}
+
+/* ── Sticky first column (row numbers) ── */
 .sticky-col {
     position: sticky;
     left: 0;
     z-index: 5;
-    background-color: #ffffff !important;
-    border-right: 2px solid #999 !important;
+    background-color: #e8eaf0 !important;
+    /* Use box-shadow instead of border-right so it's visible with border-collapse:separate */
+    box-shadow: 3px 0 0 0 #999;
     font-weight: bold;
     text-align: center;
     width: 45px;
     min-width: 45px;
     max-width: 45px;
+    border-right: none !important;
 }
 
-.sticky-col:hover {
-    background-color: #f0f0f0 !important;
-}
-
-/* Top-left corner cell */
+/* ── Top-left corner ── */
 .sticky-top-left {
     position: sticky;
     left: 0;
     top: 0;
-    z-index: 15;
-    background-color: #e8e8e8 !important;
-    border-right: 2px solid #999 !important;
+    z-index: 20;
+    background-color: #d8dae2 !important;
+    box-shadow: 3px 0 0 0 #999;
+}
+.sticky-top-left-2 {
+    position: sticky;
+    left: 0;
+    top: 30px;
+    z-index: 20;
+    background-color: #e0e2ea !important;
+    box-shadow: 3px 0 0 0 #999;
 }
 
-/* Excel row header */
+/* ── Row header (number cells) ── */
 .excel-row-header {
     text-align: center;
     font-weight: bold;
     width: 45px;
     min-width: 45px;
     max-width: 45px;
-    background-color: #f0f0f0;
+    background-color: #e8eaf0;
+    color: #555;
+    font-size: 11px;
 }
 
-.card { 
-    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); 
+/* ── Action column ── */
+.action-col {
+    min-width: 80px !important;
+    text-align: center;
+    background-color: #e8eaf0;
+    position: sticky;
+    right: 0;
+    z-index: 4;
+    box-shadow: -2px 0 0 0 #ccc;
 }
 
-/* Help text for users */
+/* ── Small icon buttons ── */
+.btn-xs-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 4px;
+    background: #e9ecef;
+    color: #444;
+    border: 1px solid #ccc;
+    font-size: 11px;
+    text-decoration: none;
+    margin: 1px;
+    transition: background 0.15s;
+}
+.btn-xs-icon:hover      { background: #cce5ff; color: #0056b3; border-color: #99caff; }
+.btn-xs-icon.btn-edit   { background: #fff3cd; color: #856404; border-color: #ffc107; }
+.btn-xs-icon.btn-edit:hover { background: #ffc107; color: #212529; }
+
+.card { box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); }
+
 .scroll-hint {
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     color: #666;
-    margin-top: 5px;
     font-style: italic;
+    display: block;
+    margin-bottom: 6px;
 }
 </style>
 {% endblock %}
