@@ -574,8 +574,12 @@ def save_step_data(step, form, wizard_data):
             'industry': form.get('industry'),
             'country': form.get('country'),
             'employee_count': form.get('employee_count'),
+            'entity_type': form.get('entity_type', 'Controller'),
             'controller_contact': form.get('controller_contact', ''),
             'controller_address': form.get('controller_address', ''),
+            'processor_name': form.get('processor_name', ''),
+            'processor_contact': form.get('processor_contact', ''),
+            'processor_address': form.get('processor_address', ''),
             'dpo_name': form.get('dpo_name'),
             'dpo_contact': form.get('dpo_contact'),
             'dpo_address': form.get('dpo_address')
@@ -616,17 +620,20 @@ def generate_ropa_records(wizard_data, user):
     else:
         deletion_procedures = f"In accordance with policy: {retained}" if retained else ''
 
+    entity_type = org.get('entity_type', 'Controller')
+
     record_data = {
         'processing_activity_name': activity_name,
         'created_by': user.id,
         'category': org.get('industry', 'General'),
         'description': af.get('notes_comments', ''),
         'department_function': af.get('department_function', ''),
+        'entity_type': entity_type,
 
-        # Controller information (from org step)
-        'controller_name': org.get('name', ''),
-        'controller_contact': org.get('controller_contact', ''),
-        'controller_address': org.get('controller_address', ''),
+        # Controller information (from org step, populated when entity is Controller)
+        'controller_name': org.get('name', '') if entity_type != 'Processor' else '',
+        'controller_contact': org.get('controller_contact', '') if entity_type != 'Processor' else '',
+        'controller_address': org.get('controller_address', '') if entity_type != 'Processor' else '',
 
         # DPO information
         'dpo_name': org.get('dpo_name', ''),
@@ -634,9 +641,9 @@ def generate_ropa_records(wizard_data, user):
         'dpo_address': org.get('dpo_address', ''),
 
         # Processor / recipient details
-        'processor_name': af.get('recipient_details', ''),
-        'processor_contact': '',
-        'processor_address': '',
+        'processor_name': org.get('processor_name', '') or af.get('recipient_details', ''),
+        'processor_contact': org.get('processor_contact', ''),
+        'processor_address': org.get('processor_address', ''),
 
         # Processing details from activity form
         'processing_purpose': af.get('processing_purpose', ''),

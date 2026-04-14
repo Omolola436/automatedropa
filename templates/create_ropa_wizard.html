@@ -79,10 +79,64 @@
                         <!-- ===== STEP 1: Organisation + DPO ===== -->
                         {% if current_step == 1 %}
 
+                        <!-- ── Controller / Processor Question ── -->
+                        <div class="card border-warning mb-4">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <h6 class="mb-0 fw-bold"><i class="fas fa-question-circle me-2 text-warning"></i>Your Role in This Processing Activity *</h6>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted small mb-3">Select whether your organisation is acting as a <strong>Controller</strong> (you decide the purpose/means of processing) or a <strong>Processor</strong> (you process data on behalf of another organisation).</p>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="entity-card {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}selected{% endif %}" onclick="selectEntity('Controller')" id="cardController">
+                                            <input type="radio" name="entity_type" id="entityController" value="Controller"
+                                                   {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}checked{% endif %}
+                                                   style="display:none;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="fas fa-building text-primary mt-1" style="font-size:1.3rem;"></i>
+                                                <div>
+                                                    <div class="fw-bold">Controller</div>
+                                                    <small class="text-muted">You decide the purposes and means of processing personal data.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="entity-card {% if wizard_data.organization.get('entity_type') == 'Processor' %}selected{% endif %}" onclick="selectEntity('Processor')" id="cardProcessor">
+                                            <input type="radio" name="entity_type" id="entityProcessor" value="Processor"
+                                                   {% if wizard_data.organization.get('entity_type') == 'Processor' %}checked{% endif %}
+                                                   style="display:none;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="fas fa-cogs text-success mt-1" style="font-size:1.3rem;"></i>
+                                                <div>
+                                                    <div class="fw-bold">Processor</div>
+                                                    <small class="text-muted">You process data on behalf of a controller organisation.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="entity-card {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}selected{% endif %}" onclick="selectEntity('Joint Controller')" id="cardJointController">
+                                            <input type="radio" name="entity_type" id="entityJoint" value="Joint Controller"
+                                                   {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}checked{% endif %}
+                                                   style="display:none;">
+                                            <div class="d-flex align-items-start gap-2">
+                                                <i class="fas fa-handshake text-info mt-1" style="font-size:1.3rem;"></i>
+                                                <div>
+                                                    <div class="fw-bold">Joint Controller</div>
+                                                    <small class="text-muted">You jointly determine purposes with another organisation.</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <h6 class="fw-bold text-primary mb-3"><i class="fas fa-building me-2"></i>Organisation Information</h6>
                         <div class="row g-3 mb-4">
                             <div class="col-md-6">
-                                <label class="form-label">Organisation Name *</label>
+                                <label class="form-label" id="orgNameLabel">Organisation Name *</label>
                                 <input type="text" class="form-control" name="org_name"
                                        value="{{ wizard_data.organization.get('name', '') }}" required>
                             </div>
@@ -118,16 +172,42 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Controller Contact</label>
+                            <!-- Controller contact/address (hidden for Processor) -->
+                            <div class="col-md-6" id="controllerContactWrap">
+                                <label class="form-label" id="controllerContactLabel">Controller Contact</label>
                                 <input type="text" class="form-control" name="controller_contact"
                                        placeholder="e.g., +44 20 1234 5678 / contact@company.com"
                                        value="{{ wizard_data.organization.get('controller_contact', '') }}">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Controller Address</label>
+                            <div class="col-md-6" id="controllerAddressWrap">
+                                <label class="form-label" id="controllerAddressLabel">Controller Address</label>
                                 <textarea class="form-control" name="controller_address" rows="2"
                                           placeholder="Registered address of the data controller">{{ wizard_data.organization.get('controller_address', '') }}</textarea>
+                            </div>
+                        </div>
+
+                        <!-- Processor Details (shown when entity is Processor) -->
+                        <div id="processorSection" style="display:{% if wizard_data.organization.get('entity_type') == 'Processor' %}block{% else %}none{% endif %};">
+                            <hr>
+                            <h6 class="fw-bold text-success mb-3 mt-3"><i class="fas fa-cogs me-2"></i>Your Organisation (Processor) Details</h6>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-4">
+                                    <label class="form-label">Processor Name (Your Organisation) *</label>
+                                    <input type="text" class="form-control" name="processor_name"
+                                           placeholder="Your organisation's name"
+                                           value="{{ wizard_data.organization.get('processor_name', '') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Processor Contact</label>
+                                    <input type="text" class="form-control" name="processor_contact"
+                                           placeholder="Email or phone"
+                                           value="{{ wizard_data.organization.get('processor_contact', '') }}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Processor Address</label>
+                                    <textarea class="form-control" name="processor_address" rows="2"
+                                              placeholder="Your registered address">{{ wizard_data.organization.get('processor_address', '') }}</textarea>
+                                </div>
                             </div>
                         </div>
 
@@ -314,11 +394,15 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <table class="table table-sm mb-0">
-                                            <tr><td class="text-muted" style="width:45%">Organisation</td><td><strong>{{ wizard_data.organization.get('name', '—') }}</strong></td></tr>
+                                            <tr><td class="text-muted" style="width:45%">Role</td><td><span class="badge {% if wizard_data.organization.get('entity_type','Controller') == 'Controller' %}bg-primary{% elif wizard_data.organization.get('entity_type') == 'Processor' %}bg-success{% else %}bg-info{% endif %}">{{ wizard_data.organization.get('entity_type', 'Controller') }}</span></td></tr>
+                                            <tr><td class="text-muted">Organisation</td><td><strong>{{ wizard_data.organization.get('name', '—') }}</strong></td></tr>
                                             <tr><td class="text-muted">Industry</td><td>{{ wizard_data.organization.get('industry', '—') }}</td></tr>
                                             <tr><td class="text-muted">Country</td><td>{{ wizard_data.organization.get('country', '—') }}</td></tr>
                                             <tr><td class="text-muted">Employees</td><td>{{ wizard_data.organization.get('employee_count', '—') }}</td></tr>
                                             <tr><td class="text-muted">Controller Contact</td><td>{{ wizard_data.organization.get('controller_contact', '—') }}</td></tr>
+                                            {% if wizard_data.organization.get('entity_type') == 'Processor' %}
+                                            <tr><td class="text-muted">Processor Name</td><td>{{ wizard_data.organization.get('processor_name', '—') }}</td></tr>
+                                            {% endif %}
                                         </table>
                                     </div>
                                     <div class="col-md-6">
@@ -404,7 +488,50 @@
 {% endblock %}
 
 {% block scripts %}
+<style>
+.entity-card {
+    border: 2px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1rem;
+    cursor: pointer;
+    transition: border-color 0.2s, background-color 0.2s;
+    height: 100%;
+}
+.entity-card:hover {
+    border-color: #0d6efd;
+    background-color: #f0f5ff;
+}
+.entity-card.selected {
+    border-color: #0d6efd;
+    background-color: #e8f0fe;
+}
+</style>
 <script>
+function selectEntity(type) {
+    // Update card selection
+    ['Controller', 'Processor', 'Joint Controller'].forEach(function(t) {
+        var card = document.getElementById('card' + t.replace(' ', ''));
+        if (card) card.classList.toggle('selected', t === type);
+    });
+    // Check the hidden radio
+    var radio = document.querySelector('input[name="entity_type"][value="' + type + '"]');
+    if (radio) radio.checked = true;
+
+    // Toggle processor section
+    var procSection = document.getElementById('processorSection');
+    if (procSection) procSection.style.display = (type === 'Processor') ? 'block' : 'none';
+
+    // Update org name label
+    var orgLabel = document.getElementById('orgNameLabel');
+    if (orgLabel) {
+        if (type === 'Processor') {
+            orgLabel.textContent = 'Controller Organisation Name *';
+        } else {
+            orgLabel.textContent = 'Organisation Name *';
+        }
+    }
+}
+
 // Show/hide crossborder recipient fields
 document.addEventListener('DOMContentLoaded', function() {
     var crossborderSelect = document.getElementById('crossborderSelect');
@@ -423,6 +550,12 @@ document.addEventListener('DOMContentLoaded', function() {
             var show = this.value === 'No';
             document.getElementById('reasonsDiv').style.display = show ? '' : 'none';
         });
+    }
+
+    // Apply initial entity type state on page load
+    var checkedRadio = document.querySelector('input[name="entity_type"]:checked');
+    if (checkedRadio) {
+        selectEntity(checkedRadio.value);
     }
 });
 </script>

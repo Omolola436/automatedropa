@@ -78,6 +78,13 @@ def init_database():
         )
     """)
 
+    # Add entity_type column if it doesn't exist (migration)
+    try:
+        cursor.execute("ALTER TABLE ropa_records ADD COLUMN entity_type TEXT DEFAULT 'Controller'")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
     # Audit logs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (

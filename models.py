@@ -83,6 +83,9 @@ class ROPARecord(db.Model):
     dpia_required = db.Column(Boolean, default=False)
     dpia_outcome = db.Column(Text)
     
+    # Entity type (Controller / Processor / Joint Controller)
+    entity_type = db.Column(String(50), default='Controller')
+
     # Metadata
     status = db.Column(String(50), default='Draft')
     created_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
