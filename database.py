@@ -6,8 +6,10 @@ import os
 from sqlalchemy import create_engine
 
 def get_db_connection():
-    """Get database connection"""
-    return sqlite3.connect('ropa_system.db')
+    """Get database connection — uses instance/ropa_system.db to match Flask-SQLAlchemy"""
+    db_path = os.path.join(os.path.dirname(__file__), 'instance', 'ropa_system.db')
+    os.makedirs(os.path.dirname(db_path), exist_ok=True)
+    return sqlite3.connect(db_path)
 
 def init_database():
     """Initialize database with all required tables"""
@@ -141,6 +143,23 @@ def init_database():
     """)
 
     conn.commit()
+
+    # ── Schema migrations: safely add new columns if they don't exist ──
+    migrations = [
+        ("users", "subscription_tier", "TEXT NOT NULL DEFAULT 'trial'"),
+        ("users", "trial_start_date", "DATETIME"),
+        ("users", "subscription_start_date", "DATETIME"),
+        ("users", "subscription_end_date", "DATETIME"),
+        ("users", "upgrade_email_sent", "BOOLEAN DEFAULT 0"),
+        ("excel_files", "last_edited_at", "DATETIME"),
+        ("excel_files", "last_edited_by", "INTEGER"),
+    ]
+    for table, column, col_def in migrations:
+        try:
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
 
     # Database initialization complete - users must register to access the system
 

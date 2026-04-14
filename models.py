@@ -24,6 +24,7 @@ class User(UserMixin, db.Model):
     trial_start_date = db.Column(DateTime, default=datetime.utcnow)
     subscription_start_date = db.Column(DateTime, nullable=True)
     subscription_end_date = db.Column(DateTime, nullable=True)
+    upgrade_email_sent = db.Column(Boolean, default=False)
 
     # Relationship
     ropa_records = db.relationship('ROPARecord', foreign_keys='ROPARecord.created_by', backref='creator', lazy=True)
@@ -100,9 +101,12 @@ class ExcelFileData(db.Model):
     total_sheets = db.Column(Integer, default=0)
     sheet_names = db.Column(Text)  # JSON array of sheet names
     upload_timestamp = db.Column(DateTime, default=datetime.utcnow)
+    last_edited_at = db.Column(DateTime, nullable=True)
+    last_edited_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=True)
     file_metadata = db.Column(Text)  # JSON metadata about the file
 
-    uploader = db.relationship('User', backref='uploaded_excel_files')
+    uploader = db.relationship('User', foreign_keys=[uploaded_by], backref='uploaded_excel_files')
+    last_editor = db.relationship('User', foreign_keys=[last_edited_by], backref='edited_excel_files')
     sheets = db.relationship('ExcelSheetData', backref='excel_file', cascade='all, delete-orphan')
 
 class ExcelSheetData(db.Model):
@@ -240,3 +244,19 @@ class VendorActivity(db.Model):
 
     vendor = db.relationship('Vendor', backref='linked_activities')
     ropa_record = db.relationship('ROPARecord', backref='vendor_links')
+
+
+class ExcelVersionHistory(db.Model):
+    __tablename__ = 'excel_version_history'
+
+    id = db.Column(Integer, primary_key=True)
+    excel_file_id = db.Column(Integer, db.ForeignKey('excel_files.id'), nullable=False)
+    sheet_id = db.Column(Integer, db.ForeignKey('excel_sheets.id'), nullable=False)
+    changed_by = db.Column(Integer, db.ForeignKey('users.id'), nullable=False)
+    changed_at = db.Column(DateTime, default=datetime.utcnow)
+    change_summary = db.Column(String(500))
+    snapshot = db.Column(Text)  # JSON snapshot of the sheet data at this point in time
+
+    excel_file = db.relationship('ExcelFileData', backref='version_history')
+    sheet = db.relationship('ExcelSheetData', backref='version_history')
+    user = db.relationship('User', backref='excel_version_changes')

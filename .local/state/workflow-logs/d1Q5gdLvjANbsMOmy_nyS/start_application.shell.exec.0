@@ -1,0 +1,23 @@
+ * Serving Flask app 'app'
+ * Debug mode: on
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.76.2:5000
+INFO:werkzeug:[33mPress CTRL+C to quit[0m
+INFO:werkzeug: * Restarting with stat
+WARNING:werkzeug: * Debugger is active!
+INFO:werkzeug: * Debugger PIN: 301-823-639
+INFO:werkzeug:10.83.10.148 - - [14/Apr/2026 06:52:34] "[32mGET / HTTP/1.1[0m" 302 -
+DEBUG: Privacy Officer Dashboard - Total records: 3
+DEBUG: Status counts: {'Under Review': 3}
+DEBUG: Pending count: 3 (type: <class 'int'>)
+INFO:werkzeug:10.83.10.148 - - [14/Apr/2026 06:52:34] "GET /privacy-officer-dashboard HTTP/1.1" 200 -
+INFO:werkzeug:10.83.0.200 - - [14/Apr/2026 06:52:35] "[36mGET /static/css/custom.css HTTP/1.1[0m" 304 -
+INFO:werkzeug:10.83.10.148 - - [14/Apr/2026 06:52:35] "[36mGET /static/js/app.js HTTP/1.1[0m" 304 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:46] "[32mGET /privacy-officer-dashboard HTTP/1.1[0m" 302 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:46] "GET /login?next=/privacy-officer-dashboard HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:46] "GET /static/css/custom.css HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:46] "GET /static/logo.png HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:46] "GET /static/js/app.js HTTP/1.1" 200 -
+INFO:werkzeug:127.0.0.1 - - [14/Apr/2026 06:52:47] "[33mGET /favicon.ico HTTP/1.1[0m" 404 -

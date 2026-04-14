@@ -47,3 +47,20 @@ gunicorn --bind=0.0.0.0:5000 --reuse-port main:app
 - Audit logging
 - Vendor management
 - Custom tabs/fields per organization
+- Horizontal-scrolling Excel-style table with frozen Column A (view & edit)
+- Click-to-edit cells in the ROPA data table with save-to-database
+- View Saved Data page shows edited files with timestamps
+- Email notifications via EmailJS (welcome on signup, upgrade reminder on limit)
+- Admin: All Users view (superadmin only, user ID=1 or SUPERADMIN_EMAIL env var)
+- Admin: Activity Tracker — full audit log browser with filters
+- User activity tracked silently via audit_logs table
+
+## Admin Access
+The superadmin panel (All Users + Activity Tracker) is accessible to:
+- The first registered user (user ID=1), OR
+- Any user whose email matches the `SUPERADMIN_EMAIL` environment variable
+
+## Email (EmailJS)
+Configured via secrets: EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY
+- Welcome/confirmation email sent on every new registration
+- Upgrade reminder email sent once when a user hits their activity limit

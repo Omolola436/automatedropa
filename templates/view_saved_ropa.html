@@ -1,121 +1,179 @@
 {% extends "base.html" %}
 
-{% block title %}Saved ROPA Records - Privacy ROPA System{% endblock %}
+{% block title %}View Saved Data{% endblock %}
 
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-save me-2"></i>Saved ROPA Records</h1>
+    <h1><i class="fas fa-save me-2"></i>View Saved Data</h1>
     <div>
+        <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary me-2">
+            <i class="fas fa-edit me-2"></i>Edit Data
+        </a>
         <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
             <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
         </a>
     </div>
 </div>
 
-<!-- Summary Information -->
 <div class="alert alert-info mb-4">
     <div class="row">
-        <div class="col-md-6">
-            <strong><i class="fas fa-folder-open me-2"></i>Total Saved Records:</strong> {{ total_saved }}
+        <div class="col-md-4">
+            <strong><i class="fas fa-folder-open me-2"></i>Saved ROPA Records:</strong> {{ total_saved }}
         </div>
-        <div class="col-md-6">
-            <strong><i class="fas fa-clock me-2"></i>Last Updated:</strong> {{ current_time }}
+        <div class="col-md-4">
+            <strong><i class="fas fa-file-excel me-2"></i>Edited Files:</strong> {{ edited_files|length }}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-clock me-2"></i>Viewed at:</strong> {{ current_time }}
         </div>
     </div>
 </div>
 
+<!-- ── Recently Edited Excel Files ── -->
+{% if edited_files %}
+<div class="card mb-4">
+    <div class="card-header bg-warning bg-opacity-10">
+        <h5 class="mb-0">
+            <i class="fas fa-file-excel me-2 text-success"></i>Recently Edited ROPA Files
+            <span class="badge bg-secondary ms-2">{{ edited_files|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>File Name</th>
+                    <th>Uploaded By</th>
+                    <th>Uploaded On</th>
+                    <th>Last Edited</th>
+                    <th>Edited By</th>
+                    <th>Sheets</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for file in edited_files %}
+                <tr>
+                    <td>
+                        <i class="fas fa-file-excel text-success me-2"></i>
+                        <strong>{{ file.filename }}</strong>
+                    </td>
+                    <td><small>{{ file.uploader.email if file.uploader else 'Unknown' }}</small></td>
+                    <td>
+                        <small>{{ file.upload_timestamp.strftime('%Y-%m-%d %H:%M') if file.upload_timestamp else 'N/A' }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>
+                            {{ file.last_edited_at.strftime('%Y-%m-%d %H:%M') if file.last_edited_at else 'N/A' }}
+                        </span>
+                    </td>
+                    <td><small>{{ file.last_editor.email if file.last_editor else 'N/A' }}</small></td>
+                    <td><span class="badge bg-primary">{{ file.total_sheets }} sheet(s)</span></td>
+                    <td>
+                        <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-sm btn-outline-primary me-1" title="View">
+                            <i class="fas fa-eye"></i>
+                        </a>
+                        <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-sm btn-outline-secondary me-1" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <a href="{{ url_for('excel_version_history', file_id=file.id) }}" class="btn btn-sm btn-outline-info" title="View Version History">
+                            <i class="fas fa-history"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<!-- ── ROPA Records ── -->
 {% if saved_records %}
 <div class="card">
     <div class="card-header">
         <h5 class="mb-0">
-            <i class="fas fa-table me-2"></i>Saved ROPA Records
+            <i class="fas fa-table me-2"></i>ROPA Processing Records
+            <span class="badge bg-secondary ms-2">{{ saved_records|length }}</span>
         </h5>
     </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover">
-                <thead>
-                    <tr>
-                        <th>Processing Activity Name</th>
-                        <th>Status</th>
-                        <th>Created By</th>
-                        <th>Department</th>
-                        <th>Created Date</th>
-                        <th>Last Updated</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for record in saved_records %}
-                    <tr>
-                        <td>
-                            <strong>{{ record.processing_activity_name }}</strong>
-                            <br><small class="text-muted">{{ record.description[:60] }}{% if record.description|length > 60 %}...{% endif %}</small>
-                        </td>
-                        <td>
-                            {% set status_class = 'secondary' %}
-                            {% if record.status == 'Under Review' %}
-                                {% set status_class = 'warning' %}
-                            {% elif record.status == 'Approved' %}
-                                {% set status_class = 'success' %}
-                            {% elif record.status == 'Draft' %}
-                                {% set status_class = 'info' %}
-                            {% elif record.status == 'Rejected' %}
-                                {% set status_class = 'danger' %}
-                            {% endif %}
-                            <span class="badge bg-{{ status_class }}">{{ record.status or 'Unknown' }}</span>
-                        </td>
-                        <td>
-                            {% set creator = record.creator if record.creator else None %}
-                            <small>{{ creator.email if creator else 'System Upload' }}</small>
-                        </td>
-                        <td>
-                            <small>{{ record.department_function or 'N/A' }}</small>
-                        </td>
-                        <td>
-                            <small>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</small>
-                        </td>
-                        <td>
-                            <small>{{ record.updated_at.strftime('%Y-%m-%d') if record.updated_at else 'N/A' }}</small>
-                        </td>
-                        <td>
-                            <div class="btn-group btn-group-sm" role="group">
-                                <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary" title="View">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                                <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-outline-secondary" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </a>
-                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Under Review') }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-outline-success" title="Submit for Review" onclick="return confirm('Submit this record for review?')">
-                                        <i class="fas fa-paper-plane"></i>
-                                    </button>
-                                </form>
-                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-outline-warning" title="Approve" onclick="return confirm('Approve this record?')">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                </form>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+    <div class="card-body p-0">
+        <table class="table table-hover mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Processing Activity</th>
+                    <th>Status</th>
+                    <th>Created By</th>
+                    <th>Department</th>
+                    <th>Created</th>
+                    <th>Last Updated</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in saved_records %}
+                <tr>
+                    <td>
+                        <strong>{{ record.processing_activity_name }}</strong>
+                        {% if record.description %}
+                        <br><small class="text-muted">{{ record.description[:60] }}{% if record.description|length > 60 %}...{% endif %}</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% set sc = 'secondary' %}
+                        {% if record.status == 'Under Review' %}{% set sc = 'warning' %}
+                        {% elif record.status == 'Approved' %}{% set sc = 'success' %}
+                        {% elif record.status == 'Draft' %}{% set sc = 'info' %}
+                        {% elif record.status == 'Rejected' %}{% set sc = 'danger' %}
+                        {% endif %}
+                        <span class="badge bg-{{ sc }}">{{ record.status or 'Unknown' }}</span>
+                    </td>
+                    <td><small>{{ record.creator.email if record.creator else 'System' }}</small></td>
+                    <td><small>{{ record.department_function or 'N/A' }}</small></td>
+                    <td>
+                        <small>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-light text-dark border">
+                            <i class="fas fa-clock me-1 text-primary"></i>
+                            {{ record.updated_at.strftime('%Y-%m-%d %H:%M') if record.updated_at else 'N/A' }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary" title="View">
+                                <i class="fas fa-eye"></i>
+                            </a>
+                            <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-outline-secondary" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Under Review') }}" style="display:inline;">
+                                <button type="submit" class="btn btn-outline-success" title="Submit for Review" onclick="return confirm('Submit for review?')">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
-{% else %}
+{% endif %}
+
+{% if not saved_records and not edited_files %}
 <div class="text-center py-5">
     <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-    <h5>No Saved ROPA Records Found</h5>
-    <p class="text-muted">Saved ROPA records will appear here when users save drafts for later completion.</p>
+    <h5>No Saved Data Yet</h5>
+    <p class="text-muted">Data you edit and save will appear here with dates.</p>
     <div>
         <a href="{{ url_for('add_activity') }}" class="btn btn-primary me-2">
             <i class="fas fa-plus me-2"></i>Create New Activity
         </a>
-        <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+        <a href="{{ url_for('upload_file') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-upload me-2"></i>Upload File
         </a>
     </div>
 </div>

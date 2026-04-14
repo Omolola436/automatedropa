@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+
+{% macro excel_column_name(n) %}
+{%- set letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' -%}
+{%- if n < 26 -%}
+{{ letters[n] }}
+{%- else -%}
+{{ excel_column_name((n // 26) - 1) }}{{ letters[n % 26] }}
+{%- endif -%}
+{% endmacro %}
+
+{% block title %}Version History - {{ excel_file.filename }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1><i class="fas fa-history me-2"></i>Version History</h1>
+        <p class="text-muted mb-0">File: <strong>{{ excel_file.filename }}</strong></p>
+    </div>
+    <div>
+        <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-table me-2"></i>View All Data
+        </a>
+        <a href="{{ url_for('view_saved_ropa') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Saved Data
+        </a>
+    </div>
+</div>
+
+<!-- File Info Alert -->
+<div class="alert alert-info mb-4">
+    <div class="row">
+        <div class="col-md-4">
+            <strong><i class="fas fa-file-excel me-2"></i>File Name:</strong><br>
+            {{ excel_file.filename }}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-user me-2"></i>Uploaded By:</strong><br>
+            {{ excel_file.uploader.email if excel_file.uploader else 'Unknown' }}
+        </div>
+        <div class="col-md-4">
+            <strong><i class="fas fa-clock me-2"></i>Last Edited:</strong><br>
+            {{ excel_file.last_edited_at.strftime('%Y-%m-%d %H:%M') if excel_file.last_edited_at else 'Not edited yet' }}
+        </div>
+    </div>
+</div>
+
+{% if versions_by_sheet %}
+    {% for sheet_id, sheet_data in versions_by_sheet.items() %}
+    <div class="card mb-4">
+        <div class="card-header bg-primary bg-opacity-10">
+            <h5 class="mb-0">
+                <i class="fas fa-copy me-2"></i>{{ sheet_data.sheet_name }}
+                <span class="badge bg-primary ms-2">{{ sheet_data.versions|length }} version(s)</span>
+            </h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 200px;">Version Date</th>
+                            <th style="width: 150px;">Edited By</th>
+                            <th>Change Summary</th>
+                            <th style="width: 150px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for version in sheet_data.versions %}
+                        <tr>
+                            <td>
+                                <strong>{{ version.changed_at.strftime('%Y-%m-%d %H:%M:%S') }}</strong><br>
+                                <small class="text-muted">{{ version.changed_at.strftime('%A') }}</small>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ version.changed_by }}</span>
+                            </td>
+                            <td>
+                                {{ version.change_summary }}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" 
+                                        data-bs-target="#dataModal{{ version.id }}" title="Preview Data">
+                                    <i class="fas fa-eye me-1"></i>Preview
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Preview Modals -->
+    {% for version in sheet_data.versions %}
+    <div class="modal fade" id="dataModal{{ version.id }}" tabindex="-1">
+        <div class="modal-dialog modal-xxl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-table me-2"></i>
+                        {{ sheet_data.sheet_name }} - {{ version.changed_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" style="max-height: 600px; overflow-y: auto;">
+                    {% set snapshot_data = version.snapshot | from_json if version.snapshot else [] %}
+                    {% if snapshot_data %}
+                    <div class="excel-scroll-wrapper">
+                        <table class="excel-table-preview">
+                            <thead>
+                                <tr>
+                                    <th class="excel-col-header sticky-col sticky-top-left" style="width: 50px; min-width: 50px;">#</th>
+                                    {% if snapshot_data[0] %}
+                                        {% for column in snapshot_data[0].keys() %}
+                                        <th class="excel-col-header" style="min-width: 150px;">{{ excel_column_name(loop.index0) }}<br><small>{{ column }}</small></th>
+                                        {% endfor %}
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in snapshot_data %}
+                                <tr>
+                                    <td class="excel-col-header sticky-col" style="width: 50px; min-width: 50px;">{{ loop.index }}</td>
+                                    {% for column, value in row.items() %}
+                                    <td title="{{ value if value else '' }}" style="min-width: 150px;">{{ value if value else '' }}</td>
+                                    {% endfor %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>No data available for this version.
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endfor %}
+{% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-history fa-3x text-muted mb-3"></i>
+        <h5>No Version History Found</h5>
+        <p class="text-muted">This file has not been edited yet.</p>
+        <a href="{{ url_for('view_saved_ropa') }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Saved Data
+        </a>
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block styles %}
+<style>
+.excel-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+.excel-table-preview {
+    border-collapse: collapse;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 12px;
+    min-width: max-content;
+    width: 100%;
+    margin: 0;
+}
+
+.excel-table-preview th,
+.excel-table-preview td {
+    border: 1px solid #ccc;
+    padding: 6px 8px;
+    vertical-align: top;
+}
+
+.excel-table-preview th {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: bold;
+}
+
+.excel-table-preview tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.excel-table-preview tbody tr:hover {
+    background-color: #e6f3ff;
+}
+
+.excel-col-header {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: #ffffff !important;
+    border-right: 2px solid #999 !important;
+    font-weight: bold;
+    text-align: center;
+}
+
+.sticky-top-left {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 15;
+    background-color: #e8e8e8 !important;
+    border-right: 2px solid #999 !important;
+}
+</style>
+{% endblock %}

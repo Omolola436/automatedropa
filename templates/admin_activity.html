@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+
+{% block title %}Admin – Activity Tracker{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-chart-line me-2"></i>User Activity Tracker</h1>
+    <div>
+        <a href="{{ url_for('admin_users') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-users me-2"></i>All Users
+        </a>
+        <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Filter by User Email</label>
+                <input type="text" name="user" value="{{ filter_user }}" class="form-control form-control-sm" placeholder="user@example.com">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Event Type</label>
+                <select name="event" class="form-select form-select-sm">
+                    <option value="">All Events</option>
+                    {% for et in event_types %}
+                    <option value="{{ et }}" {{ 'selected' if filter_event == et }}>{{ et }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Date (from)</label>
+                <input type="date" name="date" value="{{ filter_date }}" class="form-control form-control-sm">
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body py-2">
+                <h4 class="text-primary mb-0">{{ logs|length }}</h4>
+                <small class="text-muted">Events Shown</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body py-2">
+                <h4 class="text-success mb-0">{{ unique_users }}</h4>
+                <small class="text-muted">Unique Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body py-2">
+                <h4 class="text-info mb-0">{{ today_events }}</h4>
+                <small class="text-muted">Events Today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body py-2">
+                <h4 class="text-warning mb-0">{{ login_events }}</h4>
+                <small class="text-muted">Logins Tracked</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Activity logs table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list-alt me-2"></i>Activity Log
+            <span class="badge bg-secondary ms-2">{{ logs|length }} entries</span>
+            {% if filter_user %}
+            <span class="badge bg-info ms-2">User: {{ filter_user }}</span>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive" style="max-height:65vh; overflow-y:auto;">
+            <table class="table table-hover table-sm mb-0" style="font-size:0.82rem;">
+                <thead class="table-light" style="position:sticky;top:0;z-index:5;">
+                    <tr>
+                        <th>Time</th>
+                        <th>User</th>
+                        <th>Event</th>
+                        <th>Description</th>
+                        <th>IP Address</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    {% set is_login = 'Login' in log.event_type or 'login' in log.event_type %}
+                    {% set is_security = 'Failed' in log.event_type or 'Error' in log.event_type %}
+                    <tr class="{{ 'table-success' if is_login and not is_security else 'table-danger' if is_security else '' }}">
+                        <td class="text-nowrap">
+                            <small>{{ log.timestamp.strftime('%Y-%m-%d %H:%M:%S') if log.timestamp else 'N/A' }}</small>
+                        </td>
+                        <td>
+                            {% if log.user_email %}
+                            <a href="{{ url_for('admin_activity') }}?user={{ log.user_email }}" class="text-decoration-none small">
+                                {{ log.user_email }}
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-{{ 'success' if is_login and not is_security else 'danger' if is_security else 'secondary' }}">
+                                {{ log.event_type }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ log.description or '—' }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ log.ip_address or '—' }}</small>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-search fa-2x mb-3"></i>
+            <p>No activity logs found matching your filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-3 text-muted small">
+    <i class="fas fa-info-circle me-1"></i>
+    Green rows = successful logins. Red rows = failed or error events. All user actions are tracked automatically.
+</div>
+
+{% endblock %}

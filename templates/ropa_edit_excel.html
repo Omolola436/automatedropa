@@ -52,7 +52,11 @@
             </h5>
         </div>
         <div class="card-body p-0">
-            <div class="table-responsive">
+            <div class="alert alert-info mb-3 ms-3 mt-3">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Editing Instructions:</strong> All cells are editable. Scroll right to see more fields. Column A (labels) stays visible while scrolling. Click any field to edit and then save your changes.
+            </div>
+            <div class="excel-scroll-wrapper">
                 <table class="excel-table mb-0" style="font-size: 0.9rem;">
                     <thead>
                         <tr>
@@ -877,9 +881,6 @@
                 </table>
             </div>
         </div>
-    </div>
-
-    <!-- Form Actions -->
     <div class="card mt-4">
         <div class="card-body">
             <div class="d-flex justify-content-between">
@@ -902,64 +903,132 @@
 
 {% block styles %}
 <style>
+/* Excel scroll wrapper */
+.excel-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Main table styling */
 .excel-table {
     width: 100%;
     border-collapse: collapse;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    min-width: max-content;
+    margin: 0;
 }
+
 .excel-table th,
 .excel-table td {
     border: 1px solid #d0d7dd;
-    padding: 0.65rem 0.9rem;
+    padding: 8px 10px;
 }
-.excel-table thead th.excel-header {
-    background-color: #d4edda;
-    width: 48px;
+
+.excel-table thead th {
+    background-color: #f0f0f0;
+    text-align: center;
+    font-weight: bold;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
+
 .excel-table thead th.excel-col-header {
     background-color: #d4edda;
     text-align: center;
     font-weight: bold;
 }
-.excel-table tbody tr { counter-increment: rowNumber; }
-.excel-table tbody { counter-reset: rowNumber; }
-.excel-table tbody td:first-child {
-    position: relative;
-    padding-left: 2.6rem;
-    background-color: #f4f5f7;
-    font-weight: 600;
-}
-.excel-table tbody td:first-child::before {
-    content: counter(rowNumber);
-    position: absolute;
-    left: 0.65rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #495057;
+
+/* Sticky column (first column with labels) */
+.excel-table .sticky-col,
+.excel-table .sticky-col.sticky-top-left {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: #ffffff !important;
+    border-right: 2px solid #999 !important;
     font-weight: bold;
+    min-width: 250px;
+    width: 250px;
+    max-width: 250px;
 }
-.excel-table tbody tr:hover {
-    background-color: #eef6ff;
+
+.excel-table thead th.sticky-col.sticky-top-left {
+    z-index: 15;
+    background-color: #e8e8e8 !important;
+    border-right: 2px solid #999 !important;
 }
-.form-control, .form-select {
-    font-size: 0.9rem;
+
+.excel-table tbody tr:hover td.sticky-col {
+    background-color: #f0f0f0 !important;
 }
-.form-check-input {
-    margin-right: 0.25rem;
+
+/* Row headers */
+.excel-row-header {
+    text-align: center;
+    font-weight: bold;
+    width: 50px;
+    min-width: 50px;
+    max-width: 50px;
+    background-color: #f0f0f0;
 }
-.excel-table td:empty {
-    min-height: 1.5rem;
-    cursor: text;
-}
-.excel-empty-cell {
+
+/* Form controls styling to work inside table cells */
+.form-control-inline {
     display: block;
     width: 100%;
-    height: 100%;
-    min-height: 1.5rem;
-    cursor: text;
+    padding: 6px 12px;
+    font-size: 0.9rem;
+    line-height: 1.25;
+    color: #495057;
+    background-color: #fff;
+    background-clip: padding-box;
+    border: 1px solid #ced4da;
+    border-radius: 0.25rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-.table-secondary td {
+
+.form-control-inline:focus {
+    color: #495057;
+    background-color: #fff;
+    border-color: #80bdff;
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+textarea.form-control-inline {
+    resize: vertical;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Table alternating rows */
+.excel-table tbody tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+
+.excel-table tbody tr:hover {
+    background-color: #e6f3ff;
+}
+
+tbody tr.table-secondary {
     background-color: #e2e3e5 !important;
+}
+
+.card { 
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); 
+}
+
+.form-check {
+    margin-bottom: 6px;
+}
+
+.form-check-input {
+    margin-right: 6px;
 }
 </style>
 {% endblock %}

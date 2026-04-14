@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block title %}Admin – All Users{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="fas fa-users-cog me-2"></i>All Users</h1>
+    <div>
+        <a href="{{ url_for('admin_activity') }}" class="btn btn-outline-primary me-2">
+            <i class="fas fa-chart-line me-2"></i>Activity Tracker
+        </a>
+        <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Summary cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center border-primary">
+            <div class="card-body">
+                <h3 class="text-primary">{{ stats.total }}</h3>
+                <small class="text-muted">Total Users</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-success">
+            <div class="card-body">
+                <h3 class="text-success">{{ stats.active_today }}</h3>
+                <small class="text-muted">Active Today</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-warning">
+            <div class="card-body">
+                <h3 class="text-warning">{{ stats.never_logged_in }}</h3>
+                <small class="text-muted">Never Logged In</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center border-info">
+            <div class="card-body">
+                <h3 class="text-info">{{ stats.on_trial }}</h3>
+                <small class="text-muted">On Trial</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter bar -->
+<div class="card mb-4">
+    <div class="card-body py-2">
+        <form method="GET" class="row g-2 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label small mb-1">Search by email / org</label>
+                <input type="text" name="q" value="{{ request.args.get('q','') }}" class="form-control form-control-sm" placeholder="email or organisation…">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Subscription Tier</label>
+                <select name="tier" class="form-select form-select-sm">
+                    <option value="">All Tiers</option>
+                    <option value="trial" {{ 'selected' if request.args.get('tier')=='trial' }}>Trial</option>
+                    <option value="starter" {{ 'selected' if request.args.get('tier')=='starter' }}>Starter</option>
+                    <option value="growth" {{ 'selected' if request.args.get('tier')=='growth' }}>Growth</option>
+                    <option value="enterprise" {{ 'selected' if request.args.get('tier')=='enterprise' }}>Enterprise</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small mb-1">Status</label>
+                <select name="status" class="form-select form-select-sm">
+                    <option value="">All</option>
+                    <option value="active" {{ 'selected' if request.args.get('status')=='active' }}>Active (logged in)</option>
+                    <option value="inactive" {{ 'selected' if request.args.get('status')=='inactive' }}>Never logged in</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary btn-sm w-100">Filter</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Users table -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Registered Users
+            <span class="badge bg-secondary ms-2">{{ users|length }}</span>
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if users %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.875rem;">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Email</th>
+                        <th>Organisation</th>
+                        <th>Role</th>
+                        <th>Tier</th>
+                        <th>Registered</th>
+                        <th>Last Login</th>
+                        <th>ROPA Records</th>
+                        <th>Status</th>
+                        <th>Activity</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    {% set never_logged = user.last_login is none %}
+                    {% set last_active_today = user.last_login and user.last_login.date() == today %}
+                    <tr class="{{ 'table-warning' if never_logged else '' }}">
+                        <td class="text-muted">{{ loop.index }}</td>
+                        <td>
+                            <strong>{{ user.email }}</strong>
+                            {% if user.id == 1 %}<span class="badge bg-dark ms-1">Owner</span>{% endif %}
+                        </td>
+                        <td>{{ user.department or '—' }}</td>
+                        <td>
+                            <span class="badge bg-{{ 'primary' if user.role == 'Privacy Officer' else 'secondary' }}">
+                                {{ user.role }}
+                            </span>
+                        </td>
+                        <td>
+                            {% set tier_colors = {'trial': 'secondary', 'starter': 'success', 'growth': 'primary', 'enterprise': 'dark'} %}
+                            <span class="badge bg-{{ tier_colors.get(user.subscription_tier, 'secondary') }}">
+                                {{ user.subscription_tier|title }}
+                            </span>
+                        </td>
+                        <td>
+                            <small>{{ user.created_at.strftime('%Y-%m-%d') if user.created_at else 'N/A' }}</small>
+                        </td>
+                        <td>
+                            {% if user.last_login %}
+                                <small class="{{ 'text-success fw-bold' if last_active_today else '' }}">
+                                    {{ user.last_login.strftime('%Y-%m-%d %H:%M') }}
+                                </small>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Never logged in</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-light text-dark border">{{ user.ropa_count }}</span>
+                        </td>
+                        <td>
+                            {% if last_active_today %}
+                                <span class="badge bg-success">Active Today</span>
+                            {% elif user.last_login %}
+                                <span class="badge bg-light text-dark border">Inactive</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Not Started</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <a href="{{ url_for('admin_activity') }}?user={{ user.email }}" class="btn btn-xs btn-outline-info" style="font-size:0.75rem;padding:2px 6px;">
+                                <i class="fas fa-search"></i> Logs
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">No users found matching your filters.</div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="mt-3 text-muted small">
+    <i class="fas fa-info-circle me-1"></i>
+    Rows highlighted in yellow are users who registered but have <strong>never logged in</strong>.
+    Rows showing <strong>Active Today</strong> are users who logged in today.
+</div>
+
+{% endblock %}

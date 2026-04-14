@@ -7,8 +7,9 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
-from datetime import datetime
+from datetime import datetime, date
 import pandas as pd
+from email_utils import send_welcome_email, send_upgrade_email
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -67,6 +68,15 @@ from subscription import (get_user_effective_tier, get_tier_config,
 from health_engine import (calculate_compliance_score, calculate_org_compliance_score,
                            run_health_checks, notify_new_activity, check_vendor_alerts)
 
+SUPERADMIN_EMAIL = os.environ.get('SUPERADMIN_EMAIL', '')
+
+def is_superadmin_user(user):
+    """Returns True if user is the platform superadmin (first user or configured email)."""
+    if SUPERADMIN_EMAIL and user.email == SUPERADMIN_EMAIL:
+        return True
+    return user.id == 1
+
+
 # Subscription + notification context processor
 @app.context_processor
 def inject_subscription():
@@ -88,8 +98,9 @@ def inject_subscription():
             sub_trial_days=trial_days,
             unread_notifications=unread_notifications,
             now_date=datetime.utcnow(),
+            is_superadmin=is_superadmin_user(current_user),
         )
-    return dict(sub_tier=None, sub_config={}, sub_trial_days=None, unread_notifications=0, now_date=datetime.utcnow())
+    return dict(sub_tier=None, sub_config={}, sub_trial_days=None, unread_notifications=0, now_date=datetime.utcnow(), is_superadmin=False)
 
 # Add custom Jinja filters
 @app.template_filter('from_json')
@@ -216,7 +227,12 @@ def register():
 
             login_user(user)
             log_audit_event('New Account Created', email, 'New organisation signed up for free trial')
-            flash('Welcome! Your 7-day free trial has started.', 'success')
+            flash('Welcome! Your free trial has started. A confirmation email has been sent to you.', 'success')
+            # Send welcome / confirmation email in background
+            try:
+                send_welcome_email(user_email=email, organisation=organisation or email.split('@')[0])
+            except Exception as email_err:
+                logging.warning(f"Welcome email failed for {email}: {email_err}")
             return redirect(url_for('index'))
 
         except Exception as e:
@@ -482,6 +498,19 @@ def add_activity():
             f'{config["name"]} plan. Please upgrade to add more.',
             'error'
         )
+        # Send upgrade email once
+        if not current_user.upgrade_email_sent:
+            try:
+                send_upgrade_email(
+                    user_email=current_user.email,
+                    organisation=current_user.department,
+                    activities_used=current_count,
+                    max_activities=config.get('max_activities', 5)
+                )
+                current_user.upgrade_email_sent = True
+                db.session.commit()
+            except Exception as email_err:
+                logging.warning(f"Upgrade email failed for {current_user.email}: {email_err}")
         return redirect(url_for('pricing'))
 
     # Initialize wizard data in session if not exists
@@ -942,12 +971,42 @@ def edit_all_ropa_excel():
                 sheet.sheet_data = json.dumps(sheet_data)
                 sheet.row_count = len(sheet_data)
             
+            # Update last_edited_at and last_edited_by on all affected files
+            now = datetime.utcnow()
+            sheets_updated_count = 0
+            
+            for file in models.ExcelFileData.query.all():
+                file.last_edited_at = now
+                file.last_edited_by = current_user.id
+                db.session.add(file)
+                
+                # Save version history for each sheet in this file
+                for sheet in file.sheets:
+                    try:
+                        # Create a snapshot of the current sheet data
+                        sheet_snapshot = sheet.sheet_data if sheet.sheet_data else '[]'
+                        
+                        # Save version history record
+                        version = models.ExcelVersionHistory(
+                            excel_file_id=file.id,
+                            sheet_id=sheet.id,
+                            changed_by=current_user.id,
+                            changed_at=now,
+                            change_summary=f'Updated by {current_user.email}',
+                            snapshot=sheet_snapshot
+                        )
+                        db.session.add(version)
+                        sheets_updated_count += 1
+                    except Exception as e:
+                        print(f"Error saving version history for sheet {sheet.id}: {str(e)}")
+                        pass
+
             db.session.commit()
             log_audit_event('Edit Uploaded ROPA Excel', current_user.email, f'Updated {updated_count} uploaded file fields')
-            flash(f'Successfully updated {updated_count} uploaded file fields!', 'success')
-            
-            # Redirect to view all to show the updated data
-            return redirect(url_for('view_all_ropa_excel'))
+            flash(f'Successfully saved your changes! You can view them in View Saved Data.', 'success')
+
+            # Redirect to view saved data to show the updated data with dates
+            return redirect(url_for('view_saved_ropa'))
             
         except Exception as e:
             db.session.rollback()
@@ -1014,6 +1073,54 @@ def edit_all_ropa_excel():
 
     generated_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
     return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files, generated_records=generated_records)
+
+
+@app.route('/excel-version-history/<int:file_id>')
+@login_required
+def excel_version_history(file_id):
+    """View version history for an Excel file's sheets (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    
+    try:
+        excel_file = models.ExcelFileData.query.get_or_404(file_id)
+        
+        # Get all version history for this file, ordered by date descending
+        version_history = models.ExcelVersionHistory.query.filter_by(
+            excel_file_id=file_id
+        ).order_by(models.ExcelVersionHistory.changed_at.desc()).all()
+        
+        # Group versions by sheet for easier display
+        versions_by_sheet = {}
+        for version in version_history:
+            sheet_id = version.sheet_id
+            sheet_name = version.sheet.display_name if version.sheet else f"Sheet {sheet_id}"
+            
+            if sheet_id not in versions_by_sheet:
+                versions_by_sheet[sheet_id] = {
+                    'sheet_id': sheet_id,
+                    'sheet_name': sheet_name,
+                    'versions': []
+                }
+            
+            versions_by_sheet[sheet_id]['versions'].append({
+                'id': version.id,
+                'changed_by': version.user.email if version.user else 'Unknown',
+                'changed_at': version.changed_at,
+                'change_summary': version.change_summary,
+                'snapshot': version.snapshot
+            })
+        
+        log_audit_event('View Excel Version History', current_user.email, f'Viewed version history for file: {excel_file.filename}')
+        
+        return render_template('excel_version_history.html',
+                               excel_file=excel_file,
+                               versions_by_sheet=versions_by_sheet,
+                               current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+    except Exception as e:
+        flash(f'Error loading version history: {str(e)}', 'error')
+        return redirect(url_for('view_saved_ropa'))
+
 
 @app.route('/update-status/<int:record_id>/<status>', methods=['POST'])
 @login_required
@@ -1181,22 +1288,120 @@ def export_complete_excel():
 @app.route('/view-saved-ropa')
 @login_required
 def view_saved_ropa():
-    """View saved ROPA records (Privacy Officer only)"""
+    """View saved ROPA records and recently edited Excel files (Privacy Officer only)"""
     if current_user.role != 'Privacy Officer':
         abort(403)
     
     try:
-        # Get all ROPA records for the current user's organization
-        saved_records = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).order_by(models.ROPARecord.updated_at.desc()).all()
-        
+        saved_records = models.ROPARecord.query.join(
+            models.User, models.ROPARecord.created_by == models.User.id
+        ).filter(
+            models.User.department == current_user.department
+        ).order_by(models.ROPARecord.updated_at.desc()).all()
+
+        # Files that have been edited (have a last_edited_at timestamp)
+        edited_files = models.ExcelFileData.query.filter(
+            models.ExcelFileData.last_edited_at.isnot(None)
+        ).order_by(models.ExcelFileData.last_edited_at.desc()).all()
+
         log_audit_event('View Saved ROPA', current_user.email, 'Viewed saved ROPA records')
-        return render_template('view_saved_ropa.html', 
-                             saved_records=saved_records,
-                             total_saved=len(saved_records),
-                             current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+        return render_template('view_saved_ropa.html',
+                               saved_records=saved_records,
+                               edited_files=edited_files,
+                               total_saved=len(saved_records),
+                               current_time=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
     except Exception as e:
         flash(f'Error loading saved ROPA records: {str(e)}', 'error')
         return redirect(url_for('privacy_officer_dashboard'))
+
+
+@app.route('/admin/users')
+@login_required
+def admin_users():
+    """Admin view: see all registered users (superadmin only)"""
+    if not is_superadmin_user(current_user):
+        abort(403)
+
+    q = request.args.get('q', '').strip()
+    tier_filter = request.args.get('tier', '').strip()
+    status_filter = request.args.get('status', '').strip()
+
+    query = models.User.query
+    if q:
+        query = query.filter(
+            (models.User.email.ilike(f'%{q}%')) |
+            (models.User.department.ilike(f'%{q}%'))
+        )
+    if tier_filter:
+        query = query.filter(models.User.subscription_tier == tier_filter)
+    if status_filter == 'active':
+        query = query.filter(models.User.last_login.isnot(None))
+    elif status_filter == 'inactive':
+        query = query.filter(models.User.last_login.is_(None))
+
+    users = query.order_by(models.User.created_at.desc()).all()
+
+    today = date.today()
+    for u in users:
+        u.ropa_count = models.ROPARecord.query.filter_by(created_by=u.id).count()
+
+    stats = {
+        'total': models.User.query.count(),
+        'active_today': models.User.query.filter(
+            models.User.last_login >= datetime.combine(today, datetime.min.time())
+        ).count(),
+        'never_logged_in': models.User.query.filter(models.User.last_login.is_(None)).count(),
+        'on_trial': models.User.query.filter(models.User.subscription_tier == 'trial').count(),
+    }
+
+    log_audit_event('Admin View Users', current_user.email, 'Accessed admin user list')
+    return render_template('admin_users.html', users=users, stats=stats, today=today)
+
+
+@app.route('/admin/activity')
+@login_required
+def admin_activity():
+    """Admin view: user activity tracker (superadmin only)"""
+    if not is_superadmin_user(current_user):
+        abort(403)
+
+    filter_user = request.args.get('user', '').strip()
+    filter_event = request.args.get('event', '').strip()
+    filter_date = request.args.get('date', '').strip()
+
+    query = models.AuditLog.query
+
+    if filter_user:
+        query = query.filter(models.AuditLog.user_email.ilike(f'%{filter_user}%'))
+    if filter_event:
+        query = query.filter(models.AuditLog.event_type == filter_event)
+    if filter_date:
+        try:
+            from_date = datetime.strptime(filter_date, '%Y-%m-%d')
+            query = query.filter(models.AuditLog.timestamp >= from_date)
+        except ValueError:
+            pass
+
+    logs = query.order_by(models.AuditLog.timestamp.desc()).limit(500).all()
+
+    event_types = [r[0] for r in db.session.query(models.AuditLog.event_type).distinct().order_by(models.AuditLog.event_type).all()]
+    today_start = datetime.combine(date.today(), datetime.min.time())
+    today_events = models.AuditLog.query.filter(models.AuditLog.timestamp >= today_start).count()
+    login_events = models.AuditLog.query.filter(models.AuditLog.event_type.ilike('%login%')).count()
+    unique_users = db.session.query(models.AuditLog.user_email).filter(
+        models.AuditLog.user_email.isnot(None)
+    ).distinct().count()
+
+    log_audit_event('Admin View Activity', current_user.email, 'Accessed activity tracker')
+    return render_template('admin_activity.html',
+                           logs=logs,
+                           event_types=event_types,
+                           filter_user=filter_user,
+                           filter_event=filter_event,
+                           filter_date=filter_date,
+                           today_events=today_events,
+                           login_events=login_events,
+                           unique_users=unique_users)
 
 @app.route('/system-help')
 @login_required

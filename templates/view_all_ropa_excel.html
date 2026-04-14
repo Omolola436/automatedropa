@@ -9,15 +9,15 @@
 {%- endif -%}
 {% endmacro %}
 
-{% block title %}View Uploaded ROPA Files - Excel Format{% endblock %}
+{% block title %}View All ROPA Data{% endblock %}
 
 {% block content %}
 
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="fas fa-table me-2"></i>Uploaded ROPA Files - Excel View</h1>
+    <h1><i class="fas fa-table me-2"></i>ROPA Record Data</h1>
     <div>
         <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary me-2">
-            <i class="fas fa-edit me-2"></i>Edit Uploaded Data
+            <i class="fas fa-edit me-2"></i>Edit Data
         </a>
         <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-success me-2">
             <i class="fas fa-file-excel me-2"></i>Export to Excel
@@ -92,44 +92,49 @@
 
 {% if uploaded_files %}
     {% for file in uploaded_files %}
-    <!-- File {{ loop.index }} -->
     <div class="card mb-4">
         <div class="card-header">
             <h5 class="mb-0">
                 <i class="fas fa-file-excel me-2"></i>
                 File {{ loop.index }}: {{ file.filename }}
-                <span class="badge bg-primary ms-2">
-                    {{ file.total_sheets }} sheet(s)
-                </span>
+                <span class="badge bg-primary ms-2">{{ file.total_sheets }} sheet(s)</span>
                 <small class="text-muted ms-2">
-                    Uploaded: {{ file.upload_timestamp.strftime('%Y-%m-%d %H:%M:%S') if file.upload_timestamp else 'Unknown' }}
+                    Uploaded: {{ file.upload_timestamp.strftime('%Y-%m-%d %H:%M') if file.upload_timestamp else 'Unknown' }}
                 </small>
+                {% if file.last_edited_at %}
+                <small class="text-warning ms-2">
+                    <i class="fas fa-edit me-1"></i>Last edited: {{ file.last_edited_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% if file.last_editor %} by {{ file.last_editor.email }}{% endif %}
+                </small>
+                {% endif %}
             </h5>
-            <small class="text-muted">
-                Uploaded by: {{ file.uploader.email if file.uploader else 'Unknown' }}
-            </small>
+            <small class="text-muted">Uploaded by: {{ file.uploader.email if file.uploader else 'Unknown' }}</small>
         </div>
-        <div class="card-body">
+        <div class="card-body p-0">
             {% if file.sheets %}
                 {% for sheet in file.sheets %}
                 {% if sheet.sheet_data %}
                     {% set sheet_data_list = sheet.sheet_data | from_json %}
                     {% if sheet_data_list %}
-                    <h6 class="mb-3">
-                        <i class="fas fa-table me-2"></i>Sheet: {{ sheet.display_name if sheet.display_name else sheet.sheet_name }}
-                        <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} columns</span>
-                        <span class="badge bg-info ms-1">File: {{ file.filename }}</span>
-                    </h6>
-                    
-                    <div class="table-responsive mb-4">
-                        <table class="excel-table" style="font-size: 0.85rem;">
+                    <div class="px-3 pt-3">
+                        <h6 class="mb-2">
+                            <i class="fas fa-table me-2"></i>Sheet: {{ sheet.display_name if sheet.display_name else sheet.sheet_name }}
+                            <span class="badge bg-secondary ms-2">{{ sheet.row_count }} rows × {{ sheet.column_count }} cols</span>
+                        </h6>
+                        <small class="scroll-hint">
+                            <i class="fas fa-arrow-right me-1"></i>Scroll right to see more columns (Column A stays visible)
+                        </small>
+                    </div>
+
+                    <div class="excel-scroll-wrapper mb-3">
+                        <table class="excel-table">
                             {% if sheet_data_list %}
                                 <thead>
                                     <tr>
-                                        <th class="excel-row-header"></th>
+                                        <th class="excel-row-header sticky-col sticky-top-left">#</th>
                                         {% if sheet_data_list[0] %}
                                             {% for column in sheet_data_list[0].keys() %}
-                                            <th>{{ excel_column_name(loop.index0) }}</th>
+                                            <th class="sticky-header">{{ excel_column_name(loop.index0) }}</th>
                                             {% endfor %}
                                         {% endif %}
                                     </tr>
@@ -137,9 +142,9 @@
                                 <tbody>
                                     {% for row in sheet_data_list %}
                                     <tr>
-                                        <td class="excel-row-header">{{ loop.index }}</td>
+                                        <td class="excel-row-header sticky-col">{{ loop.index }}</td>
                                         {% for column, value in row.items() %}
-                                        <td>{{ value if value is not none else '' }}</td>
+                                        <td title="{{ value if value is not none else '' }}">{{ value if value is not none else '' }}</td>
                                         {% endfor %}
                                     </tr>
                                     {% endfor %}
@@ -170,22 +175,17 @@
     </div>
 {% endif %}
 
-<!-- Footer Actions -->
 <div class="card mt-4">
     <div class="card-body">
         <div class="d-flex justify-content-between">
-            <div>
-                <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                </a>
-            </div>
-            <div>
-                {% if uploaded_files %}
-                <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary">
-                    <i class="fas fa-edit me-2"></i>Edit Uploaded Data
-                </a>
-                {% endif %}
-            </div>
+            <a href="{{ url_for('privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+            {% if uploaded_files %}
+            <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Edit Data
+            </a>
+            {% endif %}
         </div>
     </div>
 </div>
@@ -194,47 +194,116 @@
 
 {% block styles %}
 <style>
+/* Excel scroll wrapper with horizontal scrolling support */
+.excel-scroll-wrapper {
+    overflow-x: auto;
+    overflow-y: visible;
+    position: relative;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Main Excel table styling */
 .excel-table {
     border-collapse: collapse;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 12px;
+    min-width: max-content;
+    width: 100%;
+    margin: 0;
 }
+
 .excel-table th {
     background-color: #f0f0f0;
     border: 1px solid #ccc;
-    padding: 4px 8px;
+    padding: 6px 10px;
     text-align: center;
     font-weight: bold;
+    white-space: nowrap;
+    height: 30px;
+    min-width: 80px;
+    max-width: 150px;
+    word-break: break-word;
+}
+
+.excel-table td {
+    border: 1px solid #ccc;
+    padding: 5px 8px;
+    vertical-align: top;
+    white-space: normal;
+    word-wrap: break-word;
+    min-width: 80px;
+    max-width: 150px;
+    height: auto;
+}
+
+/* Row alternating colors */
+.excel-table tbody tr:nth-child(even) { 
+    background-color: #f9f9f9; 
+}
+
+/* Hover effect on rows */
+.excel-table tbody tr:hover { 
+    background-color: #e6f3ff; 
+}
+
+/* Sticky header row (column letters) */
+.sticky-header {
     position: sticky;
     top: 0;
     z-index: 10;
+    background-color: #f0f0f0;
 }
-.excel-table td {
-    border: 1px solid #ccc;
-    padding: 4px 8px;
-    vertical-align: top;
-    word-wrap: break-word;
-    max-width: 150px;
-    min-height: 20px;
+
+/* Sticky first column (row numbers) - COLUMN A STAYS STATIC */
+.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background-color: #ffffff !important;
+    border-right: 2px solid #999 !important;
+    font-weight: bold;
+    text-align: center;
+    width: 45px;
+    min-width: 45px;
+    max-width: 45px;
 }
-.excel-table tbody tr:nth-child(even) {
-    background-color: #f9f9f9;
-}
-.excel-table tbody tr:hover {
-    background-color: #e6f3ff;
-}
-.excel-row-header {
+
+.sticky-col:hover {
     background-color: #f0f0f0 !important;
+}
+
+/* Top-left corner cell */
+.sticky-top-left {
+    position: sticky;
+    left: 0;
+    top: 0;
+    z-index: 15;
+    background-color: #e8e8e8 !important;
+    border-right: 2px solid #999 !important;
+}
+
+/* Excel row header */
+.excel-row-header {
     text-align: center;
     font-weight: bold;
-    width: 40px;
-    min-width: 40px;
+    width: 45px;
+    min-width: 45px;
+    max-width: 45px;
+    background-color: #f0f0f0;
 }
-.card {
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+
+.card { 
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075); 
+}
+
+/* Help text for users */
+.scroll-hint {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+    font-style: italic;
 }
 </style>
-{% endblock %}
-
-{% block scripts %}
 {% endblock %}
