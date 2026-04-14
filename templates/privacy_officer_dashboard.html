@@ -1,79 +1,110 @@
 {% extends "base.html" %}
-
-{% block title %}Privacy Officer Dashboard - Privacy ROPA System{% endblock %}
+{% block title %}Dashboard — PrivaRec{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1><i class="fas fa-user-tie me-2"></i>Privacy Officer Dashboard</h1>
-        <p class="text-muted small mt-2">
-            <i class="fas fa-tag me-1"></i>
-            Current Plan: <strong>{{ current_tier_name }}</strong>
-        </p>
+
+{# ── Welcome Banner ── #}
+<div class="rounded-3 mb-4 px-4 py-4 text-white"
+     style="background: linear-gradient(135deg,#1a56db 0%,#0c3d8f 60%,#062566 100%); min-height:120px;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+        <div>
+            <h2 class="mb-1 fw-bold">
+                <i class="fas fa-user-shield me-2 opacity-75"></i>
+                Welcome, {{ current_user.department or current_user.email.split('@')[0] | title }}
+            </h2>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="badge bg-white text-primary fw-semibold">
+                    <i class="fas fa-tag me-1"></i>{{ current_tier_name }}
+                </span>
+                <span class="text-white-50 small">Privacy Officer · {{ current_user.email }}</span>
+                {% if session.get('test_tier') %}
+                <span class="badge bg-warning text-dark">
+                    <i class="fas fa-flask me-1"></i>Test Mode: {{ tiers[session.test_tier].name }}
+                    <a href="{{ url_for('exit_test_mode') }}" class="text-dark ms-1">✕</a>
+                </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('add_activity') }}" class="btn btn-warning fw-semibold">
+                <i class="fas fa-plus me-1"></i>New Activity
+            </a>
+            <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-light">
+                <i class="fas fa-table me-1"></i>View All
+            </a>
+        </div>
     </div>
-    <div>
-        <!-- Updated: Create Activity button -->
-        <a href="{{ url_for('add_activity') }}" class="btn btn-success me-2">
-            <i class="fas fa-plus me-2"></i>Create Activity
-        </a>
-        <a href="{{ url_for('add_activity') }}" class="btn btn-primary">
-            <i class="fas fa-plus me-2"></i>Add New Activity
-        </a>
+
+    {# Activity usage bar #}
+    {% set max_act = sub_config.get('max_activities', -1) %}
+    {% if max_act and max_act != -1 %}
+    {% set pct = ((total_records / max_act) * 100) | int %}
+    <div class="mt-3">
+        <div class="d-flex justify-content-between mb-1">
+            <small class="text-white-75">Activities used: <strong>{{ total_records }} / {{ max_act }}</strong></small>
+            <small class="text-white-75">{{ pct }}% of plan limit</small>
+        </div>
+        <div class="progress" style="height:6px; background:rgba(255,255,255,0.2);">
+            <div class="progress-bar {% if pct >= 90 %}bg-danger{% elif pct >= 70 %}bg-warning{% else %}bg-success{% endif %}"
+                 style="width:{{ [pct,100]|min }}%;"></div>
+        </div>
+        {% if pct >= 90 %}
+        <small class="text-warning mt-1 d-inline-block">
+            <i class="fas fa-exclamation-triangle me-1"></i>
+            Almost at limit —
+            <a href="{{ url_for('pricing') }}" class="text-warning fw-bold">Upgrade now</a>
+        </small>
+        {% endif %}
     </div>
+    {% else %}
+    <div class="mt-2">
+        <small class="text-white-50"><i class="fas fa-infinity me-1"></i>Unlimited activities on your plan</small>
+    </div>
+    {% endif %}
 </div>
 
-{% if session.get('test_tier') %}
-<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
-    <i class="fas fa-flask fa-2x me-3 text-info"></i>
+{# ── Upgrade / Trial alerts ── #}
+{% if sub_tier == 'expired' %}
+<div class="alert alert-danger d-flex align-items-center mb-4">
+    <i class="fas fa-exclamation-circle fa-2x me-3"></i>
     <div class="flex-grow-1">
-        <h5 class="mb-1">Test Mode: {{ tiers[session.test_tier].name }} Plan</h5>
-        <p class="mb-0">You are currently testing the {{ tiers[session.test_tier].name }} plan features. <a href="{{ url_for('exit_test_mode') }}" class="alert-link">Exit Test Mode</a></p>
+        <strong>Trial Expired</strong> — Your free trial has ended. Upgrade to continue adding activities.
     </div>
+    <a href="{{ url_for('pricing') }}" class="btn btn-danger ms-3">Upgrade Now</a>
 </div>
 {% endif %}
 
-{% if not sub_config.get('has_dashboard') %}
-<!-- Upgrade banner for Trial / Starter -->
-<div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
-    <i class="fas fa-chart-bar fa-2x me-3 text-warning"></i>
-    <div class="flex-grow-1">
-        <h5 class="mb-1">Dashboard Analytics — Growth &amp; Enterprise</h5>
-        <p class="mb-0">Upgrade to unlock full statistics, risk dashboards, advanced reporting, in-app alerts, and compliance scoring.</p>
-    </div>
-    <a href="{{ url_for('pricing') }}" class="btn btn-warning ms-3">Upgrade Now</a>
-</div>
-{% endif %}
-
+{# ── Notification panel ── #}
 {% if recent_notifications %}
-<!-- Notification Alert Panel (Growth+) -->
-<div class="card border-warning mb-4">
-    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
-        <h6 class="mb-0"><i class="fas fa-bell me-2"></i>Active Alerts ({{ recent_notifications|length }} unread)</h6>
-        <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-dark">View All</a>
+<div class="card border-0 shadow-sm mb-4" style="border-left:4px solid #f59e0b !important;">
+    <div class="card-header d-flex justify-content-between align-items-center bg-warning bg-opacity-10 border-0">
+        <h6 class="mb-0 text-warning fw-bold">
+            <i class="fas fa-bell me-2"></i>Active Alerts
+            <span class="badge bg-warning text-dark ms-1">{{ recent_notifications|length }}</span>
+        </h6>
+        <a href="{{ url_for('notifications') }}" class="btn btn-sm btn-warning">View All</a>
     </div>
     <div class="card-body p-0">
         <div class="list-group list-group-flush">
             {% for n in recent_notifications %}
-            <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div class="list-group-item d-flex justify-content-between align-items-center py-2">
                 <div>
                     {% if n.alert_type == 'danger' %}
                         <span class="badge bg-danger me-2">High Risk</span>
                     {% elif n.alert_type == 'warning' %}
                         <span class="badge bg-warning text-dark me-2">Warning</span>
-                    {% elif n.alert_type == 'primary' %}
-                        <span class="badge bg-primary me-2">New</span>
                     {% else %}
                         <span class="badge bg-info me-2">Info</span>
                     {% endif %}
-                    <strong>{{ n.title }}</strong>
-                    <small class="text-muted ms-2">{{ n.created_at.strftime('%m-%d %H:%M') if n.created_at else '' }}</small>
+                    <strong class="small">{{ n.title }}</strong>
+                    <small class="text-muted ms-2">{{ n.created_at.strftime('%d %b %H:%M') if n.created_at else '' }}</small>
                 </div>
-                <div>
+                <div class="d-flex gap-1">
                     {% if n.related_record_id %}
-                    <a href="{{ url_for('view_activity', record_id=n.related_record_id) }}" class="btn btn-sm btn-outline-primary me-1">View</a>
+                    <a href="{{ url_for('view_activity', record_id=n.related_record_id) }}" class="btn btn-sm btn-outline-primary">View</a>
                     {% endif %}
                     <form method="POST" action="{{ url_for('mark_notification_read', notif_id=n.id) }}" style="display:inline;">
-                        <button type="submit" class="btn btn-sm btn-outline-secondary">Dismiss</button>
+                        <button type="submit" class="btn btn-sm btn-outline-secondary">✕</button>
                     </form>
                 </div>
             </div>
@@ -83,646 +114,504 @@
 </div>
 {% endif %}
 
-{% if org_compliance %}
-<!-- Compliance Score Card (Enterprise only) -->
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="fas fa-chart-pie me-2"></i>Organisation Compliance Score</h5>
-        <a href="{{ url_for('compliance_report') }}" class="btn btn-sm btn-outline-primary">Full Report</a>
-    </div>
-    <div class="card-body">
-        <div class="row align-items-center">
-            <div class="col-md-3 text-center">
-                <div class="display-3 fw-bold text-{{ org_compliance.color }}">{{ org_compliance.score }}%</div>
-                <span class="badge bg-{{ org_compliance.color }} px-3 py-2 fs-6">{{ org_compliance.label }}</span>
+{# ── Stat Cards ── #}
+<div class="row g-3 mb-4">
+    {% if sub_config.get('has_dashboard') %}
+    <div class="col-6 col-md-2">
+        <a href="#records-table" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #1a56db !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-primary">{{ total_records }}</div>
+                    <div class="small text-muted">Total</div>
+                </div>
             </div>
-            <div class="col-md-9">
-                <div class="progress mb-2" style="height: 20px;">
-                    <div class="progress-bar bg-{{ org_compliance.color }}" role="progressbar"
-                         style="width: {{ org_compliance.score }}%">
-                        {{ org_compliance.score }}% Compliant
-                    </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-2">
+        <a href="javascript:void(0)" onclick="filterRecords('Approved')" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #16a34a !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-success">{{ approved_records }}</div>
+                    <div class="small text-muted">Approved</div>
                 </div>
-                <p class="text-muted mb-0">Based on {{ org_compliance.record_count }} ROPA record(s). Score measures field completeness across all required compliance fields.</p>
-                {% if org_compliance.score < 60 %}
-                <div class="alert alert-danger mt-2 py-2 mb-0">
-                    <i class="fas fa-exclamation-triangle me-1"></i>
-                    <strong>Action Required:</strong> Organisation score is below 60%. Review and complete missing fields across your ROPA records.
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-2">
+        <a href="javascript:void(0)" onclick="filterRecords('Under Review')" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #d97706 !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-warning">{{ pending_count }}</div>
+                    <div class="small text-muted">Pending</div>
                 </div>
-                {% endif %}
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-2">
+        <a href="javascript:void(0)" onclick="filterRecords('Draft')" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #6b7280 !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-secondary">{{ draft_count }}</div>
+                    <div class="small text-muted">Drafts</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-6 col-md-2">
+        <a href="javascript:void(0)" onclick="filterRecords('Rejected')" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #dc2626 !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-danger">{{ rejected_records }}</div>
+                    <div class="small text-muted">Rejected</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% if org_compliance %}
+    <div class="col-6 col-md-2">
+        <a href="{{ url_for('compliance_report') }}" class="text-decoration-none">
+            <div class="card h-100 border-0 shadow-sm text-center py-3"
+                 style="border-top:3px solid #7c3aed !important;">
+                <div class="card-body p-2">
+                    <div class="fs-1 fw-bold text-{{ org_compliance.color }}">{{ org_compliance.score }}%</div>
+                    <div class="small text-muted">Compliance</div>
+                </div>
+            </div>
+        </a>
+    </div>
+    {% endif %}
+    {% else %}
+    {# Trial/Starter — simplified cards #}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center py-3" style="border-top:3px solid #1a56db !important;">
+            <div class="card-body p-2">
+                <div class="fs-1 fw-bold text-primary">{{ total_records }}</div>
+                <div class="small text-muted">Total Records</div>
             </div>
         </div>
     </div>
-</div>
-{% endif %}
-
-<!-- Statistics Cards -->
-<div class="row mb-4">
-{% if not sub_config.get('has_dashboard') %}
-    <!-- Simplified activity count for Trial/Starter -->
-    <div class="col-md-4 mb-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title">Total Records</h6>
-                        <h3 class="mb-0">{{ total_records }}</h3>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-file-alt fa-2x opacity-75"></i>
-                    </div>
-                </div>
+    <div class="col-md-8">
+        <div class="card border-warning h-100 border-0 shadow-sm d-flex flex-row align-items-center px-4">
+            <i class="fas fa-lock text-warning fa-2x me-3"></i>
+            <div>
+                <div class="fw-bold text-muted small mb-1">Detailed analytics locked</div>
+                <div class="small text-muted">Upgrade to Growth or Enterprise to unlock approved, pending, draft, and compliance statistics.</div>
+                <a href="{{ url_for('pricing') }}" class="btn btn-sm btn-warning mt-2">Upgrade</a>
             </div>
         </div>
     </div>
-    <div class="col-md-8 mb-3">
-        <div class="card border-warning h-100">
-            <div class="card-body d-flex align-items-center">
-                <i class="fas fa-lock text-warning fa-2x me-3"></i>
-                <div>
-                    <h6 class="mb-1 text-muted">Detailed analytics are locked</h6>
-                    <p class="mb-0 small">Upgrade to Growth or Enterprise to see approved, pending, draft, rejected counts and compliance insights.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-{% else %}
-    <div class="col-md-2 mb-3">
-        <a href="#records-table" class="dashboard-card-clickable">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title">Total Records</h6>
-                            <h3 class="mb-0">{{ total_records }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-file-alt fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-2 mb-3">
-        <a href="javascript:void(0)" onclick="filterRecords('Approved')" class="dashboard-card-clickable">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title">Approved</h6>
-                            <h3 class="mb-0">{{ approved_records }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-check-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-2 mb-3">
-        <a href="javascript:void(0)" onclick="filterRecords('Pending Review')" class="dashboard-card-clickable">
-            <div class="card bg-warning text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title">Pending</h6>
-                            <h3 class="mb-0">{{ pending_count }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-clock fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-2 mb-3">
-        <a href="javascript:void(0)" onclick="filterRecords('Draft')" class="dashboard-card-clickable">
-            <div class="card bg-secondary text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title">Drafts</h6>
-                            <h3 class="mb-0">{{ draft_records }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-edit fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-md-2 mb-3">
-        <a href="javascript:void(0)" onclick="filterRecords('Rejected')" class="dashboard-card-clickable">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <h6 class="card-title">Rejected</h6>
-                            <h3 class="mb-0">{{ rejected_records }}</h3>
-                        </div>
-                        <div class="align-self-center">
-                            <i class="fas fa-times-circle fa-2x opacity-75"></i>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </a>
-    </div>
-{% endif %}
-
+    {% endif %}
 </div>
 
-<!-- Management Actions -->
-<div class="row mb-4">
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-plus-circle me-2"></i>Create Activity
-                </h5>
-                <p class="card-text">Start a new ROPA record using the step-by-step ROPA wizard.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('add_activity') }}" class="btn btn-outline-success">
-                        <i class="fas fa-plus me-1"></i>Create Activity
-                    </a>
-                    <a href="{{ url_for('upload_file') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-upload me-1"></i>Upload File
-                    </a>
-                </div>
+{# ── Main body: Quick Actions + Compliance score ── #}
+<div class="row g-4 mb-4">
+    {# Quick actions #}
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header border-0 bg-white pt-3 pb-0">
+                <h6 class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:0.08em;">
+                    <i class="fas fa-bolt me-1"></i>Quick Actions
+                </h6>
             </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-3">
-        <div class="card">
             <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-table me-2"></i>View & Edit ROPA
-                </h5>
-                <p class="card-text">View all ROPA data in Excel format or edit records with comprehensive data management.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-info">
-                        <i class="fas fa-eye me-1"></i>View All Data
-                    </a>
-                    <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-edit me-1"></i>Edit All Data
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-download me-2"></i>Export Data
-                </h5>
-                <p class="card-text">Export ROPA records in various formats for reporting and compliance.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-file-excel me-1"></i>Export Excel
-                    </a>
-                    <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-danger">
-                        <i class="fas fa-file-pdf me-1"></i>Export PDF
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if sub_config.get('has_multi_user') %}
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-users me-2"></i>User Management
-                </h5>
-                <p class="card-text">Manage user accounts, register new users, and control access permissions.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('user_management') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-users-cog me-1"></i>Manage Users
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sub_config.get('has_audit_logs') %}
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-list me-2"></i>System Monitoring
-                </h5>
-                <p class="card-text">View system audit logs and monitor user activities for security.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('audit_logs') }}" class="btn btn-outline-info">
-                        <i class="fas fa-eye me-1"></i>View Audit Logs
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-save me-2"></i>Saved ROPA
-                </h5>
-                <p class="card-text">Manage saved ROPA records and access previously stored processing activities.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('view_saved_ropa') }}" class="btn btn-outline-success">
-                        <i class="fas fa-folder-open me-1"></i>View Saved ROPA
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {% if sub_tier != 'trial' %}
-    <div class="col-md-4 mb-3">
-        <div class="card">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-question-circle me-2"></i>Help & Support
-                </h5>
-                <p class="card-text">Get help with errors, troubleshooting tips, and system guidance.</p>
-                <div class="btn-group d-grid gap-2" role="group">
-                    <a href="{{ url_for('system_help') }}" class="btn btn-outline-warning">
-                        <i class="fas fa-life-ring me-1"></i>Help & Errors
-                    </a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sub_config.get('has_compliance_score') %}
-    <div class="col-md-4 mb-3">
-        <div class="card border-success">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-chart-pie me-2 text-success"></i>Compliance Scoring
-                    <span class="badge bg-success ms-1" style="font-size:0.6rem;">Enterprise</span>
-                </h5>
-                <p class="card-text">View per-record compliance scores and organisation-wide rating.</p>
-                <a href="{{ url_for('compliance_report') }}" class="btn btn-outline-success w-100">
-                    <i class="fas fa-chart-pie me-1"></i>View Compliance Report
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sub_config.get('has_health_engine') %}
-    <div class="col-md-4 mb-3">
-        <div class="card border-danger">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-heartbeat me-2 text-danger"></i>ROPA Health Engine
-                    <span class="badge bg-danger ms-1" style="font-size:0.6rem;">Enterprise</span>
-                </h5>
-                <p class="card-text">Run an automated health check to detect high-risk, outdated, and incomplete records.</p>
-                <form method="POST" action="{{ url_for('run_health_check') }}">
-                    <button type="submit" class="btn btn-outline-danger w-100">
-                        <i class="fas fa-heartbeat me-1"></i>Run Health Check
-                    </button>
-                </form>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sub_config.get('has_vendor_tracking') %}
-    <div class="col-md-4 mb-3">
-        <div class="card border-primary">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-building me-2 text-primary"></i>Vendor Tracking
-                    <span class="badge bg-primary ms-1" style="font-size:0.6rem;">Enterprise</span>
-                </h5>
-                <p class="card-text">Track third-party vendors, flag non-adequate countries, and monitor contract expiry.</p>
-                <a href="{{ url_for('vendors') }}" class="btn btn-outline-primary w-100">
-                    <i class="fas fa-building me-1"></i>Manage Vendors
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-
-    {% if sub_config.get('has_alerts') %}
-    <div class="col-md-4 mb-3">
-        <div class="card border-warning">
-            <div class="card-body">
-                <h5 class="card-title">
-                    <i class="fas fa-bell me-2 text-warning"></i>Notifications
-                    {% if unread_notifications and unread_notifications > 0 %}
-                    <span class="badge bg-danger ms-1">{{ unread_notifications }}</span>
+                <div class="row g-2">
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('add_activity') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-plus-circle fa-lg"></i>
+                            <span class="small">New Activity</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-upload fa-lg"></i>
+                            <span class="small">Upload File</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('view_all_ropa_excel') }}" class="btn btn-outline-info w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-table fa-lg"></i>
+                            <span class="small">View ROPA</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('edit_all_ropa_excel') }}" class="btn btn-outline-warning w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-edit fa-lg"></i>
+                            <span class="small">Edit ROPA</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('export_data', format='excel') }}" class="btn btn-outline-success w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-file-excel fa-lg"></i>
+                            <span class="small">Export Excel</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('export_data', format='pdf') }}" class="btn btn-outline-danger w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-file-pdf fa-lg"></i>
+                            <span class="small">Export PDF</span>
+                        </a>
+                    </div>
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('view_saved_ropa') }}" class="btn btn-outline-dark w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-folder-open fa-lg"></i>
+                            <span class="small">Saved ROPA</span>
+                        </a>
+                    </div>
+                    {% if sub_config.get('has_multi_user') %}
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('user_management') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-users fa-lg"></i>
+                            <span class="small">Users</span>
+                        </a>
+                    </div>
                     {% endif %}
-                </h5>
-                <p class="card-text">View in-app alerts for risks, missing fields, review deadlines, and more.</p>
-                <a href="{{ url_for('notifications') }}" class="btn btn-outline-warning w-100">
-                    <i class="fas fa-bell me-1"></i>View Notifications
-                </a>
-            </div>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Recent Audit Activities -->
-<div class="row mb-4">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">
-                    <i class="fas fa-history me-2"></i>Recent Activities
-                    <a href="{{ url_for('audit_logs') }}" class="btn btn-sm btn-outline-primary float-end">View All</a>
-                </h5>
-            </div>
-            <div class="card-body">
-                {% if audit_logs and audit_logs.logs %}
-                    <div class="table-responsive">
-                        <table class="table table-sm">
-                            <thead>
-                                <tr>
-                                    <th>Time</th>
-                                    <th>Event</th>
-                                    <th>User</th>
-                                    <th>Description</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for log in audit_logs.logs[:5] %}
-                                <tr>
-                                    <td><small>{% if log.timestamp and log.timestamp.strftime %}{{ log.timestamp.strftime('%m-%d %H:%M') }}{% else %}N/A{% endif %}</small></td>
-                                    <td>
-                                        <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% else %}primary{% endif %}">
-                                            {{ log.event_type }}
-                                        </span>
-                                    </td>
-                                    <td><small>{{ log.user_email }}</small></td>
-                                    <td><small>{{ log.description[:80] }}{% if log.description|length > 80 %}...{% endif %}</small></td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                    {% if sub_config.get('has_vendor_tracking') %}
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('vendors') }}" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-building fa-lg"></i>
+                            <span class="small">Vendors</span>
+                        </a>
                     </div>
+                    {% endif %}
+                    {% if sub_config.get('has_compliance_score') %}
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('compliance_report') }}" class="btn btn-outline-success w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-chart-pie fa-lg"></i>
+                            <span class="small">Compliance</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                    {% if sub_config.get('has_health_engine') %}
+                    <div class="col-6 col-md-4">
+                        <form method="POST" action="{{ url_for('run_health_check') }}">
+                            <button type="submit" class="btn btn-outline-danger w-100 py-3 d-flex flex-column align-items-center gap-1 border-0"
+                                    style="border:1px solid #dc2626 !important;">
+                                <i class="fas fa-heartbeat fa-lg"></i>
+                                <span class="small">Health Check</span>
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% if sub_config.get('has_alerts') %}
+                    <div class="col-6 col-md-4">
+                        <a href="{{ url_for('notifications') }}" class="btn btn-outline-warning w-100 py-3 d-flex flex-column align-items-center gap-1">
+                            <i class="fas fa-bell fa-lg"></i>
+                            <span class="small">Alerts{% if unread_notifications and unread_notifications > 0 %} <span class="badge bg-danger">{{ unread_notifications }}</span>{% endif %}</span>
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Right: Compliance score + recent audit ── #}
+    <div class="col-md-4 d-flex flex-column gap-3">
+        {% if org_compliance %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-header border-0 bg-white pt-3 pb-0">
+                <h6 class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:0.08em;">
+                    <i class="fas fa-chart-pie me-1"></i>Compliance Score
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="display-4 fw-bold text-{{ org_compliance.color }}">{{ org_compliance.score }}%</div>
+                <span class="badge bg-{{ org_compliance.color }} px-3 py-1 mb-2">{{ org_compliance.label }}</span>
+                <div class="progress mt-2" style="height:10px;">
+                    <div class="progress-bar bg-{{ org_compliance.color }}"
+                         style="width:{{ org_compliance.score }}%;"></div>
+                </div>
+                <div class="text-muted small mt-2">Based on {{ org_compliance.record_count }} record(s)</div>
+                {% if org_compliance.score < 60 %}
+                <div class="alert alert-danger py-2 mt-2 mb-0 small">
+                    <i class="fas fa-exclamation-triangle me-1"></i>Score below 60% — review incomplete records
+                </div>
+                {% endif %}
+                <a href="{{ url_for('compliance_report') }}" class="btn btn-sm btn-outline-primary mt-2 w-100">Full Report</a>
+            </div>
+        </div>
+        {% elif not sub_config.get('has_compliance_score') %}
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center py-4">
+                <i class="fas fa-chart-pie fa-3x text-muted mb-3 opacity-25"></i>
+                <div class="fw-bold text-muted small">Compliance Scoring</div>
+                <div class="text-muted small mb-2">Available on Enterprise</div>
+                <a href="{{ url_for('pricing') }}" class="btn btn-sm btn-outline-primary">Upgrade</a>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Recent audit feed #}
+        <div class="card border-0 shadow-sm flex-grow-1">
+            <div class="card-header border-0 bg-white pt-3 pb-0 d-flex justify-content-between">
+                <h6 class="fw-bold text-muted text-uppercase" style="font-size:0.75rem;letter-spacing:0.08em;">
+                    <i class="fas fa-history me-1"></i>Recent Activity
+                </h6>
+                <a href="{{ url_for('audit_logs') }}" class="btn btn-sm btn-link p-0 text-muted small">View all →</a>
+            </div>
+            <div class="card-body p-0">
+                {% if audit_logs and audit_logs.logs %}
+                <div class="list-group list-group-flush">
+                    {% for log in audit_logs.logs[:6] %}
+                    <div class="list-group-item border-0 py-2 px-3">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="badge bg-{% if 'Success' in log.event_type %}success{% elif 'Failed' in log.event_type or 'Error' in log.event_type %}danger{% else %}primary{% endif %} me-2" style="font-size:0.65rem;">{{ log.event_type }}</span>
+                            <small class="text-muted">{% if log.timestamp and log.timestamp.strftime %}{{ log.timestamp.strftime('%d %b %H:%M') }}{% endif %}</small>
+                        </div>
+                        <div class="small text-muted mt-1">{{ log.description[:60] }}{% if log.description|length > 60 %}...{% endif %}</div>
+                    </div>
+                    {% endfor %}
+                </div>
                 {% else %}
-                    <p class="text-muted text-center mb-0">No recent activities</p>
+                <div class="text-muted text-center py-4 small">No recent activity</div>
                 {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Draft Records Section -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h3>Draft Records ({{ draft_count }})</h3>
-                {% if draft_records %}
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Activity Name</th>
-                                <th>Created By</th>
-                                <th>Created Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for record in draft_records %}
-                        <tr>
-                            <td>{{ record.processing_activity_name }}</td>
-                            <td>
-                                {% if record.creator %}
-                                    {{ record.creator.email }}
-                                {% else %}
-                                    Uploaded File
-                                {% endif %}
-                            </td>
-                            <td>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</td>
-                            <td>
-                                <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-info">View</a>
-                                <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Under Review') }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-sm btn-primary">Submit for Review</button>
-                                </form>
-                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display: inline;">
-                                    <button type="submit" class="btn btn-sm btn-success">Approve</button>
-                                </form>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="4" class="text-center">No draft records found</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted">No draft records found.</p>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Pending Records Section -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h3>Pending Review ({{ pending_count }})</h3>
-                {% if pending_records %}
-                <div class="table-responsive">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Activity Name</th>
-                                <th>Created By</th>
-                                <th>Created Date</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for record in pending_records %}
-                            <tr>
-                                <td>{{ record.processing_activity_name }}</td>
-                                <td>{{ record.creator.email if record.creator else 'N/A' }}</td>
-                                <td>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</td>
-                                <td>
-                                    <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-info">View</a>
-                                    <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display: inline;">
-                                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Approve this record?')">Approve</button>
-                                    </form>
-                                    <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Rejected') }}" style="display: inline;">
-                                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Reject this record?')">Reject</button>
-                                    </form>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <p class="text-muted">No records pending review.</p>
-                {% endif %}
-            </div>
-        </div>
-
-<!-- ROPA Records Table -->
-<div class="card" id="records-table">
-    <div class="card-header">
-        <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-table me-2"></i>All ROPA Records
-            </h5>
-            <div class="btn-group btn-group-sm" role="group">
-                <input type="radio" class="btn-check" name="statusFilter" id="all" value="all" checked>
-                <label class="btn btn-outline-primary" for="all">All</label>
-
-                <input type="radio" class="btn-check" name="statusFilter" id="pending" value="Pending Review">
-                <label class="btn btn-outline-warning" for="pending">Pending</label>
-
-                <input type="radio" class="btn-check" name="statusFilter" id="approved" value="Approved">
-                <label class="btn btn-outline-success" for="approved">Approved</label>
-
-                <input type="radio" class="btn-check" name="statusFilter" id="rejected" value="Rejected">
-                <label class="btn btn-outline-danger" for="rejected">Rejected</label>
-            </div>
+{# ── Pending Records ── #}
+{% if pending_records %}
+<div class="card border-0 shadow-sm mb-4" style="border-left:4px solid #d97706 !important;">
+    <div class="card-header border-0 bg-white d-flex justify-content-between align-items-center pt-3">
+        <h6 class="fw-bold mb-0">
+            <i class="fas fa-clock text-warning me-2"></i>Pending Review
+            <span class="badge bg-warning text-dark ms-1">{{ pending_count }}</span>
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Activity</th>
+                        <th>Submitted by</th>
+                        <th>Date</th>
+                        <th class="pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for record in pending_records %}
+                <tr>
+                    <td class="ps-3"><strong class="small">{{ record.processing_activity_name }}</strong></td>
+                    <td><small class="text-muted">{{ record.creator.email if record.creator else 'N/A' }}</small></td>
+                    <td><small class="text-muted">{{ record.created_at.strftime('%d %b %Y') if record.created_at else 'N/A' }}</small></td>
+                    <td class="pe-3">
+                        <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-primary me-1">View</a>
+                        <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display:inline;">
+                            <button class="btn btn-sm btn-success me-1" onclick="return confirm('Approve?')">✓</button>
+                        </form>
+                        <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Rejected') }}" style="display:inline;">
+                            <button class="btn btn-sm btn-danger" onclick="return confirm('Reject?')">✕</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
-    <div class="card-body">
+</div>
+{% endif %}
+
+{# ── Draft Records ── #}
+{% if draft_records %}
+<div class="card border-0 shadow-sm mb-4" style="border-left:4px solid #6b7280 !important;">
+    <div class="card-header border-0 bg-white d-flex justify-content-between align-items-center pt-3">
+        <h6 class="fw-bold mb-0">
+            <i class="fas fa-edit text-secondary me-2"></i>Draft Records
+            <span class="badge bg-secondary ms-1">{{ draft_count }}</span>
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Activity</th>
+                        <th>Created by</th>
+                        <th>Date</th>
+                        <th class="pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for record in draft_records %}
+                <tr>
+                    <td class="ps-3"><strong class="small">{{ record.processing_activity_name }}</strong></td>
+                    <td><small class="text-muted">{{ record.creator.email if record.creator else 'Uploaded' }}</small></td>
+                    <td><small class="text-muted">{{ record.created_at.strftime('%d %b %Y') if record.created_at else 'N/A' }}</small></td>
+                    <td class="pe-3">
+                        <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-info me-1">View</a>
+                        <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-warning me-1">Edit</a>
+                        <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Under Review') }}" style="display:inline;">
+                            <button class="btn btn-sm btn-primary">Submit</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{# ── All Records Table ── #}
+<div class="card border-0 shadow-sm" id="records-table">
+    <div class="card-header border-0 bg-white pt-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h6 class="fw-bold mb-0">
+            <i class="fas fa-table me-2 text-primary"></i>All ROPA Records
+            <span class="badge bg-primary ms-1">{{ total_records }}</span>
+        </h6>
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+            <div class="btn-group btn-group-sm" role="group">
+                <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked>
+                <label class="btn btn-outline-secondary" for="filterAll">All</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="filterPending" value="Under Review">
+                <label class="btn btn-outline-warning" for="filterPending">Pending</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="filterApproved" value="Approved">
+                <label class="btn btn-outline-success" for="filterApproved">Approved</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="filterDraft" value="Draft">
+                <label class="btn btn-outline-secondary" for="filterDraft">Draft</label>
+
+                <input type="radio" class="btn-check" name="statusFilter" id="filterRejected" value="Rejected">
+                <label class="btn btn-outline-danger" for="filterRejected">Rejected</label>
+            </div>
+            <a href="{{ url_for('add_activity') }}" class="btn btn-sm btn-primary">
+                <i class="fas fa-plus me-1"></i>New
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
         {% if records %}
-            <div class="table-responsive">
-                <table class="table table-hover" id="ropaTable">
-                    <thead>
-                        <tr>
-                            <th>Activity Name</th>
-                            <th>Created By</th>
-                            <th>Status</th>
-                            <th>Created</th>
-                            <th>Safeguards</th>
-                            <th>Security Measures</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for record in records %}
-                        <tr data-status="{{ record.status }}">
-                            <td>
-                                <strong>{{ record.processing_activity_name }}</strong>
-                                <br><small class="text-muted">{{ record.description[:60] }}{% if record.description|length > 60 %}...{% endif %}</small>
-                            </td>
-                            <td>
-                                <small>{{ record.created_by }}</small>
-                            </td>
-                            <td>
-                                {% if record.status == 'Approved' %}
-                                    <span class="badge bg-success">{{ record.status }}</span>
-                                {% elif record.status == 'Pending Review' %}
-                                    <span class="badge bg-warning">{{ record.status }}</span>
-                                {% elif record.status == 'Rejected' %}
-                                    <span class="badge bg-danger">{{ record.status }}</span>
-                                {% else %}
-                                    <span class="badge bg-secondary">{{ record.status }}</span>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="ropaTable">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Activity Name</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Legal Basis</th>
+                        <th>Risk</th>
+                        <th class="pe-3">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for record in records %}
+                    <tr data-status="{{ record.status }}">
+                        <td class="ps-3">
+                            <div class="fw-semibold small">{{ record.processing_activity_name }}</div>
+                            {% if record.description %}
+                            <div class="text-muted" style="font-size:0.75rem;">{{ record.description[:55] }}{% if record.description|length > 55 %}…{% endif %}</div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if record.status == 'Approved' %}
+                                <span class="badge bg-success">{{ record.status }}</span>
+                            {% elif record.status in ['Pending Review','Under Review'] %}
+                                <span class="badge bg-warning text-dark">{{ record.status }}</span>
+                            {% elif record.status == 'Rejected' %}
+                                <span class="badge bg-danger">{{ record.status }}</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ record.status or 'Draft' }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ record.created_at.strftime('%d %b %Y') if record.created_at else '—' }}</small>
+                        </td>
+                        <td>
+                            <small class="text-muted">{{ record.legal_basis or '—' }}</small>
+                        </td>
+                        <td>
+                            {% if record.risk_level %}
+                            <span class="badge {% if record.risk_level|lower == 'high' %}bg-danger{% elif record.risk_level|lower == 'medium' %}bg-warning text-dark{% else %}bg-success{% endif %}">
+                                {{ record.risk_level }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted small">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="pe-3">
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-primary" title="View">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if record.status in ['Pending Review','Under Review'] %}
+                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Approved') }}" style="display:inline;">
+                                    <button class="btn btn-sm btn-outline-success" title="Approve" onclick="return confirm('Approve?')">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                </form>
+                                <form method="POST" action="{{ url_for('update_status', record_id=record.id, status='Rejected') }}" style="display:inline;">
+                                    <button class="btn btn-sm btn-outline-danger" title="Reject" onclick="return confirm('Reject?')">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </form>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <small>{{ record.created_at.strftime('%Y-%m-%d') if record.created_at else 'N/A' }}</small>
-                            </td>
-                            <td>
-                                <small>{{ record.safeguards[:50] if record.safeguards else 'N/A' }}{% if record.safeguards and record.safeguards|length > 50 %}...{% endif %}</small>
-                            </td>
-                            <td>
-                                <small>{{ record.security_measures[:50] if record.security_measures else 'N/A' }}{% if record.security_measures and record.security_measures|length > 50 %}...{% endif %}</small>
-                            </td>
-                            <td>
-                                <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ url_for('view_activity', record_id=record.id) }}" class="btn btn-outline-primary" title="View">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
-                                    <a href="{{ url_for('edit_activity', record_id=record.id) }}" class="btn btn-outline-secondary" title="Edit">
-                                        <i class="fas fa-edit"></i>
-                                    </a>
-                                    {% if record.status == 'Pending Review' %}
-                                    <div class="btn-group btn-group-sm" role="group">
-                                        <a href="{{ url_for('update_status', record_id=record.id, status='Approved') }}"
-                                           class="btn btn-outline-success" title="Approve"
-                                           onclick="return confirm('Approve this record?')">
-                                            <i class="fas fa-check"></i>
-                                        </a>
-                                        <a href="{{ url_for('update_status', record_id=record.id, status='Rejected') }}"
-                                           class="btn btn-outline-danger" title="Reject"
-                                           onclick="return confirm('Reject this record?')">
-                                            <i class="fas fa-times"></i>
-                                        </a>
-                                    </div>
-                                    {% endif %}
-                                    <a href="{{ url_for('delete_activity', record_id=record.id) }}" class="btn btn-outline-danger" title="Delete"
-                                       onclick="return confirm('Are you sure you want to delete this record?')">
-                                        <i class="fas fa-trash"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <a href="{{ url_for('delete_activity', record_id=record.id) }}" class="btn btn-sm btn-outline-danger" title="Delete"
+                                   onclick="return confirm('Delete this record?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <div class="text-center py-4">
-                <i class="fas fa-file-alt fa-3x text-muted mb-3"></i>
-                <h5>No ROPA Records Found</h5>
-                <p class="text-muted">Get started by creating your first processing activity record or uploading a template.</p>
-                <div>
-                    <a href="{{ url_for('add_activity') }}" class="btn btn-primary me-2">
-                        <i class="fas fa-plus me-2"></i>Add New Activity
-                    </a>
-                    <a href="{{ url_for('upload_file') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-upload me-2"></i>Upload Template
-                    </a>
-                </div>
-            </div>
+        <div class="text-center py-5">
+            <i class="fas fa-shield-alt fa-4x text-muted mb-3 opacity-25"></i>
+            <h5 class="text-muted">No ROPA Records Yet</h5>
+            <p class="text-muted small">Get started by creating your first processing activity.</p>
+            <a href="{{ url_for('add_activity') }}" class="btn btn-primary me-2">
+                <i class="fas fa-plus me-1"></i>Create Activity
+            </a>
+            <a href="{{ url_for('upload_file') }}" class="btn btn-outline-primary">
+                <i class="fas fa-upload me-1"></i>Upload Template
+            </a>
+        </div>
         {% endif %}
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script>
-// Status filtering functionality
-document.querySelectorAll('input[name="statusFilter"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        const selectedStatus = this.value;
-        const rows = document.querySelectorAll('#ropaTable tbody tr');
-
-        rows.forEach(row => {
-            if (selectedStatus === 'all' || row.dataset.status === selectedStatus) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
+function filterRecords(status) {
+    document.querySelectorAll('input[name="statusFilter"]').forEach(r => {
+        if (r.value === status) { r.checked = true; }
     });
-});
+    applyFilter(status);
+}
 
-// Quick actions for pending records
-document.addEventListener('DOMContentLoaded', function() {
-    // Highlight pending review records
-    const pendingRows = document.querySelectorAll('tr[data-status="Pending Review"]');
-    pendingRows.forEach(row => {
+function applyFilter(status) {
+    document.querySelectorAll('#ropaTable tbody tr').forEach(row => {
+        if (status === 'all' || row.dataset.status === status) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('input[name="statusFilter"]').forEach(r => {
+        r.addEventListener('change', function () { applyFilter(this.value); });
+    });
+    document.querySelectorAll('#ropaTable tbody tr[data-status="Under Review"], #ropaTable tbody tr[data-status="Pending Review"]').forEach(row => {
         row.classList.add('table-warning');
     });
 });
