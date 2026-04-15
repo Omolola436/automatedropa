@@ -24,12 +24,18 @@ def init_database():
             password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'Privacy Champion',
             department TEXT,
+            country TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             last_login DATETIME,
             reset_token TEXT,
             reset_token_expires DATETIME
         )
     """)
+
+    # Migrate: add country column if not exists
+    existing_cols = [row[1] for row in cursor.execute("PRAGMA table_info(users)").fetchall()]
+    if 'country' not in existing_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN country TEXT")
 
     # ROPA records table
     cursor.execute("""

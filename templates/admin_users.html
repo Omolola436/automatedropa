@@ -101,6 +101,7 @@
                         <th>#</th>
                         <th>Email</th>
                         <th>Organisation</th>
+                        <th>Country</th>
                         <th>Role</th>
                         <th>Tier</th>
                         <th>Registered</th>
@@ -121,6 +122,7 @@
                             {% if user.id == 1 %}<span class="badge bg-dark ms-1">Owner</span>{% endif %}
                         </td>
                         <td>{{ user.department or '—' }}</td>
+                        <td><small>{{ user.country or '—' }}</small></td>
                         <td>
                             <span class="badge bg-{{ 'primary' if user.role == 'Privacy Officer' else 'secondary' }}">
                                 {{ user.role }}

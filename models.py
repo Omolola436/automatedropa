@@ -19,6 +19,8 @@ class User(UserMixin, db.Model):
     reset_token = db.Column(String(256), nullable=True)
     reset_token_expires = db.Column(DateTime, nullable=True)
 
+    country = db.Column(String(100), nullable=True)
+
     # Subscription fields
     subscription_tier = db.Column(String(50), nullable=False, default='trial')
     trial_start_date = db.Column(DateTime, default=datetime.utcnow)

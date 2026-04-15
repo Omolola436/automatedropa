@@ -196,9 +196,15 @@ def register():
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         organisation = request.form.get('organisation', '')
+        country = request.form.get('country', '')
+        privacy_accepted = request.form.get('privacy_accepted')
 
-        if not all([email, password, confirm_password]):
-            flash('All fields are required.', 'error')
+        if not all([email, password, confirm_password, country]):
+            flash('All required fields must be filled in.', 'error')
+            return render_template('register.html')
+
+        if not privacy_accepted:
+            flash('You must read and accept the Privacy Notice to create an account.', 'error')
             return render_template('register.html')
 
         if password != confirm_password:
@@ -219,6 +225,7 @@ def register():
                 password_hash=generate_password_hash(password),
                 role='Privacy Officer',
                 department=organisation or 'General',
+                country=country,
                 subscription_tier='trial',
                 trial_start_date=datetime.utcnow(),
             )
@@ -226,7 +233,7 @@ def register():
             db.session.commit()
 
             login_user(user)
-            log_audit_event('New Account Created', email, 'New organisation signed up for free trial')
+            log_audit_event('New Account Created', email, f'New organisation signed up for free trial from {country}')
             flash('Welcome! Your free trial has started. A confirmation email has been sent to you.', 'success')
             # Send welcome / confirmation email in background
             try:
@@ -240,6 +247,44 @@ def register():
             flash(f'Error creating account: {str(e)}', 'error')
 
     return render_template('register.html')
+
+
+@app.route('/admin-portal', methods=['GET'])
+def admin_portal():
+    """Redirect to admin portal login"""
+    if current_user.is_authenticated and is_superadmin_user(current_user):
+        return redirect(url_for('admin_users'))
+    return redirect(url_for('admin_portal_login'))
+
+
+@app.route('/admin-portal/login', methods=['GET', 'POST'])
+def admin_portal_login():
+    """Separate admin login page — not linked from the main site"""
+    if current_user.is_authenticated:
+        if is_superadmin_user(current_user):
+            return redirect(url_for('admin_users'))
+        else:
+            flash('Access denied. Admin credentials required.', 'error')
+            return render_template('admin_portal_login.html')
+
+    if request.method == 'POST':
+        email = request.form.get('email')
+        password = request.form.get('password')
+
+        user = models.User.query.filter_by(email=email).first()
+
+        if user and check_password_hash(user.password_hash, password) and is_superadmin_user(user):
+            login_user(user)
+            user.last_login = datetime.utcnow()
+            db.session.commit()
+            session.pop('wizard_data', None)
+            log_audit_event('Admin Portal Login', email, 'Administrator logged in via admin portal')
+            return redirect(url_for('admin_users'))
+        else:
+            log_audit_event('Admin Portal Login Failed', email or 'unknown', 'Failed admin portal login attempt')
+            flash('Invalid admin credentials.', 'error')
+
+    return render_template('admin_portal_login.html')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
 def forgot_password():
@@ -362,18 +407,18 @@ def privacy_officer_dashboard():
         abort(403)
 
     try:
-        # Get all records for the current user's organization (same department)
-        all_records = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).all()
+        # Get records for the current user only
+        all_records = models.ROPARecord.query.filter_by(created_by=current_user.id).all()
 
         # Calculate status counts
         status_counts = {}
         for record in all_records:
             status_counts[record.status] = status_counts.get(record.status, 0) + 1
 
-        # Get recent records (last 10) for the organization
+        # Get recent records (last 10) for the current user
         recent_records = []
         try:
-            recent_records_list = models.ROPARecord.query.join(models.User, models.ROPARecord.created_by == models.User.id).filter(models.User.department == current_user.department).order_by(models.ROPARecord.created_at.desc()).limit(10).all()
+            recent_records_list = models.ROPARecord.query.filter_by(created_by=current_user.id).order_by(models.ROPARecord.created_at.desc()).limit(10).all()
 
             for record in recent_records_list:
                 try:
@@ -892,7 +937,7 @@ def view_all_ropa_excel():
             else:
                 sheet.display_name = raw_name
 
-    generated_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
+    generated_records = models.ROPARecord.query.filter_by(created_by=current_user.id).order_by(models.ROPARecord.updated_at.desc()).all()
     log_audit_event('View Uploaded ROPA Excel', current_user.email, 'Viewed all uploaded ROPA files in Excel format')
     return render_template('view_all_ropa_excel.html', uploaded_files=uploaded_files, generated_records=generated_records, current_time=datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'))
 
@@ -1078,7 +1123,7 @@ def edit_all_ropa_excel():
 
             sheet.display_columns = display_columns
 
-    generated_records = models.ROPARecord.query.order_by(models.ROPARecord.updated_at.desc()).all()
+    generated_records = models.ROPARecord.query.filter_by(created_by=current_user.id).order_by(models.ROPARecord.updated_at.desc()).all()
     return render_template('edit_all_ropa_excel.html', uploaded_files=uploaded_files, generated_records=generated_records)
 
 
@@ -1300,14 +1345,13 @@ def view_saved_ropa():
         abort(403)
     
     try:
-        saved_records = models.ROPARecord.query.join(
-            models.User, models.ROPARecord.created_by == models.User.id
-        ).filter(
-            models.User.department == current_user.department
+        saved_records = models.ROPARecord.query.filter_by(
+            created_by=current_user.id
         ).order_by(models.ROPARecord.updated_at.desc()).all()
 
-        # Files that have been edited (have a last_edited_at timestamp)
+        # Files that have been edited by the current user
         edited_files = models.ExcelFileData.query.filter(
+            models.ExcelFileData.uploaded_by == current_user.id,
             models.ExcelFileData.last_edited_at.isnot(None)
         ).order_by(models.ExcelFileData.last_edited_at.desc()).all()
 
@@ -1987,11 +2031,14 @@ def view_all_ropa():
                 )
             )
     else:
-        # Privacy Officers and Admins see all records
+        # Privacy Officers see only their own records
         if status_filter == 'All':
-            query = models.ROPARecord.query
+            query = models.ROPARecord.query.filter_by(created_by=current_user.id)
         else:
-            query = models.ROPARecord.query.filter(models.ROPARecord.status == status_filter)
+            query = models.ROPARecord.query.filter(
+                models.ROPARecord.created_by == current_user.id,
+                models.ROPARecord.status == status_filter
+            )
 
     records = query.order_by(models.ROPARecord.created_at.desc()).all()
 

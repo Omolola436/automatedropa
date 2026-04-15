@@ -1,4 +1,4 @@
-# ROPA Management System
+# PrivaTrack — ROPA Management System
 
 ## Overview
 A Record of Processing Activities (ROPA) Management System designed to help organizations manage their data processing records in compliance with data protection regulations (e.g., GDPR).
