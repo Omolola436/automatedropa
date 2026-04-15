@@ -776,8 +776,8 @@ def edit_activity(record_id):
     """Edit existing ROPA activity in Excel format"""
     record = models.ROPARecord.query.get_or_404(record_id)
 
-    # Check permissions
-    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+    # Check permissions — only the creator or superadmin can edit
+    if record.created_by != current_user.id and not is_superadmin_user(current_user):
         abort(403)
 
     if request.method == 'POST':
@@ -893,8 +893,8 @@ def view_activity(record_id):
     """View ROPA activity details in Excel format"""
     record = models.ROPARecord.query.get_or_404(record_id)
 
-    # Check permissions
-    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+    # Check permissions — only the creator or superadmin can view
+    if record.created_by != current_user.id and not is_superadmin_user(current_user):
         abort(403)
 
     # Get custom fields and their data for this record
@@ -921,8 +921,8 @@ def view_all_ropa_excel():
     if deleted_count > 0:
         print(f"Cleaned up {deleted_count} duplicate sheets")
     
-    # Get all uploaded Excel files with their sheet data
-    uploaded_files = models.ExcelFileData.query.order_by(models.ExcelFileData.upload_timestamp.desc()).all()
+    # Get only this user's uploaded Excel files
+    uploaded_files = models.ExcelFileData.query.filter_by(uploaded_by=current_user.id).order_by(models.ExcelFileData.upload_timestamp.desc()).all()
     # Provide a fallback display name for unnamed sheets (A, B, C...)
     import string
     for file in uploaded_files:
@@ -1205,8 +1205,8 @@ def delete_activity(record_id):
     """Delete ROPA activity"""
     record = models.ROPARecord.query.get_or_404(record_id)
 
-    # Check permissions
-    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+    # Check permissions — only the creator or superadmin can delete
+    if record.created_by != current_user.id and not is_superadmin_user(current_user):
         abort(403)
 
     record_name = record.processing_activity_name
@@ -1913,8 +1913,8 @@ def view_ropa(id):
     """View ROPA record with custom fields"""
     record = models.ROPARecord.query.get_or_404(id)
 
-    # Check permissions
-    if current_user.role == 'Privacy Champion' and record.created_by != current_user.id:
+    # Check permissions — only the creator or superadmin can view
+    if record.created_by != current_user.id and not is_superadmin_user(current_user):
         abort(403)
 
     # Get custom fields and their data for this record
