@@ -305,6 +305,16 @@
                         </a>
                     </div>
                     {% endif %}
+                    <div class="col-6 col-md-4">
+                        <form method="POST" action="{{ url_for('test_email') }}">
+                            <button type="submit" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center gap-1"
+                                    title="Send a test email to {{ current_user.email }} to verify EmailJS is working"
+                                    onclick="return confirm('Send a test email to {{ current_user.email }}?')">
+                                <i class="fas fa-paper-plane fa-lg"></i>
+                                <span class="small">Test Email</span>
+                            </button>
+                        </form>
+                    </div>
                 </div>
             </div>
         </div>

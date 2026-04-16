@@ -9,7 +9,9 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 import tempfile
 from datetime import datetime, date
 import pandas as pd
-from email_utils import send_welcome_email, send_upgrade_email
+from email_utils import (send_welcome_email, send_upgrade_email,
+                          send_activity_approved_email, send_activity_rejected_email,
+                          check_emailjs_configured)
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -1261,9 +1263,60 @@ def update_status(record_id, status):
 
     db.session.commit()
 
+    # Email the record creator about the status change
+    try:
+        creator = models.User.query.get(record.created_by)
+        if creator and creator.email:
+            reviewer_name = current_user.department or current_user.email
+            if status == 'Approved':
+                send_activity_approved_email(
+                    user_email=creator.email,
+                    activity_name=record.processing_activity_name,
+                    reviewer_name=reviewer_name
+                )
+            elif status == 'Rejected':
+                send_activity_rejected_email(
+                    user_email=creator.email,
+                    activity_name=record.processing_activity_name,
+                    reason=record.review_comments or None,
+                    reviewer_name=reviewer_name
+                )
+    except Exception as email_err:
+        logging.warning(f"Status-change email failed: {email_err}")
+
     log_audit_event('ROPA Status Updated', current_user.email, f'Updated status of ROPA {record.processing_activity_name} to {status}')
     flash(f'ROPA record status updated to {status}', 'success')
     return redirect(url_for('privacy_officer_dashboard'))
+
+@app.route('/test-email', methods=['POST'])
+@login_required
+def test_email():
+    """Send a test email to the current user (Privacy Officer only)"""
+    if current_user.role != 'Privacy Officer':
+        abort(403)
+    if not check_emailjs_configured():
+        flash('EmailJS credentials are not fully configured. Please check your environment secrets.', 'error')
+        return redirect(request.referrer or url_for('privacy_officer_dashboard'))
+    try:
+        from email_utils import send_email
+        success = send_email(
+            to_email=current_user.email,
+            to_name=current_user.department or current_user.email,
+            subject="ProcessLedger – Email Test",
+            message=(
+                "This is a test email from ProcessLedger.\n\n"
+                "If you received this, your EmailJS integration is working correctly.\n\n"
+                "Best regards,\nThe ProcessLedger Team"
+            )
+        )
+        if success:
+            flash(f'Test email sent successfully to {current_user.email}.', 'success')
+        else:
+            flash('Email was not delivered. Please check your EmailJS service/template configuration.', 'error')
+    except Exception as e:
+        flash(f'Error sending test email: {str(e)}', 'error')
+    return redirect(request.referrer or url_for('privacy_officer_dashboard'))
+
 
 @app.route('/delete-activity/<int:record_id>', methods=['POST'])
 @login_required
