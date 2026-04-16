@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}PrivaTrack — Automated ROPA Compliance{% endblock %}
+{% block title %}ProcessLedger — Automated ROPA Compliance{% endblock %}
 
 {% block content %}
 
@@ -16,9 +16,8 @@
                 <span class="text-primary">Automated Compliance.</span>
             </h1>
             <p class="lead text-muted mb-4">
-                Stop managing GDPR compliance in spreadsheets. Our automated ROPA solution keeps your 
-                Record of Processing Activities continuously up-to-date, risk-assessed, and ready for 
-                any regulatory audit at any time.
+                Move beyond manual ROPA management. Automate your records with real-time updates, intelligent risk insights, and always audit-ready documentation all in one streamlined platform.
+
             </p>
             <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center">
                 <a href="{{ url_for('register') }}" class="btn btn-primary btn-lg px-5">
@@ -28,7 +27,7 @@
                     <i class="fas fa-tags me-2"></i>View Plans & Pricing
                 </a>
             </div>
-            <p class="text-muted mt-3 small">
+            <p class="text-muted mt-3 fs-5">
                 <i class="fas fa-check-circle text-success me-1"></i>Free 14-day trial &nbsp;·&nbsp;
                 <i class="fas fa-check-circle text-success me-1"></i>Set up in minutes
             </p>
@@ -74,8 +73,8 @@
                     </div>
                     <h5 class="fw-bold">Not One-Off. Continuous.</h5>
                     <p class="text-muted mb-0">
-                        ROPA records are living documents. As your processing activities change, 
-                        updates are instant, not a once-a-year project.
+                        Your data processing records should not  be static. As your operations evolve, your documentation updates instantly no annual reviews, no manual rework
+
                     </p>
                 </div>
             </div>
@@ -88,8 +87,8 @@
                     </div>
                     <h5 class="fw-bold">Always Audit-Ready</h5>
                     <p class="text-muted mb-0">
-                        Every change is logged. Your full audit trail is one click away, 
-                        no scrambling when a regulator comes knocking.
+                        Every action is automatically tracked and recorded. Access your complete audit trail in seconds  no scrambling, no last-minute fixes.
+
                     </p>
                 </div>
             </div>
@@ -102,8 +101,8 @@
                     </div>
                     <h5 class="fw-bold">Smart & Automated</h5>
                     <p class="text-muted mb-0">
-                        Auto-classify personal data categories, get risk flags on sensitive data, 
-                        and receive suggested security measures without manual effort.
+                        Let the system do the heavy lifting. Automatically classify data, flag sensitive processing, and receive intelligent risk insights  without manual effort.
+
                     </p>
                 </div>
             </div>
@@ -117,41 +116,44 @@
     <div class="row g-4 align-items-start">
         <div class="col-md-3 text-center">
             <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3 fw-bold fs-5" style="width:56px;height:56px;">1</div>
-            <h6 class="fw-bold">Sign Up Free</h6>
-            <p class="text-muted small mb-0">Create your account in seconds. Your 14-day trial starts immediately.</p>
+            <h6 class="fw-bold">Get Started Instantly</h6>
+            <p class="text-muted small mb-0">Create your account in seconds and start exploring immediately, no setup delays, no complexity.
+</p>
         </div>
         <div class="col-md-1 d-none d-md-flex align-items-center justify-content-center pt-2">
             <i class="fas fa-arrow-right fa-2x text-muted"></i>
         </div>
         <div class="col-md-3 text-center">
             <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3 fw-bold fs-5" style="width:56px;height:56px;">2</div>
-            <h6 class="fw-bold">Add Your Processing Activities</h6>
-            <p class="text-muted small mb-0">Use our guided form to document data processing. Risk is assessed automatically.</p>
+            <h6 class="fw-bold">Document Your Processes</h6>
+            <p class="text-muted small mb-0">Use a guided, intuitive workflow to capture your data processing activities. Risk insights are generated automatically as you go.
+</p>
         </div>
         <div class="col-md-1 d-none d-md-flex align-items-center justify-content-center pt-2">
             <i class="fas fa-arrow-right fa-2x text-muted"></i>
         </div>
         <div class="col-md-4 text-center">
             <div class="rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center mb-3 fw-bold fs-5" style="width:56px;height:56px;">3</div>
-            <h6 class="fw-bold">Stay Compliant. Always.</h6>
-            <p class="text-muted small mb-0">Export to Excel/PDF, track versions, and scale your plan as your organisation grows.</p>
+            <h6 class="fw-bold">Stay Compliant  Always</h6>
+            <p class="text-muted small mb-0">Access real-time updates, export reports anytime, and scale effortlessly as your organization grows.
+</p>
         </div>
     </div>
 </section>
 
 <!-- Features -->
 <section class="mb-5">
-    <h2 class="text-center fw-bold mb-5">Everything You Need to Stay Compliant</h2>
+    <h2 class="text-center fw-bold mb-5">Everything You Need In One Place</h2>
     <div class="row g-3">
         {% set features = [
-            ('fas fa-file-alt', 'text-primary', 'ROPA Records', 'Create, edit and manage all data processing activities in a structured, GDPR Article 30-compliant format.'),
-            ('fas fa-robot', 'text-success', 'Auto-Classification', 'Personal data categories are automatically classified and sensitive data is flagged for your attention.'),
-            ('fas fa-chart-bar', 'text-warning', 'Risk Assessment', 'Every record is assessed for breach likelihood and impact — High, Medium or Low risk at a glance.'),
-            ('fas fa-history', 'text-info', 'Version History', 'Every edit is tracked. Roll back and compare snapshots to see exactly what changed and when.'),
-            ('fas fa-users', 'text-primary', 'Multi-Department', 'Privacy Champions submit from their departments. Privacy Officers review, approve and manage.'),
-            ('fas fa-file-excel', 'text-success', 'Excel & PDF Export', 'Download your full ROPA register as Excel or PDF — ready for regulators in one click.'),
-            ('fas fa-list-check', 'text-danger', 'Audit Logs', 'A tamper-evident log of every action. Know who did what and when across your entire system.'),
-            ('fas fa-globe', 'text-warning', 'Compliance Mapping', 'Map your activities to GDPR, NDPA, and other frameworks. One record, multiple jurisdictions.'),
+            ('fas fa-file-alt', 'text-primary', 'Structured ROPA Management', 'Create, edit, and manage all your data processing records in a clear, standardized format built for real-world compliance.'),
+            ('fas fa-robot', 'text-success', 'Intelligent Data Classification', 'Automatically organize personal data into categories and highlight sensitive information that requires attention.'),
+            ('fas fa-chart-bar', 'text-warning', 'Built-In Risk Insights', 'Instantly understand your exposure with clear risk levels  helping you prioritize what matters most.'),
+            ('fas fa-history', 'text-info', 'Complete Version Control', 'Track every update, compare changes over time, and restore previous versions whenever needed.'),
+            ('fas fa-users', 'text-primary', 'Team Collaboration Made Easy', 'Enable teams across departments to contribute while maintaining centralized oversight and control.'),
+            ('fas fa-file-excel', 'text-success', 'Instant Export & Reporting', 'Generate professional, audit-ready reports in Excel or PDF  ready whenever you need them.'),
+            ('fas fa-list-check', 'text-danger', 'Full Audit Trail', 'Maintain a secure, tamper-evident log of all activities across your system  complete transparency at every level.'),
+            ('fas fa-globe', 'text-warning', 'Multi-Framework Alignment', 'Map your records once and align across multiple regulatory and industry standards  without duplicating effort.'),
         ] %}
         {% for icon, color, title, desc in features %}
         <div class="col-md-6 col-lg-3">
@@ -171,8 +173,9 @@
 
 <!-- Pricing teaser -->
 <section class="text-center mb-5">
-    <h2 class="fw-bold mb-2">Simple and Transparent Pricing</h2>
-    <p class="text-muted mb-4">Scale as you grow, No surprises.</p>
+    <h2 class="fw-bold mb-2">Simple, Transparent and Scalable</h2>
+    <p class="text-muted mb-4">No hidden fees, No complexity.
+Choose a plan that fits your organization today  and scale as your needs grow.</p>
     <div class="row g-3 justify-content-center mb-4">
         <div class="col-6 col-md-3">
             <div class="card border-secondary h-100">

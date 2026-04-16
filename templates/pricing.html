@@ -1,11 +1,12 @@
 {% extends "base.html" %}
 
-{% block title %}Pricing Plans — PrivaTrack{% endblock %}
+{% block title %}Pricing Plans — ProcessLedger{% endblock %}
 
 {% block content %}
 <div class="text-center mb-5">
     <h1 class="fw-bold"><i class="fas fa-tags me-2 text-primary"></i>Subscription Plans</h1>
-    <p class="lead text-muted">Choose the plan that keeps your organisation continuously compliant</p>
+    <p class="lead text-muted">Choose the Plan That Scales With Your Compliance Needs. Stay continuously compliant with a plan designed for your organisation  whether you are  just starting or managing complex operations.
+</p>
     {% if current_user.is_authenticated and sub_tier == 'trial' and sub_trial_days is not none %}
     <div class="alert alert-warning d-inline-block mt-2">
         <i class="fas fa-clock me-2"></i>
@@ -21,7 +22,6 @@
 
 <!-- Annual discount banner -->
 <div class="alert alert-info text-center mb-4">
-    <i class="fas fa-percent me-2"></i>
     <strong>Save 20% with annual billing</strong> – switch to yearly and get 2 months free on any paid plan.
 </div>
 
@@ -37,15 +37,17 @@
                 <div class="text-center mb-3">
                     <span class="display-6 fw-bold">$0</span><span class="text-muted"> / 14 days</span>
                 </div>
-                <p class="text-muted small text-center">Get started instantly.</p>
+                <p class="text-muted small text-center">Start exploring instantly,  no commitment required.</p>
                 <ul class="list-unstyled flex-grow-1">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 5 processing activities</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA template (standardised)</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No dashboard analytics</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No automation</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 10 processing activities</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Standardised ROPA template</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Simple data entry interface</li>
+                    <p class="text-muted small text-center">Best for: Testing the platform before committing</p>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No analytics or insights</li>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No automation features</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No multi-user access</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No audit logs</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No Email support</li>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No collaboration or audit tracking</li>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No support</li>
                 </ul>
                 {% if current_user.is_authenticated and sub_tier == 'trial' %}
                 <div class="text-center mt-auto"><span class="badge bg-secondary fs-6 px-3 py-2">Your Current Plan</span></div>
@@ -69,16 +71,18 @@
                     <span class="display-6 fw-bold">$29</span><span class="text-muted"> / month</span>
                 </div>
                 <p class="text-center text-muted small mb-3">$278 / year <span class="badge bg-success">Save 20%</span></p>
-                <p class="text-muted small text-center">Perfect for small businesses &amp; startups.</p>
+                <p class="text-muted small text-center">Built for startups and small teams taking their first step into structured compliance.</p>
                 <ul class="list-unstyled flex-grow-1">
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 25 processing activities</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA template (standardised)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Guided onboarding</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Excel / PDF download</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>UUp to 35 ROPA processing activities</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Standardised ROPA template</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Guided onboarding experience</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Export your ROPA  to Excel & PDF</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Email support</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No dashboard analytics</li>
+                    <p class="text-muted small text-center">Best for: Early-stage businesses needing structured documentation</p>
+                <ul class="list-unstyled flex-grow-1">
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No analytics dashboard</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No automation</li>
-                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No multi-user access</li>
+                    <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No team collaboration</li>
                 </ul>
                 {% if current_user.is_authenticated and sub_tier == 'starter' %}
                 <div class="text-center mt-auto"><span class="badge bg-success fs-6 px-3 py-2">Your Current Plan</span></div>
@@ -87,7 +91,7 @@
                     <button class="btn btn-success w-100" disabled>
                         <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
                     </button>
-                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:projects@3consult-ng.com">projects@3consult-ng.com</a></p>
                 </div>
                 {% endif %}
             </div>
@@ -106,16 +110,17 @@
                     <span class="display-6 fw-bold">$99</span><span class="text-muted"> / month</span>
                 </div>
                 <p class="text-center text-muted small mb-3">$950 / year <span class="badge bg-success">Save 20%</span></p>
-                <p class="text-muted small text-center">For growing companies &amp; SMEs.</p>
+                <p class="text-muted small text-center">Designed for growing organisations that need visibility and control.</p>
                 <ul class="list-unstyled flex-grow-1">
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Everything in Starter</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 50 processing activities</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Dashboard analytics</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Up to 60 ROPA  processing activities</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Dashboard analytics & insights</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Version history tracking</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Basic risk flagging</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-department input</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-department contributions</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Basic compliance mapping</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Priority support</li>
+                    <p class="text-muted small text-center">Best for: SMEs managing multiple processes and teams</p>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No full automation</li>
                     <li class="mb-2 text-muted"><i class="fas fa-times text-danger me-2"></i>No audit logs</li>
                 </ul>
@@ -126,7 +131,7 @@
                     <button class="btn btn-primary w-100" disabled>
                         <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
                     </button>
-                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:projects@3consult-ng.com">projects@3consult-ng.com</a></p>
                 </div>
                 {% endif %}
             </div>
@@ -144,20 +149,21 @@
                     <span class="display-6 fw-bold">$299</span><span class="text-muted"> / month</span>
                 </div>
                 <p class="text-center text-muted small mb-3">$2,870 / year <span class="badge bg-success">Save 20%</span></p>
-                <p class="text-muted small text-center">For large organisations &amp; multi-jurisdiction compliance.</p>
+                <p class="text-muted small text-center">Advanced compliance management for larger organisations and complex environments.</p>
                 <ul class="list-unstyled flex-grow-1">
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Everything in Growth</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i><strong>Unlimited</strong> processing activities</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Full automation workflows</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🔥 Compliance Score per record</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🔴 In-app alerts (high-risk, missing basis…)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>💡 ROPA Health Engine (auto monitoring)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>🏢 Vendor / third-party risk tracking</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Compliance scoring per record</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Real-time risk alerts & notifications</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>ROPA Health Engine (continuous monitoring)</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Vendor & third-party risk tracking</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Role-based access control</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Audit logs &amp; compliance reporting</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-jurisdiction mapping (NDPA, GDPR…)</li>
-                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>DPIA triggers &amp; risk engine</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Audit logs & reporting</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Multi-framework alignment</li>
+                    <li class="mb-2"><i class="fas fa-check text-success me-2"></i>DPIA triggers & advanced risk engine</li>
                     <li class="mb-2"><i class="fas fa-check text-success me-2"></i>Dedicated account support</li>
+                    <p class="text-muted small text-center">Best for: Organisations operating at scale across teams and jurisdictions</p>
                 </ul>
                 {% if current_user.is_authenticated and sub_tier == 'enterprise' %}
                 <div class="text-center mt-auto"><span class="badge fs-6 px-3 py-2" style="background-color: #6f42c1;">Your Current Plan</span></div>
@@ -166,7 +172,7 @@
                     <button class="btn w-100 text-white" style="background-color: #6f42c1;" disabled>
                         <i class="fas fa-lock me-2"></i>Contact Sales to Upgrade
                     </button>
-                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:sales@example.com">sales@example.com</a></p>
+                    <p class="text-muted small mt-2 mb-0">Email <a href="mailto:projects@3consult-ng.com">projects@3consult-ng.com</a></p>
                 </div>
                 {% endif %}
             </div>
@@ -191,9 +197,9 @@
         <tbody>
             <tr>
                 <td class="text-start fw-semibold">Processing Activities</td>
-                <td>5</td>
-                <td>5</td>
-                <td class="table-primary">15</td>
+                <td>10</td>
+                <td>35</td>
+                <td class="table-primary">60</td>
                 <td style="background-color:#f3e8ff;"><strong>Unlimited</strong></td>
             </tr>
             <tr>
@@ -299,15 +305,15 @@
 </div>
 
 <!-- Privacy Notice -->
-<div class="card mt-5 border-0 bg-light">
+<!--<div class="card mt-5 border-0 bg-light">
     <div class="card-body py-4 px-4">
         <h5 class="fw-bold mb-2"><i class="fas fa-shield-alt me-2 text-primary"></i>Privacy Notice</h5>
         <p class="text-muted small mb-2">
             We are committed to protecting your personal data. Information collected during sign-up is processed on the lawful basis of <strong>contract</strong> and is used solely to provide the ROPA management service. Your data is never sold or shared with unauthorised third parties.
         </p>
         <p class="text-muted small mb-0">
-            You have the right to access, rectify, or erase your data at any time. Contact us at <a href="mailto:privacy@example.com">privacy@example.com</a> for any data privacy requests.
+            You have the right to access, rectify, or erase your data at any time. Contact us at <a href="mailto:privacy@example.com">projects@3consult-ng.com</a> for any data privacy requests.
         </p>
-    </div>
+    </div>-->
 </div>
 {% endblock %}

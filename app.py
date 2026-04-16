@@ -162,12 +162,6 @@ def login():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
-        consent = request.form.get('consent')
-
-        # Check consent
-        if not consent:
-            flash('You must provide consent to use the system', 'error')
-            return render_template('login.html')
 
         user = models.User.query.filter_by(email=email).first()
 
@@ -175,16 +169,17 @@ def login():
             login_user(user)
             user.last_login = datetime.utcnow()
             db.session.commit()
+
             # Clear any leftover wizard session data from a previous user
             session.pop('wizard_data', None)
-            log_audit_event('Login Success', email, 'User logged in successfully with consent')
+
+            log_audit_event('Login Success', email, 'User logged in successfully')
             return redirect(url_for('index'))
         else:
             log_audit_event('Login Failed', email, 'Failed login attempt')
             flash('Invalid email or password', 'error')
 
     return render_template('login.html')
-
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     """Open registration — each new signup creates a Privacy Officer (org admin) on a free trial"""

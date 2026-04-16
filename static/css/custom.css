@@ -257,3 +257,9 @@ body {
     color: #fff !important;  /* shield icon white */
     margin-right: 8px;
 }
+
+/* Remove bullet points globally */
+ul {
+    list-style: none;
+    padding-left: 0;
+}
