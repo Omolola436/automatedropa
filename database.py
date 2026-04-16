@@ -91,6 +91,35 @@ def init_database():
     except Exception:
         pass  # Column already exists
 
+    # Add controller_country column if it doesn't exist (migration)
+    try:
+        cursor.execute("ALTER TABLE ropa_records ADD COLUMN controller_country TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Add special_categories column if it doesn't exist (migration)
+    try:
+        cursor.execute("ALTER TABLE ropa_records ADD COLUMN special_categories TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
+    # Add representative columns if they don't exist (migration)
+    for col in ['representative_name TEXT', 'representative_contact TEXT', 'representative_address TEXT']:
+        try:
+            cursor.execute(f"ALTER TABLE ropa_records ADD COLUMN {col}")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+
+    # Add dpia_outcome column if it doesn't exist (migration)
+    try:
+        cursor.execute("ALTER TABLE ropa_records ADD COLUMN dpia_outcome TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
+
     # Audit logs table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS audit_logs (

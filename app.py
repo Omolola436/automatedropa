@@ -677,16 +677,26 @@ def save_step_data(step, form, wizard_data):
             'retained_in_accordance': form.get('retained_in_accordance', ''),
             'reasons_not_adhering': form.get('reasons_not_adhering', ''),
             'notes_comments': form.get('notes_comments', ''),
+            # Special categories
+            'special_categories': form.get('special_categories', ''),
             # Mode of processing
             'mode_of_processing': form.get('mode_of_processing', 'Controller'),
             'mop_processor_name': form.get('mop_processor_name', ''),
             'mop_processor_contact': form.get('mop_processor_contact', ''),
             'mop_processor_country': form.get('mop_processor_country', ''),
+            # Representative
+            'representative_name': form.get('representative_name', ''),
+            'representative_contact': form.get('representative_contact', ''),
+            'representative_address': form.get('representative_address', ''),
             # Risk assessment
             'breach_likelihood': likelihood,
             'breach_impact': impact,
             'risk_level': auto_risk_level,
-            'dpia_required': 'Yes' if (likelihood == 'High' and impact == 'High') else 'No',
+            # DPIA (manual + auto)
+            'dpia_required_field': form.get('dpia_required_field', ''),
+            'dpia_outcome': form.get('dpia_outcome', ''),
+            # Auto-trigger: override if risk is High
+            'dpia_required': 'Yes' if (likelihood == 'High' and impact == 'High') else form.get('dpia_required_field', 'No'),
         }
 
 
@@ -716,15 +726,16 @@ def generate_ropa_records(wizard_data, user):
         'department_function': af.get('department_function', ''),
         'entity_type': entity_type,
 
-        # Controller information (from org step, populated when entity is Controller)
-        'controller_name': org.get('name', '') if entity_type != 'Processor' else '',
-        'controller_contact': org.get('controller_contact', '') if entity_type != 'Processor' else '',
-        'controller_address': org.get('controller_address', '') if entity_type != 'Processor' else '',
+        # Controller information
+        'controller_name': org.get('name', ''),
+        'controller_contact': org.get('controller_contact', ''),
+        'controller_address': org.get('controller_address', ''),
+        'controller_country': org.get('country', ''),
 
         # DPO information
         'dpo_name': org.get('dpo_name', ''),
         'dpo_contact': org.get('dpo_contact', ''),
-        'dpo_address': org.get('dpo_address', ''),
+        'dpo_address': org.get('dpo_address', ''),  # stores DPO country
 
         # Processing details from activity form
         'processing_purpose': af.get('processing_purpose', ''),
@@ -732,7 +743,7 @@ def generate_ropa_records(wizard_data, user):
         'legitimate_interests': af.get('reasons_not_adhering', ''),
         'data_subjects': af.get('data_subjects', ''),
         'data_categories': af.get('data_categories', ''),
-        'special_categories': '',
+        'special_categories': af.get('special_categories', ''),
         'recipients': af.get('recipients', ''),
         'third_country_transfers': af.get('crossborder_transfer', ''),
         'safeguards': af.get('safeguards', ''),
@@ -750,6 +761,14 @@ def generate_ropa_records(wizard_data, user):
         'processor_name': (af.get('mop_processor_name', '') or org.get('processor_name', '')) if (af.get('mode_of_processing') == 'Processor' or entity_type == 'Processor') else org.get('processor_name', ''),
         'processor_contact': af.get('mop_processor_contact', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_contact', ''),
         'processor_address': af.get('mop_processor_country', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_address', ''),
+
+        # Representative details
+        'representative_name': af.get('representative_name', ''),
+        'representative_contact': af.get('representative_contact', ''),
+        'representative_address': af.get('representative_address', ''),
+
+        # DPIA outcome
+        'dpia_outcome': af.get('dpia_outcome', ''),
 
         'status': 'Under Review'
     }

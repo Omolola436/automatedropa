@@ -48,6 +48,7 @@ class ROPARecord(db.Model):
     controller_name = db.Column(String(200))
     controller_contact = db.Column(String(200))
     controller_address = db.Column(Text)
+    controller_country = db.Column(String(200))
     
     # DPO information  
     dpo_name = db.Column(String(200))

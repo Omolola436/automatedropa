@@ -28,6 +28,17 @@ A Record of Processing Activities (ROPA) management system to help organizations
 - `uploads/` — Uploaded files
 
 ## Recent Changes
+
+### Session 3 (Latest)
+- **Step 1 simplified**: Removed Processor/Joint Controller radio buttons; Step 1 now shows a static "Data Controller" badge with a hidden input `entity_type=Controller`
+- **Step 2 new fields**: Added Special Categories textarea, Representative card (name/contact/address), DPIA Required select, DPIA Outcome textarea (conditionally shown when DPIA Required = Yes or Under Assessment)
+- **Risk auto-override**: `dpia_required` is forced to `Yes` when both `breach_likelihood` and `breach_impact` are `High`; otherwise uses the manual `dpia_required_field` selection
+- **app.py**: `save_step_data` and `generate_ropa_records` now save `special_categories`, `representative_name/contact/address`, `dpia_outcome`, `dpia_required`, and `controller_country`
+- **database.py**: Added ALTER TABLE migrations for `controller_country`, `special_categories`, `representative_name`, `representative_contact`, `representative_address`, `dpia_outcome`
+- **export_utils.py**: Added new columns to both data extraction and column mapping (controller_country, special_categories, representative_name/contact/address, dpia_outcome)
+- **base.html sidebar**: Custom Fields link is now locked (shows padlock + "Pro" badge linking to /subscription) for trial tier users; visible normally for paid tiers
+
+## Session 2 Changes (Prior)
 - Country/Jurisdiction dropdown in Step 1 controller now has full A-Z country list
 - Legal basis options no longer show article numbers (e.g. "Consent" not "Consent (Art. 6(1)(a))")
 - Entity type (Controller/Processor/Joint Controller) changed from clickable cards to clean radio buttons

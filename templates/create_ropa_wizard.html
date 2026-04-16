@@ -128,39 +128,13 @@
                         <!-- ===== STEP 1: Organisation + DPO ===== -->
                         {% if current_step == 1 %}
 
-                        <!-- ── Controller / Processor Question ── -->
-                        <div class="card border-warning mb-4">
-                            <div class="card-header bg-warning bg-opacity-10">
-                                <h6 class="mb-0 fw-bold"><i class="fas fa-question-circle me-2 text-warning"></i>Your Role in This Processing Activity *</h6>
-                            </div>
-                            <div class="card-body">
-                                <p class="text-muted small mb-3">Select whether your organisation is acting as a <strong>Controller</strong>, <strong>Processor</strong>, or <strong>Joint Controller</strong>.</p>
-                                <div class="d-flex flex-wrap gap-4">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="entity_type" id="entityController" value="Controller"
-                                               {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}checked{% endif %}>
-                                        <label class="form-check-label fw-semibold" for="entityController">
-                                            <i class="fas fa-building text-primary me-1"></i>Controller
-                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You decide the purposes and means of processing.</div>
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="entity_type" id="entityProcessor" value="Processor"
-                                               {% if wizard_data.organization.get('entity_type') == 'Processor' %}checked{% endif %}>
-                                        <label class="form-check-label fw-semibold" for="entityProcessor">
-                                            <i class="fas fa-cogs text-success me-1"></i>Processor
-                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You process data on behalf of a controller.</div>
-                                        </label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input" type="radio" name="entity_type" id="entityJoint" value="Joint Controller"
-                                               {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}checked{% endif %}>
-                                        <label class="form-check-label fw-semibold" for="entityJoint">
-                                            <i class="fas fa-handshake text-info me-1"></i>Joint Controller
-                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You jointly determine purposes with another organisation.</div>
-                                        </label>
-                                    </div>
-                                </div>
+                        <!-- ── Controller Role Badge ── -->
+                        <input type="hidden" name="entity_type" value="Controller">
+                        <div class="alert alert-primary d-flex align-items-center mb-4">
+                            <i class="fas fa-building fs-4 me-3"></i>
+                            <div>
+                                <strong>You are acting as a Data Controller</strong>
+                                <div class="small text-muted mt-1">Your organisation decides the purposes and means of processing personal data.</div>
                             </div>
                         </div>
 
@@ -209,31 +183,6 @@
                                 <label class="form-label" id="controllerAddressLabel">Controller Address</label>
                                 <textarea class="form-control" name="controller_address" rows="2"
                                           placeholder="Registered address of the data controller">{{ wizard_data.organization.get('controller_address', '') }}</textarea>
-                            </div>
-                        </div>
-
-                        <!-- Processor Details (shown when entity is Processor) -->
-                        <div id="processorSection" style="display:{% if wizard_data.organization.get('entity_type') == 'Processor' %}block{% else %}none{% endif %};">
-                            <hr>
-                            <h6 class="fw-bold text-success mb-3 mt-3"><i class="fas fa-cogs me-2"></i>Your Organisation (Processor) Details</h6>
-                            <div class="row g-3 mb-4">
-                                <div class="col-md-4">
-                                    <label class="form-label">Processor Name (Your Organisation)</label>
-                                    <input type="text" class="form-control" name="processor_name"
-                                           placeholder="Your organisation's name"
-                                           value="{{ wizard_data.organization.get('processor_name', '') }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Processor Contact</label>
-                                    <input type="text" class="form-control" name="processor_contact"
-                                           placeholder="Email or phone"
-                                           value="{{ wizard_data.organization.get('processor_contact', '') }}">
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label">Processor Address</label>
-                                    <textarea class="form-control" name="processor_address" rows="2"
-                                              placeholder="Your registered address">{{ wizard_data.organization.get('processor_address', '') }}</textarea>
-                                </div>
                             </div>
                         </div>
 
@@ -334,6 +283,14 @@
                                        placeholder="e.g., Name, Email, NIN, Bank Details, Health Data..."
                                        value="{{ wizard_data.activity_form.get('data_categories', '') }}">
                                 <div class="form-text">Types of personal data being processed. Sensitive data (health, biometric, religious) requires extra protection.</div>
+                            </div>
+
+                            <!-- Special Categories of Personal Data -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Special Categories of Personal Data</label>
+                                <textarea class="form-control" name="special_categories" rows="2"
+                                          placeholder="e.g., Health data, Biometric data, Religious beliefs, Criminal records (if any)...">{{ wizard_data.activity_form.get('special_categories', '') }}</textarea>
+                                <div class="form-text">Sensitive data types requiring extra protection. Leave blank if none apply.</div>
                             </div>
 
                             <!-- Legal Basis for Processing -->
@@ -540,6 +497,55 @@
                                 </div>
                             </div>
 
+                            <!-- ── REPRESENTATIVE ── -->
+                            <div class="col-12 mt-2">
+                                <div class="card border-secondary">
+                                    <div class="card-header bg-secondary bg-opacity-10">
+                                        <h6 class="mb-0 fw-bold"><i class="fas fa-user-tie me-2 text-secondary"></i>Representative Details <span class="text-muted fw-normal small">(if applicable)</span></h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted small mb-3">If your organisation is not established in the EU/EEA or UK, you may need to appoint a representative.</p>
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label">Representative Name</label>
+                                                <input type="text" class="form-control" name="representative_name"
+                                                       placeholder="Full name of representative"
+                                                       value="{{ wizard_data.activity_form.get('representative_name', '') }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Representative Contact</label>
+                                                <input type="text" class="form-control" name="representative_contact"
+                                                       placeholder="Email or phone"
+                                                       value="{{ wizard_data.activity_form.get('representative_contact', '') }}">
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label">Representative Address</label>
+                                                <textarea class="form-control" name="representative_address" rows="2"
+                                                          placeholder="Address of the representative">{{ wizard_data.activity_form.get('representative_address', '') }}</textarea>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ── DPIA DETAILS ── -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">DPIA Required?</label>
+                                <select class="form-select" name="dpia_required_field" id="dpiaRequiredSelect">
+                                    <option value="">Select option</option>
+                                    <option value="Yes" {% if wizard_data.activity_form.get('dpia_required_field') == 'Yes' %}selected{% endif %}>Yes</option>
+                                    <option value="No" {% if wizard_data.activity_form.get('dpia_required_field') == 'No' %}selected{% endif %}>No</option>
+                                    <option value="Under Assessment" {% if wizard_data.activity_form.get('dpia_required_field') == 'Under Assessment' %}selected{% endif %}>Under Assessment</option>
+                                </select>
+                                <div class="form-text">Has a Data Protection Impact Assessment been determined necessary?</div>
+                            </div>
+
+                            <div class="col-md-6" id="dpiaOutcomeDiv" {% if wizard_data.activity_form.get('dpia_required_field') not in ('Yes','Under Assessment') %}style="display:none;"{% endif %}>
+                                <label class="form-label fw-semibold">DPIA Outcome / Status</label>
+                                <textarea class="form-control" name="dpia_outcome" rows="2"
+                                          placeholder="e.g., DPIA completed on 01/01/2025 — risks mitigated, or DPIA in progress...">{{ wizard_data.activity_form.get('dpia_outcome', '') }}</textarea>
+                            </div>
+
                             <!-- Notes/Comments -->
                             <div class="col-12">
                                 <label class="form-label fw-semibold">Notes/Comments</label>
@@ -739,19 +745,7 @@
 
 {% block scripts %}
 <script>
-// Entity type radio → toggle processor section
-document.querySelectorAll('input[name="entity_type"]').forEach(function(radio) {
-    radio.addEventListener('change', function() {
-        var procSection = document.getElementById('processorSection');
-        if (procSection) {
-            procSection.style.display = (this.value === 'Processor') ? 'block' : 'none';
-        }
-        var orgLabel = document.getElementById('orgNameLabel');
-        if (orgLabel) {
-            orgLabel.textContent = (this.value === 'Processor') ? 'Controller Organisation Name *' : 'Organisation Name *';
-        }
-    });
-});
+// (entity type is now always Controller - no toggle needed)
 
 // Mode of processing radio → toggle processor info block
 document.querySelectorAll('input[name="mode_of_processing"]').forEach(function(radio) {
@@ -819,6 +813,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (breachLikelihood) breachLikelihood.addEventListener('change', updateRiskScore);
     if (breachImpact) breachImpact.addEventListener('change', updateRiskScore);
+
+    // Show/hide DPIA outcome field
+    var dpiaRequiredSelect = document.getElementById('dpiaRequiredSelect');
+    if (dpiaRequiredSelect) {
+        dpiaRequiredSelect.addEventListener('change', function() {
+            var show = (this.value === 'Yes' || this.value === 'Under Assessment');
+            var div = document.getElementById('dpiaOutcomeDiv');
+            if (div) div.style.display = show ? '' : 'none';
+        });
+    }
 });
 </script>
 {% endblock %}
