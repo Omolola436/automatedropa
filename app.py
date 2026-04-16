@@ -579,18 +579,42 @@ def add_activity():
             save_step_data(step, request.form, wizard_data)
             wizard_data['step'] = max(step - 1, 1)
 
+        elif action == 'save_activity':
+            # Save current activity to DB and go to step 3 for review
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            records_created = generate_ropa_records(wizard_data, current_user)
+            saved = wizard_data.setdefault('saved_activities', [])
+            saved.append(wizard_data['activity_form'].get('activity_name', 'Activity'))
+            wizard_data['activity_form'] = {}
+            wizard_data['step'] = 3
+            flash(f'Activity saved successfully. You can now generate your Excel file.', 'success')
+
+        elif action == 'add_another':
+            # Save current activity to DB and reset step 2 for a new activity
+            step = int(request.form.get('current_step', 1))
+            save_step_data(step, request.form, wizard_data)
+            records_created = generate_ropa_records(wizard_data, current_user)
+            saved = wizard_data.setdefault('saved_activities', [])
+            saved.append(wizard_data['activity_form'].get('activity_name', 'Activity'))
+            wizard_data['activity_form'] = {}
+            wizard_data['step'] = 2
+            flash(f'Activity saved! Add another processing activity below.', 'success')
+
         elif action == 'generate':
             # Final step - generate ROPA records and export to Excel
             step = int(request.form.get('current_step', 1))
-            save_step_data(step, request.form, wizard_data)
+            # Only generate from current form if there's activity data (not already saved via add_another)
+            if wizard_data.get('activity_form', {}).get('activity_name'):
+                save_step_data(step, request.form, wizard_data)
+                generate_ropa_records(wizard_data, current_user)
 
-            # Generate ROPA records based on wizard data
-            records_created = generate_ropa_records(wizard_data, current_user)
+            total = len(wizard_data.get('saved_activities', [])) + (1 if wizard_data.get('activity_form', {}).get('activity_name') else 0)
 
             # Clear wizard data
             session.pop('wizard_data', None)
 
-            flash(f'Successfully created {records_created} ROPA record(s). Downloading your Excel file...', 'success')
+            flash(f'Successfully created ROPA record(s). Downloading your Excel file...', 'success')
             # Redirect to Excel export so file downloads immediately
             return redirect(url_for('export_data', format='excel'))
 
@@ -625,6 +649,18 @@ def save_step_data(step, form, wizard_data):
             'dpo_address': form.get('dpo_address')
         }
     elif step == 2:  # Processing Activity Details
+        # Calculate risk level automatically
+        likelihood = form.get('breach_likelihood', '')
+        impact = form.get('breach_impact', '')
+        if likelihood == 'High' and impact == 'High':
+            auto_risk_level = 'High'
+        elif likelihood == 'Low' and impact == 'Low':
+            auto_risk_level = 'Low'
+        elif likelihood or impact:
+            auto_risk_level = 'Medium'
+        else:
+            auto_risk_level = ''
+
         wizard_data['activity_form'] = {
             'activity_name': form.get('activity_name', ''),
             'department_function': form.get('department_function', ''),
@@ -640,7 +676,17 @@ def save_step_data(step, form, wizard_data):
             'safeguards': form.get('safeguards', ''),
             'retained_in_accordance': form.get('retained_in_accordance', ''),
             'reasons_not_adhering': form.get('reasons_not_adhering', ''),
-            'notes_comments': form.get('notes_comments', '')
+            'notes_comments': form.get('notes_comments', ''),
+            # Mode of processing
+            'mode_of_processing': form.get('mode_of_processing', 'Controller'),
+            'mop_processor_name': form.get('mop_processor_name', ''),
+            'mop_processor_contact': form.get('mop_processor_contact', ''),
+            'mop_processor_country': form.get('mop_processor_country', ''),
+            # Risk assessment
+            'breach_likelihood': likelihood,
+            'breach_impact': impact,
+            'risk_level': auto_risk_level,
+            'dpia_required': 'Yes' if (likelihood == 'High' and impact == 'High') else 'No',
         }
 
 
@@ -680,11 +726,6 @@ def generate_ropa_records(wizard_data, user):
         'dpo_contact': org.get('dpo_contact', ''),
         'dpo_address': org.get('dpo_address', ''),
 
-        # Processor / recipient details
-        'processor_name': org.get('processor_name', '') or af.get('recipient_details', ''),
-        'processor_contact': org.get('processor_contact', ''),
-        'processor_address': org.get('processor_address', ''),
-
         # Processing details from activity form
         'processing_purpose': af.get('processing_purpose', ''),
         'legal_basis': af.get('legal_basis', ''),
@@ -698,6 +739,17 @@ def generate_ropa_records(wizard_data, user):
         'retention_period': af.get('retention_period', ''),
         'deletion_procedures': deletion_procedures,
         'security_measures': af.get('security_measures', ''),
+
+        # Risk assessment fields
+        'breach_likelihood': af.get('breach_likelihood', ''),
+        'breach_impact': af.get('breach_impact', ''),
+        'risk_level': af.get('risk_level', ''),
+        'dpia_required': af.get('dpia_required', 'No') == 'Yes',
+
+        # Mode of processing - store processor info in processor fields if mode is Processor
+        'processor_name': (af.get('mop_processor_name', '') or org.get('processor_name', '')) if (af.get('mode_of_processing') == 'Processor' or entity_type == 'Processor') else org.get('processor_name', ''),
+        'processor_contact': af.get('mop_processor_contact', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_contact', ''),
+        'processor_address': af.get('mop_processor_country', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_address', ''),
 
         'status': 'Under Review'
     }
@@ -1780,6 +1832,13 @@ def allowed_file(filename):
 @login_required
 def custom_tabs():
     """Manage custom tabs"""
+    # Lock custom fields for free trial users
+    from subscription import get_user_effective_tier
+    effective_tier = get_user_effective_tier(current_user)
+    if effective_tier in ('trial', 'expired') and current_user.role != 'Privacy Officer':
+        flash('Custom fields are available on Starter, Growth, and Enterprise plans. Upgrade to unlock this feature.', 'warning')
+        return redirect(url_for('pricing'))
+
     if current_user.role == 'Privacy Officer':
         # Privacy Officers see pending custom tabs for review
         from custom_tab_automation import get_pending_custom_tabs
@@ -1797,6 +1856,12 @@ def add_custom_field():
     """Add new custom field"""
     if current_user.role not in ['Privacy Champion', 'Privacy Officer']:
         abort(403)
+    # Lock custom fields for free trial users
+    from subscription import get_user_effective_tier
+    effective_tier = get_user_effective_tier(current_user)
+    if effective_tier in ('trial', 'expired') and current_user.role != 'Privacy Officer':
+        flash('Custom fields are available on Starter, Growth, and Enterprise plans. Upgrade to unlock this feature.', 'warning')
+        return redirect(url_for('pricing'))
 
     if request.method == 'POST':
         try:

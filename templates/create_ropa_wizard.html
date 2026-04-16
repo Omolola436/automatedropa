@@ -3,6 +3,40 @@
 {% block title %}Create ROPA - Step-by-Step Wizard{% endblock %}
 
 {% block content %}
+{% set all_countries = [
+    'Afghanistan','Albania','Algeria','Angola','Argentina','Armenia','Australia','Austria','Azerbaijan',
+    'Bahamas','Bahrain','Bangladesh','Belarus','Belgium','Belize','Benin','Bolivia',
+    'Bosnia and Herzegovina','Botswana','Brazil','Brunei','Bulgaria','Burkina Faso','Burundi',
+    'Cambodia','Cameroon','Canada','Cape Verde','Chad','Chile','China','Colombia','Comoros',
+    'Congo (Brazzaville)','Congo (DRC)','Costa Rica','Croatia','Cuba','Cyprus','Czech Republic',
+    'Denmark','Djibouti','Dominican Republic',
+    'Ecuador','Egypt','El Salvador','Equatorial Guinea','Eritrea','Estonia','Eswatini','Ethiopia',
+    'Fiji','Finland','France',
+    'Gabon','Gambia','Georgia','Germany','Ghana','Greece','Guatemala','Guinea','Guyana',
+    'Haiti','Honduras','Hungary',
+    'Iceland','India','Indonesia','Iran','Iraq','Ireland','Israel','Italy',
+    'Jamaica','Japan','Jordan',
+    'Kazakhstan','Kenya','Kuwait','Kyrgyzstan',
+    'Laos','Latvia','Lebanon','Lesotho','Liberia','Libya','Liechtenstein','Lithuania','Luxembourg',
+    'Madagascar','Malawi','Malaysia','Maldives','Mali','Malta','Mauritania','Mauritius',
+    'Mexico','Moldova','Monaco','Mongolia','Montenegro','Morocco','Mozambique',
+    'Namibia','Nepal','Netherlands','New Zealand','Nicaragua','Niger','Nigeria',
+    'North Korea','North Macedonia','Norway',
+    'Oman',
+    'Pakistan','Panama','Papua New Guinea','Paraguay','Peru','Philippines','Poland','Portugal',
+    'Qatar',
+    'Romania','Russia','Rwanda',
+    'Saudi Arabia','Senegal','Serbia','Sierra Leone','Singapore','Slovakia','Slovenia',
+    'Somalia','South Africa','South Korea','South Sudan','Spain','Sri Lanka','Sudan',
+    'Sweden','Switzerland','Syria',
+    'Taiwan','Tajikistan','Tanzania','Thailand','Togo','Trinidad and Tobago','Tunisia',
+    'Turkey','Turkmenistan',
+    'Uganda','Ukraine','United Arab Emirates','United Kingdom','United States','Uruguay','Uzbekistan',
+    'Venezuela','Vietnam',
+    'Yemen',
+    'Zambia','Zimbabwe'
+] %}
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -18,9 +52,14 @@
                     <span class="text-muted small"><i class="fas fa-infinity me-1"></i>Unlimited activities</span>
                     {% endif %}
                 </div>
-                <a href="{{ url_for('privacy_champion_dashboard' if current_user.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
-                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
-                </a>
+                <div class="d-flex align-items-center gap-3">
+                    <a href="tel:+442071234567" class="btn btn-outline-success btn-sm">
+                        <i class="fas fa-phone me-1"></i>+44 207 123 4567
+                    </a>
+                    <a href="{{ url_for('privacy_champion_dashboard' if current_user.role == 'Privacy Champion' else 'privacy_officer_dashboard') }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                    </a>
+                </div>
             </div>
 
             <!-- Step indicators -->
@@ -58,6 +97,16 @@
                 </div>
             </div>
 
+            {% if wizard_data.get('saved_activities') %}
+            <div class="alert alert-success d-flex align-items-center">
+                <i class="fas fa-check-circle me-2 fs-5"></i>
+                <div>
+                    <strong>{{ wizard_data.saved_activities | length }} activit{{ 'ies' if wizard_data.saved_activities | length > 1 else 'y' }} saved.</strong>
+                    You can add another activity below or proceed to generate the Excel.
+                </div>
+            </div>
+            {% endif %}
+
             <form method="POST" id="ropaWizardForm">
                 <input type="hidden" name="current_step" value="{{ current_step }}">
 
@@ -85,49 +134,31 @@
                                 <h6 class="mb-0 fw-bold"><i class="fas fa-question-circle me-2 text-warning"></i>Your Role in This Processing Activity *</h6>
                             </div>
                             <div class="card-body">
-                                <p class="text-muted small mb-3">Select whether your organisation is acting as a <strong>Controller</strong> (you decide the purpose/means of processing) or a <strong>Processor</strong> (you process data on behalf of another organisation).</p>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <div class="entity-card {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}selected{% endif %}" onclick="selectEntity('Controller')" id="cardController">
-                                            <input type="radio" name="entity_type" id="entityController" value="Controller"
-                                                   {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}checked{% endif %}
-                                                   style="display:none;">
-                                            <div class="d-flex align-items-start gap-2">
-                                                <i class="fas fa-building text-primary mt-1" style="font-size:1.3rem;"></i>
-                                                <div>
-                                                    <div class="fw-bold">Controller</div>
-                                                    <small class="text-muted">You decide the purposes and means of processing personal data.</small>
-                                                </div>
-                                            </div>
-                                        </div>
+                                <p class="text-muted small mb-3">Select whether your organisation is acting as a <strong>Controller</strong>, <strong>Processor</strong>, or <strong>Joint Controller</strong>.</p>
+                                <div class="d-flex flex-wrap gap-4">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="entity_type" id="entityController" value="Controller"
+                                               {% if wizard_data.organization.get('entity_type', 'Controller') == 'Controller' %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="entityController">
+                                            <i class="fas fa-building text-primary me-1"></i>Controller
+                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You decide the purposes and means of processing.</div>
+                                        </label>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="entity-card {% if wizard_data.organization.get('entity_type') == 'Processor' %}selected{% endif %}" onclick="selectEntity('Processor')" id="cardProcessor">
-                                            <input type="radio" name="entity_type" id="entityProcessor" value="Processor"
-                                                   {% if wizard_data.organization.get('entity_type') == 'Processor' %}checked{% endif %}
-                                                   style="display:none;">
-                                            <div class="d-flex align-items-start gap-2">
-                                                <i class="fas fa-cogs text-success mt-1" style="font-size:1.3rem;"></i>
-                                                <div>
-                                                    <div class="fw-bold">Processor</div>
-                                                    <small class="text-muted">You process data on behalf of a controller organisation.</small>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="entity_type" id="entityProcessor" value="Processor"
+                                               {% if wizard_data.organization.get('entity_type') == 'Processor' %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="entityProcessor">
+                                            <i class="fas fa-cogs text-success me-1"></i>Processor
+                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You process data on behalf of a controller.</div>
+                                        </label>
                                     </div>
-                                    <div class="col-md-4">
-                                        <div class="entity-card {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}selected{% endif %}" onclick="selectEntity('Joint Controller')" id="cardJointController">
-                                            <input type="radio" name="entity_type" id="entityJoint" value="Joint Controller"
-                                                   {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}checked{% endif %}
-                                                   style="display:none;">
-                                            <div class="d-flex align-items-start gap-2">
-                                                <i class="fas fa-handshake text-info mt-1" style="font-size:1.3rem;"></i>
-                                                <div>
-                                                    <div class="fw-bold">Joint Controller</div>
-                                                    <small class="text-muted">You jointly determine purposes with another organisation.</small>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="radio" name="entity_type" id="entityJoint" value="Joint Controller"
+                                               {% if wizard_data.organization.get('entity_type') == 'Joint Controller' %}checked{% endif %}>
+                                        <label class="form-check-label fw-semibold" for="entityJoint">
+                                            <i class="fas fa-handshake text-info me-1"></i>Joint Controller
+                                            <div class="text-muted" style="font-size:0.78rem;font-weight:400;">You jointly determine purposes with another organisation.</div>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
@@ -153,14 +184,9 @@
                                 <label class="form-label">Country / Jurisdiction *</label>
                                 <select class="form-select" name="country" required>
                                     <option value="">Select Country</option>
-                                    <option value="EU/EEA" {% if wizard_data.organization.get('country') == 'EU/EEA' %}selected{% endif %}>EU/EEA – GDPR</option>
-                                    <option value="UK" {% if wizard_data.organization.get('country') == 'UK' %}selected{% endif %}>UK – UK GDPR + DPA</option>
-                                    <option value="Nigeria" {% if wizard_data.organization.get('country') == 'Nigeria' %}selected{% endif %}>Nigeria – NDPA</option>
-                                    <option value="South Africa" {% if wizard_data.organization.get('country') == 'South Africa' %}selected{% endif %}>South Africa – POPIA</option>
-                                    <option value="Brazil" {% if wizard_data.organization.get('country') == 'Brazil' %}selected{% endif %}>Brazil – LGPD</option>
-                                    <option value="Canada" {% if wizard_data.organization.get('country') == 'Canada' %}selected{% endif %}>Canada – PIPEDA</option>
-                                    <option value="India" {% if wizard_data.organization.get('country') == 'India' %}selected{% endif %}>India – DPDP Act</option>
-                                    <option value="Other" {% if wizard_data.organization.get('country') == 'Other' %}selected{% endif %}>Other</option>
+                                    {% for c in all_countries %}
+                                    <option value="{{ c }}" {% if wizard_data.organization.get('country') == c %}selected{% endif %}>{{ c }}</option>
+                                    {% endfor %}
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -172,7 +198,7 @@
                                     {% endfor %}
                                 </select>
                             </div>
-                            <!-- Controller contact/address (hidden for Processor) -->
+                            <!-- Controller contact/address -->
                             <div class="col-md-6" id="controllerContactWrap">
                                 <label class="form-label" id="controllerContactLabel">Controller Contact</label>
                                 <input type="text" class="form-control" name="controller_contact"
@@ -192,7 +218,7 @@
                             <h6 class="fw-bold text-success mb-3 mt-3"><i class="fas fa-cogs me-2"></i>Your Organisation (Processor) Details</h6>
                             <div class="row g-3 mb-4">
                                 <div class="col-md-4">
-                                    <label class="form-label">Processor Name (Your Organisation) *</label>
+                                    <label class="form-label">Processor Name (Your Organisation)</label>
                                     <input type="text" class="form-control" name="processor_name"
                                            placeholder="Your organisation's name"
                                            value="{{ wizard_data.organization.get('processor_name', '') }}">
@@ -227,9 +253,35 @@
                                        value="{{ wizard_data.organization.get('dpo_contact', '') }}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">DPO Address</label>
-                                <textarea class="form-control" name="dpo_address" rows="2"
-                                          placeholder="DPO's office address">{{ wizard_data.organization.get('dpo_address', '') }}</textarea>
+                                <label class="form-label">DPO Country / Location</label>
+                                <select class="form-select" name="dpo_address">
+                                    <option value="">Select Country</option>
+                                    {% for c in all_countries %}
+                                    <option value="{{ c }}" {% if wizard_data.organization.get('dpo_address') == c %}selected{% endif %}>{{ c }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Step 1 FAQ -->
+                        <hr class="mt-4">
+                        <div class="accordion accordion-flush mt-3" id="faqStep1">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-question-circle me-2"></i>Frequently Asked Questions</h6>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq1a">What is a ROPA?</button></h2>
+                                <div id="faq1a" class="accordion-collapse collapse" data-bs-parent="#faqStep1"><div class="accordion-body small text-muted">A Record of Processing Activities (ROPA) documents how your organisation collects, uses, stores, and shares personal data. It is a key requirement under GDPR, NDPA, and similar regulations.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq1b">What is a data controller?</button></h2>
+                                <div id="faq1b" class="accordion-collapse collapse" data-bs-parent="#faqStep1"><div class="accordion-body small text-muted">The organisation that decides why and how personal data is processed. If you determine the purpose and means of processing, you are a Controller.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq1c">What is a data processor?</button></h2>
+                                <div id="faq1c" class="accordion-collapse collapse" data-bs-parent="#faqStep1"><div class="accordion-body small text-muted">A third party that processes data on behalf of the controller. If another organisation tells you what data to process and why, you are a Processor.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq1d">Who needs to maintain a ROPA?</button></h2>
+                                <div id="faq1d" class="accordion-collapse collapse" data-bs-parent="#faqStep1"><div class="accordion-body small text-muted">Any organisation that processes personal data — including SMEs, startups, and large enterprises — especially those handling customer, employee, or vendor data.</div></div>
                             </div>
                         </div>
 
@@ -259,10 +311,11 @@
 
                             <!-- Purpose -->
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Purpose?</label>
+                                <label class="form-label fw-semibold">Purpose of Processing</label>
                                 <input type="text" class="form-control" name="processing_purpose"
                                        placeholder="e.g., Managing employee contracts and payroll..."
                                        value="{{ wizard_data.activity_form.get('processing_purpose', '') }}">
+                                <div class="form-text">Be specific — e.g., "To process employee salaries" rather than "for business use".</div>
                             </div>
 
                             <!-- Categories of Data Subjects -->
@@ -271,7 +324,7 @@
                                 <input type="text" class="form-control" name="data_subjects"
                                        placeholder="e.g., Employees, Customers, Contractors..."
                                        value="{{ wizard_data.activity_form.get('data_subjects', '') }}">
-                                <div class="form-text">Who the personal data belongs to</div>
+                                <div class="form-text">Who the personal data belongs to (e.g., customers, employees, vendors, website visitors).</div>
                             </div>
 
                             <!-- Categories of Personal Data -->
@@ -280,31 +333,7 @@
                                 <input type="text" class="form-control" name="data_categories"
                                        placeholder="e.g., Name, Email, NIN, Bank Details, Health Data..."
                                        value="{{ wizard_data.activity_form.get('data_categories', '') }}">
-                                <div class="form-text">Types of personal data being processed</div>
-                            </div>
-
-                            <!-- Retention Period -->
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Retention Period</label>
-                                <input type="text" class="form-control" name="retention_period"
-                                       placeholder="e.g., 6 years after contract end, 7 years..."
-                                       value="{{ wizard_data.activity_form.get('retention_period', '') }}">
-                            </div>
-
-                            <!-- Recipients -->
-                            <div class="col-md-6">
-                                <label class="form-label fw-semibold">Recipients</label>
-                                <input type="text" class="form-control" name="recipients"
-                                       placeholder="e.g., HMRC, Payroll provider, Internal HR only..."
-                                       value="{{ wizard_data.activity_form.get('recipients', '') }}">
-                                <div class="form-text">Who has access to or receives this data</div>
-                            </div>
-
-                            <!-- Security Measures Used -->
-                            <div class="col-12">
-                                <label class="form-label fw-semibold">Security Measures Used</label>
-                                <textarea class="form-control" name="security_measures" rows="2"
-                                          placeholder="e.g., Encryption at rest and in transit, access controls, MFA, regular audits...">{{ wizard_data.activity_form.get('security_measures', '') }}</textarea>
+                                <div class="form-text">Types of personal data being processed. Sensitive data (health, biometric, religious) requires extra protection.</div>
                             </div>
 
                             <!-- Legal Basis for Processing -->
@@ -313,32 +342,115 @@
                                 <select class="form-select" name="legal_basis">
                                     <option value="">Select legal basis</option>
                                     {% set bases = [
-                                        ('Consent', 'Consent (Art. 6(1)(a))'),
-                                        ('Contract', 'Contract (Art. 6(1)(b))'),
-                                        ('Legal obligation', 'Legal Obligation (Art. 6(1)(c))'),
-                                        ('Vital interests', 'Vital Interests (Art. 6(1)(d))'),
-                                        ('Public task', 'Public Task (Art. 6(1)(e))'),
-                                        ('Legitimate interest', 'Legitimate Interests (Art. 6(1)(f))')
+                                        ('Consent', 'Consent'),
+                                        ('Contract', 'Contract'),
+                                        ('Legal obligation', 'Legal Obligation'),
+                                        ('Vital interests', 'Vital Interests'),
+                                        ('Public task', 'Public Task'),
+                                        ('Legitimate interest', 'Legitimate Interests')
                                     ] %}
                                     {% for val, label in bases %}
                                     <option value="{{ val }}" {% if wizard_data.activity_form.get('legal_basis') == val %}selected{% endif %}>{{ label }}</option>
                                     {% endfor %}
                                 </select>
+                                <div class="form-text">The lawful reason your organisation is allowed to process this personal data.</div>
+                            </div>
+
+                            <!-- Recipients -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Recipients / Third Parties</label>
+                                <input type="text" class="form-control" name="recipients"
+                                       placeholder="e.g., HMRC, Payroll provider, Internal HR only..."
+                                       value="{{ wizard_data.activity_form.get('recipients', '') }}">
+                                <div class="form-text">Individuals or organisations you share personal data with (e.g., payment processors, cloud providers).</div>
+                            </div>
+
+                            <!-- Retention Period -->
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Retention Period</label>
+                                <input type="text" class="form-control" name="retention_period"
+                                       placeholder="e.g., 6 years after contract end, 7 years..."
+                                       value="{{ wizard_data.activity_form.get('retention_period', '') }}">
+                                <div class="form-text">Base retention on legal requirements, business needs, or contractual obligations.</div>
+                            </div>
+
+                            <!-- ── MODE OF PROCESSING ── -->
+                            <div class="col-12 mt-2">
+                                <div class="card border-info">
+                                    <div class="card-header bg-info bg-opacity-10">
+                                        <h6 class="mb-0 fw-bold"><i class="fas fa-toggle-on me-2 text-info"></i>Mode of Processing</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted small mb-3">For this specific activity, are you acting as a <strong>Processor</strong> (processing data on behalf of someone else) or a <strong>Controller</strong> (deciding the purposes yourself)?</p>
+                                        <div class="d-flex gap-4">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="mode_of_processing" id="mopController" value="Controller"
+                                                       {% if wizard_data.activity_form.get('mode_of_processing', 'Controller') == 'Controller' %}checked{% endif %}>
+                                                <label class="form-check-label fw-semibold" for="mopController">
+                                                    <i class="fas fa-building text-primary me-1"></i>Controller
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="radio" name="mode_of_processing" id="mopProcessor" value="Processor"
+                                                       {% if wizard_data.activity_form.get('mode_of_processing') == 'Processor' %}checked{% endif %}>
+                                                <label class="form-check-label fw-semibold" for="mopProcessor">
+                                                    <i class="fas fa-cogs text-success me-1"></i>Processor
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <!-- Processor info (shown when Processor selected) -->
+                                        <div id="mopProcessorInfo" class="mt-3 p-3 bg-light rounded" style="display:{% if wizard_data.activity_form.get('mode_of_processing') == 'Processor' %}block{% else %}none{% endif %};">
+                                            <h6 class="text-success fw-bold mb-3"><i class="fas fa-cogs me-1"></i>Processor Information</h6>
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Processor / Your Organisation Name</label>
+                                                    <input type="text" class="form-control" name="mop_processor_name"
+                                                           placeholder="Name of processor"
+                                                           value="{{ wizard_data.activity_form.get('mop_processor_name', '') }}">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Processor Contact</label>
+                                                    <input type="text" class="form-control" name="mop_processor_contact"
+                                                           placeholder="Email or phone"
+                                                           value="{{ wizard_data.activity_form.get('mop_processor_contact', '') }}">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Processor Country</label>
+                                                    <select class="form-select" name="mop_processor_country">
+                                                        <option value="">Select Country</option>
+                                                        {% for c in all_countries %}
+                                                        <option value="{{ c }}" {% if wizard_data.activity_form.get('mop_processor_country') == c %}selected{% endif %}>{{ c }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Security Measures -->
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Security Measures Used</label>
+                                <textarea class="form-control" name="security_measures" rows="2"
+                                          placeholder="e.g., Encryption at rest and in transit, access controls, MFA, regular audits...">{{ wizard_data.activity_form.get('security_measures', '') }}</textarea>
+                                <div class="form-text">Technical and organisational controls to protect personal data (e.g., encryption, access controls, employee training).</div>
                             </div>
 
                             <!-- Crossborder Transfer? -->
                             <div class="col-md-6">
-                                <label class="form-label fw-semibold">Crossborder Transfer?</label>
+                                <label class="form-label fw-semibold">Cross-Border Transfer?</label>
                                 <select class="form-select" name="crossborder_transfer" id="crossborderSelect">
                                     <option value="">Select option</option>
                                     <option value="Yes" {% if wizard_data.activity_form.get('crossborder_transfer') == 'Yes' %}selected{% endif %}>Yes</option>
                                     <option value="No" {% if wizard_data.activity_form.get('crossborder_transfer') == 'No' %}selected{% endif %}>No</option>
                                 </select>
+                                <div class="form-text">Does personal data leave your country/region? E.g., using cloud providers or international vendors.</div>
                             </div>
 
                             <!-- Name & Contact Details of Recipient (shown when Crossborder = Yes) -->
                             <div class="col-md-6" id="recipientDetailsDiv" {% if wizard_data.activity_form.get('crossborder_transfer') != 'Yes' %}style="display:none;"{% endif %}>
-                                <label class="form-label fw-semibold">Name &amp; Contact Details of Recipient</label>
+                                <label class="form-label fw-semibold">Name &amp; Contact Details of Overseas Recipient</label>
                                 <textarea class="form-control" name="recipient_details" rows="2"
                                           placeholder="Name, address and contact of the overseas recipient...">{{ wizard_data.activity_form.get('recipient_details', '') }}</textarea>
                             </div>
@@ -362,9 +474,70 @@
 
                             <!-- Reasons For Not Adhering to Policy (shown when No) -->
                             <div class="col-md-6" id="reasonsDiv" {% if wizard_data.activity_form.get('retained_in_accordance') != 'No' %}style="display:none;"{% endif %}>
-                                <label class="form-label fw-semibold">Reasons For Not Adhering to Policy <span class="text-muted">(if applicable)</span></label>
+                                <label class="form-label fw-semibold">Reasons For Not Adhering to Policy</label>
                                 <textarea class="form-control" name="reasons_not_adhering" rows="2"
                                           placeholder="Explain why the data is not retained/erased per policy...">{{ wizard_data.activity_form.get('reasons_not_adhering', '') }}</textarea>
+                            </div>
+
+                            <!-- ── RISK ASSESSMENT ── -->
+                            <div class="col-12 mt-2">
+                                <div class="card border-danger">
+                                    <div class="card-header bg-danger bg-opacity-10">
+                                        <h6 class="mb-0 fw-bold"><i class="fas fa-shield-alt me-2 text-danger"></i>Risk Assessment</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="text-muted small mb-3">Answer these questions to assess the risk level of this processing activity. The system will automatically calculate your risk score and alert you if a DPIA may be required.</p>
+                                        <div class="row g-3">
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">Likelihood of a Data Breach</label>
+                                                <select class="form-select" name="breach_likelihood" id="breachLikelihood">
+                                                    <option value="">Select</option>
+                                                    <option value="Low" {% if wizard_data.activity_form.get('breach_likelihood') == 'Low' %}selected{% endif %}>Low</option>
+                                                    <option value="Medium" {% if wizard_data.activity_form.get('breach_likelihood') == 'Medium' %}selected{% endif %}>Medium</option>
+                                                    <option value="High" {% if wizard_data.activity_form.get('breach_likelihood') == 'High' %}selected{% endif %}>High</option>
+                                                </select>
+                                                <div class="form-text">How likely is a breach with this activity?</div>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label class="form-label fw-semibold">Impact of a Data Breach</label>
+                                                <select class="form-select" name="breach_impact" id="breachImpact">
+                                                    <option value="">Select</option>
+                                                    <option value="Low" {% if wizard_data.activity_form.get('breach_impact') == 'Low' %}selected{% endif %}>Low</option>
+                                                    <option value="Medium" {% if wizard_data.activity_form.get('breach_impact') == 'Medium' %}selected{% endif %}>Medium</option>
+                                                    <option value="High" {% if wizard_data.activity_form.get('breach_impact') == 'High' %}selected{% endif %}>High</option>
+                                                </select>
+                                                <div class="form-text">How severe would the impact be on data subjects?</div>
+                                            </div>
+                                            <div class="col-md-4 d-flex flex-column justify-content-start">
+                                                <label class="form-label fw-semibold">Calculated Risk Score</label>
+                                                <div id="riskScoreBadge" class="mt-1">
+                                                    {% set lh = wizard_data.activity_form.get('breach_likelihood','') %}
+                                                    {% set im = wizard_data.activity_form.get('breach_impact','') %}
+                                                    {% if lh and im %}
+                                                        {% if lh == 'High' and im == 'High' %}
+                                                            <span class="badge bg-danger fs-6 px-3 py-2">HIGH RISK</span>
+                                                        {% elif lh == 'Low' and im == 'Low' %}
+                                                            <span class="badge bg-success fs-6 px-3 py-2">LOW RISK</span>
+                                                        {% else %}
+                                                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">MEDIUM RISK</span>
+                                                        {% endif %}
+                                                    {% else %}
+                                                        <span class="badge bg-secondary fs-6 px-3 py-2">— Select both above</span>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <!-- DPIA trigger alert -->
+                                        <div id="dpiaAlert" class="alert alert-danger mt-3 mb-0" style="display:{% if wizard_data.activity_form.get('breach_likelihood') == 'High' and wizard_data.activity_form.get('breach_impact') == 'High' %}block{% else %}none{% endif %};">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            <strong>DPIA Trigger:</strong> Based on your risk assessment, a <strong>Data Protection Impact Assessment (DPIA)</strong> may be required for this processing activity. Please consult your DPO before proceeding.
+                                        </div>
+                                        <div id="dpiaAlertMedium" class="alert alert-warning mt-3 mb-0" style="display:{% if (wizard_data.activity_form.get('breach_likelihood') == 'High' or wizard_data.activity_form.get('breach_impact') == 'High') and not (wizard_data.activity_form.get('breach_likelihood') == 'High' and wizard_data.activity_form.get('breach_impact') == 'High') %}block{% else %}none{% endif %};">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            <strong>Medium Risk Detected:</strong> Consider reviewing your security measures and consult your DPO if this activity involves sensitive personal data.
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
 
                             <!-- Notes/Comments -->
@@ -376,9 +549,46 @@
 
                         </div><!-- end row -->
 
+                        <!-- Step 2 FAQ -->
+                        <hr class="mt-4">
+                        <div class="accordion accordion-flush mt-3" id="faqStep2">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-question-circle me-2"></i>Frequently Asked Questions</h6>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2a">What is a processing activity?</button></h2>
+                                <div id="faq2a" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted">Any operation performed on personal data — such as collecting customer information, storing employee records, sending marketing emails, or sharing data with third parties.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2b">Which legal basis should I choose?</button></h2>
+                                <div id="faq2b" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted"><strong>Consent</strong> – data subject agreed. <strong>Contract</strong> – needed to fulfil a contract. <strong>Legal Obligation</strong> – required by law. <strong>Vital Interests</strong> – life/death situation. <strong>Public Task</strong> – public authority function. <strong>Legitimate Interests</strong> – your genuine interest outweighs privacy risk.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2c">What is data retention?</button></h2>
+                                <div id="faq2c" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted">How long personal data is stored before being deleted. Base it on legal requirements, business needs, or contractual obligations. Avoid keeping data longer than necessary.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2d">What is a cross-border data transfer?</button></h2>
+                                <div id="faq2d" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted">When personal data is transferred outside your country or region. This occurs when using cloud providers hosted abroad or international vendors. Appropriate safeguards (e.g., Standard Contractual Clauses) must be in place.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2e">When do I need a DPIA?</button></h2>
+                                <div id="faq2e" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted">A Data Protection Impact Assessment (DPIA) is required when processing is likely to result in a high risk to individuals — particularly for large-scale processing of sensitive data, systematic monitoring, or automated decision-making. If our risk calculator shows HIGH risk, consult your DPO.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq2f">What are common ROPA mistakes?</button></h2>
+                                <div id="faq2f" class="accordion-collapse collapse" data-bs-parent="#faqStep2"><div class="accordion-body small text-muted">Using vague descriptions, not updating regularly, ignoring third-party processors, and not documenting the legal basis. Be specific — e.g. "To process employee salaries" rather than "for business use".</div></div>
+                            </div>
+                        </div>
+
 
                         <!-- ===== STEP 3: Review & Generate ===== -->
                         {% elif current_step == 3 %}
+
+                        {% if wizard_data.get('saved_activities') %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-layer-group me-2"></i>
+                            <strong>{{ wizard_data.saved_activities | length }} processing activit{{ 'ies' if wizard_data.saved_activities | length > 1 else 'y' }} saved</strong> and ready for export. Click <strong>Generate &amp; Download Excel</strong> to download all activities.
+                        </div>
+                        {% endif %}
 
                         <div class="alert alert-success">
                             <i class="fas fa-check-circle me-2"></i>
@@ -409,7 +619,7 @@
                                         <table class="table table-sm mb-0">
                                             <tr><td class="text-muted" style="width:45%">DPO Name</td><td><strong>{{ wizard_data.organization.get('dpo_name', '—') }}</strong></td></tr>
                                             <tr><td class="text-muted">DPO Contact</td><td>{{ wizard_data.organization.get('dpo_contact', '—') }}</td></tr>
-                                            <tr><td class="text-muted">DPO Address</td><td>{{ wizard_data.organization.get('dpo_address', '—') }}</td></tr>
+                                            <tr><td class="text-muted">DPO Country</td><td>{{ wizard_data.organization.get('dpo_address', '—') }}</td></tr>
                                         </table>
                                     </div>
                                 </div>
@@ -433,16 +643,25 @@
                                             <tr><td class="text-muted">Retention Period</td><td>{{ af.get('retention_period', '—') }}</td></tr>
                                             <tr><td class="text-muted">Recipients</td><td>{{ af.get('recipients', '—') }}</td></tr>
                                             <tr><td class="text-muted">Legal Basis</td><td>{{ af.get('legal_basis', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Mode of Processing</td><td>{{ af.get('mode_of_processing', '—') }}</td></tr>
                                         </table>
                                     </div>
                                     <div class="col-md-6">
                                         <table class="table table-sm mb-0">
-                                            <tr><td class="text-muted" style="width:50%">Crossborder Transfer?</td><td>{{ af.get('crossborder_transfer', '—') }}</td></tr>
-                                            <tr><td class="text-muted">Recipient Details</td><td>{{ af.get('recipient_details', '—') }}</td></tr>
+                                            <tr><td class="text-muted" style="width:50%">Cross-Border Transfer</td><td>{{ af.get('crossborder_transfer', '—') }}</td></tr>
                                             <tr><td class="text-muted">Safeguards</td><td>{{ af.get('safeguards', '—') }}</td></tr>
                                             <tr><td class="text-muted">Retained per Policy?</td><td>{{ af.get('retained_in_accordance', '—') }}</td></tr>
-                                            <tr><td class="text-muted">Reasons Not Adhering</td><td>{{ af.get('reasons_not_adhering', '—') }}</td></tr>
                                             <tr><td class="text-muted">Security Measures</td><td>{{ af.get('security_measures', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Breach Likelihood</td><td>{{ af.get('breach_likelihood', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Breach Impact</td><td>{{ af.get('breach_impact', '—') }}</td></tr>
+                                            <tr><td class="text-muted">Risk Level</td><td>
+                                                {% set lh = af.get('breach_likelihood','') %}
+                                                {% set im = af.get('breach_impact','') %}
+                                                {% if lh == 'High' and im == 'High' %}<span class="badge bg-danger">High</span>
+                                                {% elif lh == 'Low' and im == 'Low' %}<span class="badge bg-success">Low</span>
+                                                {% elif lh or im %}<span class="badge bg-warning text-dark">Medium</span>
+                                                {% else %}—{% endif %}
+                                            </td></tr>
                                             <tr><td class="text-muted">Notes/Comments</td><td>{{ af.get('notes_comments', '—') }}</td></tr>
                                         </table>
                                     </div>
@@ -450,9 +669,30 @@
                             </div>
                         </div>
 
+                        {% if af.get('breach_likelihood') == 'High' and af.get('breach_impact') == 'High' %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>DPIA Required:</strong> This activity has been assessed as HIGH RISK. A Data Protection Impact Assessment (DPIA) is recommended. Please consult your DPO.
+                        </div>
+                        {% endif %}
+
                         <div class="alert alert-info">
                             <i class="fas fa-file-excel me-2 text-success"></i>
-                            Your Excel file will be downloaded immediately. It will contain all the above data in a structured ROPA spreadsheet format.
+                            Your Excel file will be downloaded immediately. It will contain all the above data in a structured ROPA spreadsheet format including risk assessment scores.
+                        </div>
+
+                        <!-- Step 3 FAQ -->
+                        <hr class="mt-4">
+                        <div class="accordion accordion-flush mt-3" id="faqStep3">
+                            <h6 class="fw-bold text-secondary mb-2"><i class="fas fa-question-circle me-2"></i>Frequently Asked Questions</h6>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq3a">How often should I update my ROPA?</button></h2>
+                                <div id="faq3a" class="accordion-collapse collapse" data-bs-parent="#faqStep3"><div class="accordion-body small text-muted">Your ROPA should be updated whenever new processes are introduced, vendors change, or regulations evolve. At minimum, review it annually.</div></div>
+                            </div>
+                            <div class="accordion-item border">
+                                <h2 class="accordion-header"><button class="accordion-button collapsed py-2" type="button" data-bs-toggle="collapse" data-bs-target="#faq3b">Why is a ROPA important?</button></h2>
+                                <div id="faq3b" class="accordion-collapse collapse" data-bs-parent="#faqStep3"><div class="accordion-body small text-muted">A ROPA helps you understand your data flows, identify risks, and demonstrate compliance during audits or regulatory reviews. It is a legal requirement for most organisations under GDPR and similar laws.</div></div>
+                            </div>
                         </div>
 
                         {% endif %}
@@ -467,8 +707,18 @@
                             </button>
                             {% endif %}
                         </div>
-                        <div>
-                            {% if current_step < 3 %}
+                        <div class="d-flex gap-2">
+                            {% if current_step == 2 %}
+                            <button type="submit" name="action" value="save_activity" class="btn btn-outline-primary px-4">
+                                <i class="fas fa-save me-2"></i>Save Activity
+                            </button>
+                            <button type="submit" name="action" value="add_another" class="btn btn-outline-success px-4">
+                                <i class="fas fa-plus me-2"></i>Add Another Processing Activity
+                            </button>
+                            <button type="submit" name="action" value="next" class="btn btn-primary px-4">
+                                Review &amp; Generate <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                            {% elif current_step < 3 %}
                             <button type="submit" name="action" value="next" class="btn btn-primary px-4">
                                 Next <i class="fas fa-arrow-right ms-2"></i>
                             </button>
@@ -488,54 +738,35 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-.entity-card {
-    border: 2px solid #dee2e6;
-    border-radius: 8px;
-    padding: 1rem;
-    cursor: pointer;
-    transition: border-color 0.2s, background-color 0.2s;
-    height: 100%;
-}
-.entity-card:hover {
-    border-color: #0d6efd;
-    background-color: #f0f5ff;
-}
-.entity-card.selected {
-    border-color: #0d6efd;
-    background-color: #e8f0fe;
-}
-</style>
 <script>
-function selectEntity(type) {
-    // Update card selection
-    ['Controller', 'Processor', 'Joint Controller'].forEach(function(t) {
-        var card = document.getElementById('card' + t.replace(' ', ''));
-        if (card) card.classList.toggle('selected', t === type);
-    });
-    // Check the hidden radio
-    var radio = document.querySelector('input[name="entity_type"][value="' + type + '"]');
-    if (radio) radio.checked = true;
-
-    // Toggle processor section
-    var procSection = document.getElementById('processorSection');
-    if (procSection) procSection.style.display = (type === 'Processor') ? 'block' : 'none';
-
-    // Update org name label
-    var orgLabel = document.getElementById('orgNameLabel');
-    if (orgLabel) {
-        if (type === 'Processor') {
-            orgLabel.textContent = 'Controller Organisation Name *';
-        } else {
-            orgLabel.textContent = 'Organisation Name *';
+// Entity type radio → toggle processor section
+document.querySelectorAll('input[name="entity_type"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        var procSection = document.getElementById('processorSection');
+        if (procSection) {
+            procSection.style.display = (this.value === 'Processor') ? 'block' : 'none';
         }
-    }
-}
+        var orgLabel = document.getElementById('orgNameLabel');
+        if (orgLabel) {
+            orgLabel.textContent = (this.value === 'Processor') ? 'Controller Organisation Name *' : 'Organisation Name *';
+        }
+    });
+});
+
+// Mode of processing radio → toggle processor info block
+document.querySelectorAll('input[name="mode_of_processing"]').forEach(function(radio) {
+    radio.addEventListener('change', function() {
+        var info = document.getElementById('mopProcessorInfo');
+        if (info) info.style.display = (this.value === 'Processor') ? 'block' : 'none';
+    });
+});
 
 // Show/hide crossborder recipient fields
 document.addEventListener('DOMContentLoaded', function() {
     var crossborderSelect = document.getElementById('crossborderSelect');
     var retentionPolicySelect = document.getElementById('retentionPolicySelect');
+    var breachLikelihood = document.getElementById('breachLikelihood');
+    var breachImpact = document.getElementById('breachImpact');
 
     if (crossborderSelect) {
         crossborderSelect.addEventListener('change', function() {
@@ -547,16 +778,47 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (retentionPolicySelect) {
         retentionPolicySelect.addEventListener('change', function() {
-            var show = this.value === 'No';
-            document.getElementById('reasonsDiv').style.display = show ? '' : 'none';
+            var reasonsDiv = document.getElementById('reasonsDiv');
+            if (reasonsDiv) reasonsDiv.style.display = (this.value === 'No') ? '' : 'none';
         });
     }
 
-    // Apply initial entity type state on page load
-    var checkedRadio = document.querySelector('input[name="entity_type"]:checked');
-    if (checkedRadio) {
-        selectEntity(checkedRadio.value);
+    function updateRiskScore() {
+        var likelihood = breachLikelihood ? breachLikelihood.value : '';
+        var impact = breachImpact ? breachImpact.value : '';
+        var badge = document.getElementById('riskScoreBadge');
+        var dpiaAlert = document.getElementById('dpiaAlert');
+        var dpiaAlertMedium = document.getElementById('dpiaAlertMedium');
+        if (!badge) return;
+
+        var riskLevel = '';
+        var badgeClass = 'bg-secondary';
+        var badgeText = '— Select both above';
+
+        if (likelihood && impact) {
+            if (likelihood === 'High' && impact === 'High') {
+                riskLevel = 'High';
+                badgeClass = 'bg-danger';
+                badgeText = 'HIGH RISK';
+            } else if (likelihood === 'Low' && impact === 'Low') {
+                riskLevel = 'Low';
+                badgeClass = 'bg-success';
+                badgeText = 'LOW RISK';
+            } else {
+                riskLevel = 'Medium';
+                badgeClass = 'bg-warning text-dark';
+                badgeText = 'MEDIUM RISK';
+            }
+        }
+
+        badge.innerHTML = '<span class="badge ' + badgeClass + ' fs-6 px-3 py-2">' + badgeText + '</span>';
+
+        if (dpiaAlert) dpiaAlert.style.display = (riskLevel === 'High') ? 'block' : 'none';
+        if (dpiaAlertMedium) dpiaAlertMedium.style.display = (riskLevel === 'Medium') ? 'block' : 'none';
     }
+
+    if (breachLikelihood) breachLikelihood.addEventListener('change', updateRiskScore);
+    if (breachImpact) breachImpact.addEventListener('change', updateRiskScore);
 });
 </script>
 {% endblock %}

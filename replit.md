@@ -27,6 +27,19 @@ A Record of Processing Activities (ROPA) management system to help organizations
 - `instance/` — SQLite database (`ropa_system.db`)
 - `uploads/` — Uploaded files
 
+## Recent Changes
+- Country/Jurisdiction dropdown in Step 1 controller now has full A-Z country list
+- Legal basis options no longer show article numbers (e.g. "Consent" not "Consent (Art. 6(1)(a))")
+- Entity type (Controller/Processor/Joint Controller) changed from clickable cards to clean radio buttons
+- DPO Address field changed to a country dropdown (A-Z)
+- Step 2 now has a "Mode of Processing" section (Processor/Controller) with conditional processor info form (name, contact, country)
+- Step 2 now includes Risk Assessment questions: Likelihood of Breach, Impact of Breach, auto-calculated Risk Score badge, and DPIA trigger alert
+- Step 2 footer has Save Activity and Add Another Processing Activity buttons (multi-activity support without restarting from step 1)
+- Custom fields (add/view) locked for free trial users - redirects to pricing page
+- Risk fields (breach_likelihood, breach_impact, risk_level, dpia_required) now exported to Excel
+- Per-step FAQ accordions added to all 3 wizard steps using the provided FAQ content
+- Phone number (+44 207 123 4567) added to footer and wizard header
+
 ## Running the App
 ```bash
 python main.py
