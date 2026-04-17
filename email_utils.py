@@ -21,17 +21,25 @@ def send_email(to_email, to_name, subject, message, reply_to=None):
         logging.warning("EmailJS credentials not configured. Email not sent.")
         return False
 
+    # Split name into first/last to match the EmailJS template variables
+    name_parts = (to_name or '').strip().split(' ', 1)
+    fname = name_parts[0] if name_parts else ''
+    lname = name_parts[1] if len(name_parts) > 1 else ''
+
+    # Combine subject + body since template has no dedicated subject field
+    full_message = f"Subject: {subject}\n\n{message}"
+
     try:
         payload = {
             "service_id": service_id,
             "template_id": template_id,
             "user_id": public_key,
             "template_params": {
-                "to_email": to_email,
-                "to_name": to_name,
-                "subject": subject,
-                "message": message,
-                "reply_to": reply_to or "noreply@processledger.com"
+                "FName": fname,
+                "LName": lname,
+                "email": to_email,
+                "tel": "",
+                "message": full_message
             }
         }
         response = requests.post(
