@@ -6,12 +6,14 @@ EMAILJS_API_URL = 'https://api.emailjs.com/api/v1.0/email/send'
 
 
 def _get_credentials():
-    """Read EmailJS credentials from environment at call-time."""
-    return (
-        os.environ.get('EMAILJS_SERVICE_ID'),
-        os.environ.get('EMAILJS_TEMPLATE_ID'),
-        os.environ.get('EMAILJS_PUBLIC_KEY'),
-    )
+    service_id = os.environ.get('EMAILJS_SERVICE_ID')
+    template_id = os.environ.get('EMAILJS_TEMPLATE_ID')
+    public_key = os.environ.get('EMAILJS_PUBLIC_KEY')
+
+    print("DEBUG EMAILJS INSIDE FUNCTION:",
+          service_id, template_id, public_key)
+
+    return service_id, template_id, public_key
 
 
 def send_email(to_email, to_name, subject, message, reply_to=None):
@@ -36,9 +38,7 @@ def send_email(to_email, to_name, subject, message, reply_to=None):
             "user_id": public_key,
             "template_params": {
                 "FName": fname,
-                "LName": lname,
                 "email": to_email,
-                "tel": "",
                 "message": full_message
             }
         }
@@ -61,10 +61,10 @@ def send_email(to_email, to_name, subject, message, reply_to=None):
 
 def send_welcome_email(user_email, organisation=None):
     name = organisation or user_email.split('@')[0]
-    subject = "Welcome to ProcessLedger – Your Account is Active"
+    subject = "Welcome to DataProcess Flow – Your Account is Active"
     message = (
         f"Dear {name},\n\n"
-        "Thank you for creating your account on ProcessLedger by 3Consulting. "
+        "Thank you for creating your account on DataProcess Flow by 3Consulting. "
         "Your free trial has started and your account is now active.\n\n"
         "During your trial you can:\n"
         "  • Create up to 5 ROPA processing activities\n"
@@ -72,7 +72,7 @@ def send_welcome_email(user_email, organisation=None):
         "  • Use the step-by-step activity wizard\n\n"
         "Log in anytime to get started. If you need help, just reply to this email.\n\n"
         "Best regards,\n"
-        "The ProcessLedger Team\n"
+        "The DataProcess Flow Team\n"
         "3Consulting"
     )
     return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
@@ -91,7 +91,7 @@ def send_upgrade_email(user_email, organisation=None, activities_used=0, max_act
         "  • Enterprise    – Unlimited activities + all features\n\n"
         "Log in and visit the Pricing page to upgrade today.\n\n"
         "Best regards,\n"
-        "The ProcessLedger Team\n"
+        "The DataProcess Flow Team\n"
         "3Consulting"
     )
     return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
@@ -99,15 +99,15 @@ def send_upgrade_email(user_email, organisation=None, activities_used=0, max_act
 
 def send_password_reset_email(user_email, reset_link):
     name = user_email.split('@')[0]
-    subject = "ProcessLedger – Password Reset Request"
+    subject = "DataProcess Flow – Password Reset Request"
     message = (
         f"Dear {name},\n\n"
-        "We received a request to reset your password for your ProcessLedger account.\n\n"
+        "We received a request to reset your password for your DataProcess Flow account.\n\n"
         f"Click the link below to reset your password:\n{reset_link}\n\n"
         "This link will expire in 1 hour. If you did not request a password reset, "
         "please ignore this email — your account is safe.\n\n"
         "Best regards,\n"
-        "The ProcessLedger Team\n"
+        "The DataProcess Flow Team\n"
         "3Consulting"
     )
     return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
@@ -116,13 +116,13 @@ def send_password_reset_email(user_email, reset_link):
 def send_activity_approved_email(user_email, activity_name, reviewer_name=None):
     name = user_email.split('@')[0]
     reviewer = reviewer_name or "your Privacy Officer"
-    subject = f"ProcessLedger – Activity Approved: {activity_name}"
+    subject = f"DataProcess Flow – Activity Approved: {activity_name}"
     message = (
         f"Dear {name},\n\n"
         f"Your ROPA processing activity '{activity_name}' has been reviewed and approved by {reviewer}.\n\n"
-        "You can view the approved record by logging into ProcessLedger.\n\n"
+        "You can view the approved record by logging into DataProcess Flow.\n\n"
         "Best regards,\n"
-        "The ProcessLedger Team\n"
+        "The DataProcess Flow Team\n"
         "3Consulting"
     )
     return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
@@ -132,14 +132,14 @@ def send_activity_rejected_email(user_email, activity_name, reason=None, reviewe
     name = user_email.split('@')[0]
     reviewer = reviewer_name or "your Privacy Officer"
     reason_text = f"\n\nReason provided:\n{reason}" if reason else ""
-    subject = f"ProcessLedger – Activity Requires Attention: {activity_name}"
+    subject = f"DataProcess Flow – Activity Requires Attention: {activity_name}"
     message = (
         f"Dear {name},\n\n"
         f"Your ROPA processing activity '{activity_name}' has been reviewed by {reviewer} "
         f"and requires further attention.{reason_text}\n\n"
-        "Please log into ProcessLedger to review and update the record.\n\n"
+        "Please log into DataProcess Flow to review and update the record.\n\n"
         "Best regards,\n"
-        "The ProcessLedger Team\n"
+        "The DataProcess Flow Team\n"
         "3Consulting"
     )
     return send_email(to_email=user_email, to_name=name, subject=subject, message=message)

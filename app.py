@@ -1,4 +1,12 @@
+from dotenv import load_dotenv, find_dotenv
 import os
+
+dotenv_path = find_dotenv()
+print("DOTENV PATH FOUND:", dotenv_path)
+
+load_dotenv(dotenv_path)
+print("CURRENT DIR:", os.getcwd())
+print("FILES HERE:", os.listdir())
 import logging
 import json
 from flask import Flask, render_template, request, redirect, url_for, flash, session, send_file, jsonify, abort
@@ -1302,11 +1310,11 @@ def test_email():
         success = send_email(
             to_email=current_user.email,
             to_name=current_user.department or current_user.email,
-            subject="ProcessLedger – Email Test",
+            subject="DataProcess Flow – Email Test",
             message=(
-                "This is a test email from ProcessLedger.\n\n"
+                "This is a test email from DataProcess Flow.\n\n"
                 "If you received this, your EmailJS integration is working correctly.\n\n"
-                "Best regards,\nThe ProcessLedger Team"
+                "Best regards,\nThe DataProcess Flow Team"
             )
         )
         if success:
