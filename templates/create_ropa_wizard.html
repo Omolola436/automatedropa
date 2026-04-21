@@ -338,7 +338,7 @@
                                         <h6 class="mb-0 fw-bold"><i class="fas fa-toggle-on me-2 text-info"></i>Mode of Processing</h6>
                                     </div>
                                     <div class="card-body">
-                                        <p class="text-muted small mb-3">For this specific activity, are you acting as a <strong>Processor</strong> (processing data on behalf of someone else) or a <strong>Controller</strong> (deciding the purposes yourself)?</p>
+                                        <p class="text-muted small mb-3">For this specific activity, are you acting as a <strong>Processor</strong> (processing data on behalf of someone else) or a <strong>Controller</strong> (deciding the purposes yourself)?<br><span class="text-info">If you are the Controller, tell us about the Processor handling the data for you. If you are the Processor, tell us about the Controller you are processing on behalf of.</span></p>
                                         <div class="d-flex gap-4">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="radio" name="mode_of_processing" id="mopController" value="Controller"
@@ -355,14 +355,15 @@
                                                 </label>
                                             </div>
                                         </div>
-                                        <!-- Processor info (shown when Processor selected) -->
-                                        <div id="mopProcessorInfo" class="mt-3 p-3 bg-light rounded" style="display:{% if wizard_data.activity_form.get('mode_of_processing') == 'Processor' %}block{% else %}none{% endif %};">
+                                        <!-- Processor info (shown when Controller selected → ask about the Processor) -->
+                                        <div id="mopProcessorInfo" class="mt-3 p-3 bg-light rounded" style="display:{% if wizard_data.activity_form.get('mode_of_processing', 'Controller') == 'Controller' %}block{% else %}none{% endif %};">
                                             <h6 class="text-success fw-bold mb-3"><i class="fas fa-cogs me-1"></i>Processor Information</h6>
+                                            <p class="text-muted small mb-3">Tell us about the processor that handles personal data on your behalf for this activity.</p>
                                             <div class="row g-3">
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Processor / Your Organisation Name</label>
+                                                    <label class="form-label">Processor Name</label>
                                                     <input type="text" class="form-control" name="mop_processor_name"
-                                                           placeholder="Name of processor"
+                                                           placeholder="Name of processor organisation"
                                                            value="{{ wizard_data.activity_form.get('mop_processor_name', '') }}">
                                                 </div>
                                                 <div class="col-md-4">
@@ -377,6 +378,35 @@
                                                         <option value="">Select Country</option>
                                                         {% for c in all_countries %}
                                                         <option value="{{ c }}" {% if wizard_data.activity_form.get('mop_processor_country') == c %}selected{% endif %}>{{ c }}</option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Controller info (shown when Processor selected → ask about the Controller) -->
+                                        <div id="mopControllerInfo" class="mt-3 p-3 bg-light rounded" style="display:{% if wizard_data.activity_form.get('mode_of_processing') == 'Processor' %}block{% else %}none{% endif %};">
+                                            <h6 class="text-primary fw-bold mb-3"><i class="fas fa-building me-1"></i>Controller Information</h6>
+                                            <p class="text-muted small mb-3">Tell us about the controller you are processing personal data on behalf of for this activity.</p>
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Controller Name</label>
+                                                    <input type="text" class="form-control" name="mop_controller_name"
+                                                           placeholder="Name of controller organisation"
+                                                           value="{{ wizard_data.activity_form.get('mop_controller_name', '') }}">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Controller Contact</label>
+                                                    <input type="text" class="form-control" name="mop_controller_contact"
+                                                           placeholder="Email or phone"
+                                                           value="{{ wizard_data.activity_form.get('mop_controller_contact', '') }}">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Controller Country</label>
+                                                    <select class="form-select" name="mop_controller_country">
+                                                        <option value="">Select Country</option>
+                                                        {% for c in all_countries %}
+                                                        <option value="{{ c }}" {% if wizard_data.activity_form.get('mop_controller_country') == c %}selected{% endif %}>{{ c }}</option>
                                                         {% endfor %}
                                                     </select>
                                                 </div>
@@ -747,11 +777,15 @@
 <script>
 // (entity type is now always Controller - no toggle needed)
 
-// Mode of processing radio → toggle processor info block
+// Mode of processing radio → toggle processor / controller info blocks
+// Selecting "Controller" → ask for the Processor's info
+// Selecting "Processor"  → ask for the Controller's info
 document.querySelectorAll('input[name="mode_of_processing"]').forEach(function(radio) {
     radio.addEventListener('change', function() {
-        var info = document.getElementById('mopProcessorInfo');
-        if (info) info.style.display = (this.value === 'Processor') ? 'block' : 'none';
+        var processorInfo = document.getElementById('mopProcessorInfo');
+        var controllerInfo = document.getElementById('mopControllerInfo');
+        if (processorInfo) processorInfo.style.display = (this.value === 'Controller') ? 'block' : 'none';
+        if (controllerInfo) controllerInfo.style.display = (this.value === 'Processor') ? 'block' : 'none';
     });
 });
 

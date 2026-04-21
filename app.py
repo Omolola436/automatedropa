@@ -170,10 +170,12 @@ def index():
 def login():
     """User login"""
     if request.method == 'POST':
-        email = request.form['email']
+        email = (request.form.get('email') or '').strip()
         password = request.form['password']
 
-        user = models.User.query.filter_by(email=email).first()
+        # Case-insensitive email lookup so capitalisation differences don't block sign-in
+        from sqlalchemy import func
+        user = models.User.query.filter(func.lower(models.User.email) == email.lower()).first()
 
         if user and check_password_hash(user.password_hash, password):
             login_user(user)
@@ -197,7 +199,7 @@ def register():
         return redirect(url_for('index'))
 
     if request.method == 'POST':
-        email = request.form.get('email')
+        email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
         organisation = request.form.get('organisation', '')
@@ -220,7 +222,8 @@ def register():
             flash('Password must be at least 6 characters long.', 'error')
             return render_template('register.html')
 
-        if models.User.query.filter_by(email=email).first():
+        from sqlalchemy import func as _sql_func
+        if models.User.query.filter(_sql_func.lower(models.User.email) == email.lower()).first():
             flash('An account with that email already exists.', 'error')
             return render_template('register.html')
 
@@ -237,15 +240,14 @@ def register():
             db.session.add(user)
             db.session.commit()
 
-            login_user(user)
             log_audit_event('New Account Created', email, f'New organisation signed up for free trial from {country}')
-            flash('Welcome! Your free trial has started. A confirmation email has been sent to you.', 'success')
+            flash('Account created successfully! Please sign in to continue.', 'success')
             # Send welcome / confirmation email in background
             try:
                 send_welcome_email(user_email=email, organisation=organisation or email.split('@')[0])
             except Exception as email_err:
                 logging.warning(f"Welcome email failed for {email}: {email_err}")
-            return redirect(url_for('index'))
+            return redirect(url_for('login'))
 
         except Exception as e:
             db.session.rollback()
@@ -691,9 +693,14 @@ def save_step_data(step, form, wizard_data):
             'special_categories': form.get('special_categories', ''),
             # Mode of processing
             'mode_of_processing': form.get('mode_of_processing', 'Controller'),
+            # When mode = Controller, the user supplies the OTHER party's processor info
             'mop_processor_name': form.get('mop_processor_name', ''),
             'mop_processor_contact': form.get('mop_processor_contact', ''),
             'mop_processor_country': form.get('mop_processor_country', ''),
+            # When mode = Processor, the user supplies the OTHER party's controller info
+            'mop_controller_name': form.get('mop_controller_name', ''),
+            'mop_controller_contact': form.get('mop_controller_contact', ''),
+            'mop_controller_country': form.get('mop_controller_country', ''),
             # Representative
             'representative_name': form.get('representative_name', ''),
             'representative_contact': form.get('representative_contact', ''),
@@ -726,7 +733,27 @@ def generate_ropa_records(wizard_data, user):
     else:
         deletion_procedures = f"In accordance with policy: {retained}" if retained else ''
 
-    entity_type = org.get('entity_type', 'Controller')
+    # The user's organisation acts as either Controller or Processor for this activity.
+    # The "Mode of Processing" radio captures which role they play here.
+    mode = af.get('mode_of_processing', 'Controller')
+    entity_type = mode  # keep entity_type aligned with the per-activity mode
+
+    # If user is the Controller → controller fields = their org; processor fields = the other party
+    # If user is the Processor → processor fields = their org; controller fields = the other party
+    if mode == 'Processor':
+        controller_name = af.get('mop_controller_name', '')
+        controller_contact = af.get('mop_controller_contact', '')
+        controller_country = af.get('mop_controller_country', '')
+        processor_name = org.get('name', '')
+        processor_contact = org.get('controller_contact', '') or org.get('processor_contact', '')
+        processor_country = org.get('country', '')
+    else:
+        controller_name = org.get('name', '')
+        controller_contact = org.get('controller_contact', '')
+        controller_country = org.get('country', '')
+        processor_name = af.get('mop_processor_name', '')
+        processor_contact = af.get('mop_processor_contact', '')
+        processor_country = af.get('mop_processor_country', '')
 
     record_data = {
         'processing_activity_name': activity_name,
@@ -737,10 +764,10 @@ def generate_ropa_records(wizard_data, user):
         'entity_type': entity_type,
 
         # Controller information
-        'controller_name': org.get('name', ''),
-        'controller_contact': org.get('controller_contact', ''),
-        'controller_address': org.get('controller_address', ''),
-        'controller_country': org.get('country', ''),
+        'controller_name': controller_name,
+        'controller_contact': controller_contact,
+        'controller_address': org.get('controller_address', '') if mode == 'Controller' else '',
+        'controller_country': controller_country,
 
         # DPO information
         'dpo_name': org.get('dpo_name', ''),
@@ -767,10 +794,10 @@ def generate_ropa_records(wizard_data, user):
         'risk_level': af.get('risk_level', ''),
         'dpia_required': af.get('dpia_required', 'No') == 'Yes',
 
-        # Mode of processing - store processor info in processor fields if mode is Processor
-        'processor_name': (af.get('mop_processor_name', '') or org.get('processor_name', '')) if (af.get('mode_of_processing') == 'Processor' or entity_type == 'Processor') else org.get('processor_name', ''),
-        'processor_contact': af.get('mop_processor_contact', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_contact', ''),
-        'processor_address': af.get('mop_processor_country', '') if af.get('mode_of_processing') == 'Processor' else org.get('processor_address', ''),
+        # Processor information (resolved above based on mode of processing)
+        'processor_name': processor_name,
+        'processor_contact': processor_contact,
+        'processor_address': processor_country,
 
         # Representative details
         'representative_name': af.get('representative_name', ''),
