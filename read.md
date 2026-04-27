@@ -9,8 +9,3 @@ Flask-based ROPA (Records of Processing Activities) management application.
 
 ## Run
 - Dev: `python main.py` (workflow "Start application", port 5000, host 0.0.0.0)
-- Prod: gunicorn via Replit autoscale deployment (`main:app`)
-
-## Notes
-- `ProxyFix` middleware enabled to trust Replit's proxy.
-- Dependencies in `requirements.txt`.
