@@ -48,11 +48,20 @@
 
                 <form method="POST" id="registerForm">
                     <div class="mb-3">
+                        <label for="full_name" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light"><i class="fas fa-user text-muted"></i></span>
+                            <input type="text" class="form-control" id="full_name" name="full_name"
+                                   placeholder="Jane Doe" required autofocus>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="email" class="form-label fw-semibold">Work Email Address <span class="text-danger">*</span></label>
                         <div class="input-group">
                             <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
                             <input type="email" class="form-control" id="email" name="email"
-                                   placeholder="you@yourcompany.com" required autofocus>
+                                   placeholder="you@yourcompany.com" required>
                         </div>
                     </div>
 

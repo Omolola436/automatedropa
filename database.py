@@ -37,6 +37,10 @@ def init_database():
     if 'country' not in existing_cols:
         cursor.execute("ALTER TABLE users ADD COLUMN country TEXT")
 
+    # Migrate: add full_name column if not exists
+    if 'full_name' not in existing_cols:
+        cursor.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
+
     # ROPA records table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ropa_records (

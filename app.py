@@ -202,11 +202,12 @@ def register():
         email = (request.form.get('email') or '').strip().lower()
         password = request.form.get('password')
         confirm_password = request.form.get('confirm_password')
+        full_name = (request.form.get('full_name') or '').strip()
         organisation = request.form.get('organisation', '')
         country = request.form.get('country', '')
         privacy_accepted = request.form.get('privacy_accepted')
 
-        if not all([email, password, confirm_password, country]):
+        if not all([full_name, email, password, confirm_password, country]):
             flash('All required fields must be filled in.', 'error')
             return render_template('register.html')
 
@@ -231,6 +232,7 @@ def register():
             user = models.User(
                 email=email,
                 password_hash=generate_password_hash(password),
+                full_name=full_name,
                 role='Privacy Officer',
                 department=organisation or 'General',
                 country=country,
@@ -244,7 +246,11 @@ def register():
             flash('Account created successfully! Please sign in to continue.', 'success')
             # Send welcome / confirmation email in background
             try:
-                send_welcome_email(user_email=email, organisation=organisation or email.split('@')[0])
+                send_welcome_email(
+                    user_email=email,
+                    full_name=full_name,
+                    organisation=organisation or email.split('@')[0],
+                )
             except Exception as email_err:
                 logging.warning(f"Welcome email failed for {email}: {email_err}")
             return redirect(url_for('login'))
@@ -555,6 +561,7 @@ def add_activity():
             try:
                 send_upgrade_email(
                     user_email=current_user.email,
+                    full_name=getattr(current_user, 'full_name', None),
                     organisation=current_user.department,
                     activities_used=current_count,
                     max_activities=config.get('max_activities', 5)

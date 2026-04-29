@@ -78,13 +78,25 @@ def send_email(to_email, to_name, subject, message, reply_to=None):
         return False
 
 
-def send_welcome_email(user_email, organisation=None):
+def _greeting_name(full_name=None, organisation=None, user_email=None):
+    """Pick the best name to greet the user with."""
+    if full_name and full_name.strip():
+        return full_name.strip()
+    if organisation and organisation.strip():
+        return organisation.strip()
+    if user_email:
+        return user_email.split('@')[0]
+    return "there"
+
+
+def send_welcome_email(user_email, full_name=None, organisation=None):
     """Email #1 — sent right after a user creates an account."""
-    name = organisation or user_email.split('@')[0]
+    greeting = _greeting_name(full_name, organisation, user_email)
+    org_line = f" on behalf of {organisation}" if organisation else ""
     subject = "Welcome to DataProcess Flow – Your Account is Active"
     message = (
-        f"Dear {name},\n\n"
-        "Thank you for creating your account on DataProcess Flow by 3Consulting. "
+        f"Dear {greeting},\n\n"
+        f"Thank you for creating your account on DataProcess Flow by 3Consulting{org_line}. "
         "Your free trial has started and your account is now active.\n\n"
         "During your trial you can:\n"
         "  • Create up to 5 ROPA processing activities\n"
@@ -95,15 +107,15 @@ def send_welcome_email(user_email, organisation=None):
         "The DataProcess Flow Team\n"
         "3Consulting"
     )
-    return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
+    return send_email(to_email=user_email, to_name=greeting, subject=subject, message=message)
 
 
-def send_upgrade_email(user_email, organisation=None, activities_used=0, max_activities=5):
+def send_upgrade_email(user_email, full_name=None, organisation=None, activities_used=0, max_activities=5):
     """Email #2 — sent when the free trial / activity limit is reached."""
-    name = organisation or user_email.split('@')[0]
+    greeting = _greeting_name(full_name, organisation, user_email)
     subject = "Your Free Trial Has Ended – Time to Upgrade"
     message = (
-        f"Dear {name},\n\n"
+        f"Dear {greeting},\n\n"
         f"Your DataProcess Flow free trial has ended. You have used "
         f"{activities_used} out of {max_activities} ROPA activities on your current plan.\n\n"
         "To continue adding activities and unlock more powerful features, "
@@ -116,7 +128,7 @@ def send_upgrade_email(user_email, organisation=None, activities_used=0, max_act
         "The DataProcess Flow Team\n"
         "3Consulting"
     )
-    return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
+    return send_email(to_email=user_email, to_name=greeting, subject=subject, message=message)
 
 
 def send_password_reset_email(user_email, reset_link):
