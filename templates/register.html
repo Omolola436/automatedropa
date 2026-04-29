@@ -71,6 +71,8 @@
                             <span class="input-group-text bg-light"><i class="fas fa-globe text-muted"></i></span>
                             <select class="form-select" id="country" name="country" required>
                                 <option value="" disabled selected>Select your country…</option>
+
+                                <!-- YOUR FULL COUNTRY LIST (UNCHANGED) -->
                                 <option>Afghanistan</option><option>Albania</option><option>Algeria</option>
                                 <option>Andorra</option><option>Angola</option><option>Antigua and Barbuda</option>
                                 <option>Argentina</option><option>Armenia</option><option>Australia</option>
@@ -141,25 +143,41 @@
                         </div>
                     </div>
 
+                    <!-- Password -->
                     <div class="mb-3">
-                        <label for="password" class="form-label fw-semibold">Password <span class="text-danger">*</span></label>
+                        <label for="password" class="form-label fw-semibold">Password *</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
-                            <input type="password" class="form-control" id="password" name="password"
-                                   placeholder="At least 6 characters" required>
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-lock text-muted"></i>
+                            </span>
+
+                            <input type="password" class="form-control" id="password" name="password" required>
+
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('password','eye1')">
+                                <i class="fas fa-eye" id="eye1"></i>
+                            </button>
                         </div>
                     </div>
 
+                    <!-- Confirm Password -->
                     <div class="mb-3">
-                        <label for="confirm_password" class="form-label fw-semibold">Confirm Password <span class="text-danger">*</span></label>
+                        <label for="confirm_password" class="form-label fw-semibold">Confirm Password *</label>
                         <div class="input-group">
-                            <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
-                            <input type="password" class="form-control" id="confirm_password" name="confirm_password"
-                                   placeholder="Repeat your password" required>
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-lock text-muted"></i>
+                            </span>
+
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+
+                            <button class="btn btn-outline-secondary" type="button"
+                                    onclick="togglePassword('confirm_password','eye2')">
+                                <i class="fas fa-eye" id="eye2"></i>
+                            </button>
                         </div>
                     </div>
 
-                    <!-- Privacy Notice Acceptance -->
+                    <!-- Privacy Notice (UNCHANGED EXACTLY) -->
                     <div class="mb-4">
                         <div class="card border-primary bg-primary bg-opacity-10">
                             <div class="card-body py-2 px-3">
@@ -189,15 +207,31 @@
                 document.getElementById('privacy_accepted').addEventListener('change', function() {
                     document.getElementById('signupBtn').disabled = !this.checked;
                 });
+
+                function togglePassword(inputId, iconId) {
+                    const input = document.getElementById(inputId);
+                    const icon = document.getElementById(iconId);
+
+                    if (input.type === "password") {
+                        input.type = "text";
+                        icon.classList.remove("fa-eye");
+                        icon.classList.add("fa-eye-slash");
+                    } else {
+                        input.type = "password";
+                        icon.classList.remove("fa-eye-slash");
+                        icon.classList.add("fa-eye");
+                    }
+                }
                 </script>
 
                 <hr class="my-3">
+
                 <p class="text-center text-muted mb-0 small">
                     Already have an account?
                     <a href="{{ url_for('login') }}" class="fw-semibold text-decoration-none">Sign in</a>
                 </p>
-            </div>
 
+            </div>
         </div>
     </div>
 </div>
