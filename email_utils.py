@@ -1,65 +1,85 @@
 import os
-import requests
+import ssl
+import smtplib
 import logging
+from email.message import EmailMessage
 
-EMAILJS_API_URL = 'https://api.emailjs.com/api/v1.0/email/send'
 
+def _get_smtp_config():
+    """Load SMTP configuration from environment variables."""
+    host = os.environ.get('SMTP_HOST')
+    port = int(os.environ.get('SMTP_PORT', '587'))
+    username = os.environ.get('SMTP_USERNAME', 'support@3consult-ng.com')
+    password = os.environ.get('SMTP_PASSWORD')
+    use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
+    use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
 
-def _get_credentials():
-    service_id = os.environ.get('EMAILJS_SERVICE_ID')
-    template_id = os.environ.get('EMAILJS_TEMPLATE_ID')
-    public_key = os.environ.get('EMAILJS_PUBLIC_KEY')
+    from_email = os.environ.get('FROM_EMAIL', 'support@3consult-ng.com')
+    from_name = os.environ.get('FROM_NAME', 'DataProcess Flow')
+    bcc_email = os.environ.get('BCC_EMAIL', 'odada@3consult-ng.com')
 
-    print("DEBUG EMAILJS INSIDE FUNCTION:",
-          service_id, template_id, public_key)
-
-    return service_id, template_id, public_key
+    return {
+        'host': host,
+        'port': port,
+        'username': username,
+        'password': password,
+        'use_tls': use_tls,
+        'use_ssl': use_ssl,
+        'from_email': from_email,
+        'from_name': from_name,
+        'bcc_email': bcc_email,
+    }
 
 
 def send_email(to_email, to_name, subject, message, reply_to=None):
-    service_id, template_id, public_key = _get_credentials()
+    """Send an email via SMTP from support@3consult-ng.com, BCC odada@3consult-ng.com."""
+    cfg = _get_smtp_config()
 
-    if not all([service_id, template_id, public_key]):
-        logging.warning("EmailJS credentials not configured. Email not sent.")
+    if not cfg['host'] or not cfg['password']:
+        logging.warning(
+            "SMTP credentials not configured (SMTP_HOST / SMTP_PASSWORD missing). "
+            "Email to %s not sent.", to_email
+        )
         return False
 
-    # Split name into first/last to match the EmailJS template variables
-    name_parts = (to_name or '').strip().split(' ', 1)
-    fname = name_parts[0] if name_parts else ''
-    lname = name_parts[1] if len(name_parts) > 1 else ''
+    msg = EmailMessage()
+    msg['Subject'] = subject
+    msg['From'] = f"{cfg['from_name']} <{cfg['from_email']}>"
+    msg['To'] = f"{to_name} <{to_email}>" if to_name else to_email
+    if reply_to:
+        msg['Reply-To'] = reply_to
+    msg.set_content(message)
 
-    # Combine subject + body since template has no dedicated subject field
-    full_message = f"Subject: {subject}\n\n{message}"
+    # Build full recipient list including BCC
+    recipients = [to_email]
+    if cfg['bcc_email']:
+        recipients.append(cfg['bcc_email'])
 
     try:
-        payload = {
-            "service_id": service_id,
-            "template_id": template_id,
-            "user_id": public_key,
-            "template_params": {
-                "FName": fname,
-                "email": to_email,
-                "message": full_message
-            }
-        }
-        response = requests.post(
-            EMAILJS_API_URL,
-            json=payload,
-            headers={"Content-Type": "application/json"},
-            timeout=10
-        )
-        if response.status_code == 200:
-            logging.info(f"Email sent successfully to {to_email}")
-            return True
+        if cfg['use_ssl']:
+            context = ssl.create_default_context()
+            with smtplib.SMTP_SSL(cfg['host'], cfg['port'], context=context, timeout=15) as server:
+                server.login(cfg['username'], cfg['password'])
+                server.send_message(msg, from_addr=cfg['from_email'], to_addrs=recipients)
         else:
-            logging.error(f"EmailJS API error: {response.status_code} - {response.text}")
-            return False
+            with smtplib.SMTP(cfg['host'], cfg['port'], timeout=15) as server:
+                server.ehlo()
+                if cfg['use_tls']:
+                    context = ssl.create_default_context()
+                    server.starttls(context=context)
+                    server.ehlo()
+                server.login(cfg['username'], cfg['password'])
+                server.send_message(msg, from_addr=cfg['from_email'], to_addrs=recipients)
+
+        logging.info("Email '%s' sent to %s (BCC: %s)", subject, to_email, cfg['bcc_email'])
+        return True
     except Exception as e:
-        logging.error(f"Error sending email to {to_email}: {str(e)}")
+        logging.error("Error sending email to %s: %s", to_email, str(e))
         return False
 
 
 def send_welcome_email(user_email, organisation=None):
+    """Email #1 — sent right after a user creates an account."""
     name = organisation or user_email.split('@')[0]
     subject = "Welcome to DataProcess Flow – Your Account is Active"
     message = (
@@ -79,11 +99,13 @@ def send_welcome_email(user_email, organisation=None):
 
 
 def send_upgrade_email(user_email, organisation=None, activities_used=0, max_activities=5):
+    """Email #2 — sent when the free trial / activity limit is reached."""
     name = organisation or user_email.split('@')[0]
-    subject = "You've Reached Your Activity Limit – Time to Upgrade"
+    subject = "Your Free Trial Has Ended – Time to Upgrade"
     message = (
         f"Dear {name},\n\n"
-        f"You have used {activities_used} out of {max_activities} ROPA activities on your current plan.\n\n"
+        f"Your DataProcess Flow free trial has ended. You have used "
+        f"{activities_used} out of {max_activities} ROPA activities on your current plan.\n\n"
         "To continue adding activities and unlock more powerful features, "
         "please upgrade your subscription:\n\n"
         "  • Starter Plan  – Up to 5 activities + Excel export\n"
@@ -146,6 +168,11 @@ def send_activity_rejected_email(user_email, activity_name, reason=None, reviewe
 
 
 def check_emailjs_configured():
-    """Returns True if all EmailJS credentials are present."""
-    service_id, template_id, public_key = _get_credentials()
-    return all([service_id, template_id, public_key])
+    """Backwards-compatible name. Returns True if SMTP credentials are configured."""
+    cfg = _get_smtp_config()
+    return bool(cfg['host'] and cfg['password'])
+
+
+def check_smtp_configured():
+    """Returns True if SMTP credentials are present."""
+    return check_emailjs_configured()

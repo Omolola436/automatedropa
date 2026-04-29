@@ -38,3 +38,15 @@ outputType = "webview"
 [deployment]
 deploymentTarget = "autoscale"
 run = ["gunicorn", "--bind=0.0.0.0:5000", "--reuse-port", "main:app"]
+
+[userenv]
+
+[userenv.shared]
+SMTP_HOST = "mail.3consult-ng.com"
+SMTP_PORT = "465"
+SMTP_USE_SSL = "true"
+SMTP_USE_TLS = "false"
+SMTP_USERNAME = "support@3consult-ng.com"
+FROM_EMAIL = "support@3consult-ng.com"
+FROM_NAME = "DataProcess Flow"
+BCC_EMAIL = "odada@3consult-ng.com"
