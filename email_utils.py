@@ -8,9 +8,9 @@ from email.message import EmailMessage
 def _get_smtp_config():
     """Load SMTP configuration from environment variables."""
     host = os.environ.get('SMTP_HOST')
-    port = int(os.environ.get('SMTP_PORT', '587'))
-    username = os.environ.get('SMTP_USERNAME', 'support@3consult-ng.com')
-    password = os.environ.get('SMTP_PASSWORD')
+    port = 587
+    username = "support@3consult-ng.com"
+    password = "@consulting."
     use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
     use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
 
