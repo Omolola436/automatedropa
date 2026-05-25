@@ -7,14 +7,49 @@ from werkzeug.utils import secure_filename
 from datetime import datetime
 import json
 
+def malware_scan(file_stream):
+    """Stub for malware scanning. Replace with real scanner integration (ClamAV, VirusTotal, etc.).
+    Return True if file is clean, False if infected.
+    """
+    # Placeholder: always return True (clean). Integrate real scanner in production.
+    return True
+
+
 def process_uploaded_file(file, user_email):
     """Process uploaded Excel file with all sheets and store complete structure"""
     try:
         filename = secure_filename(file.filename)
+        if '.' not in filename:
+            return "Invalid file name"
         file_extension = filename.rsplit('.', 1)[1].lower()
 
-        if file_extension not in ['xlsx', 'xls']:
+        allowed_ext = ['xlsx', 'xls']
+        allowed_mimetypes = [
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            'application/vnd.ms-excel'
+        ]
+
+        if file_extension not in allowed_ext:
             return "Only Excel files (.xlsx, .xls) are supported for multi-sheet processing"
+
+        # Check mimetype if available
+        mimetype = getattr(file, 'mimetype', None)
+        if mimetype and mimetype not in allowed_mimetypes:
+            # Log but don't strictly fail if mimetype missing; more permissive for some clients
+            log_audit_event('File Upload Rejected (mimetype)', user_email, f'Received mimetype: {mimetype} for file {filename}')
+            return "Uploaded file has an unsupported MIME type"
+
+        # Malware scan hook
+        try:
+            file.stream.seek(0)
+        except Exception:
+            try:
+                file.seek(0)
+            except Exception:
+                pass
+        if not malware_scan(file):
+            log_audit_event('File Upload Rejected (malware)', user_email, f'Malware detected in file: {filename}')
+            return "Uploaded file failed malware scan"
 
         # Read all sheets from Excel file
         excel_data = read_all_excel_sheets(file)

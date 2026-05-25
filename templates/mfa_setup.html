@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}MFA Setup — DataProcess Flow{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <h3>Multi-Factor Authentication (MFA)</h3>
+  {% if provisioning_uri %}
+    <p>Scan this QR code in your authenticator app or use the code below:</p>
+    <div>
+      <img src="{{ qr_data_uri }}" alt="QR Code" />
+    </div>
+    <p class="mt-2"><strong>Manual code:</strong> {{ secret }}</p>
+    <form method="POST" action="{{ url_for('mfa_verify') }}">
+      <div class="mb-3">
+        <label class="form-label">Enter code from app</label>
+        <input type="text" name="code" class="form-control" required>
+      </div>
+      <button class="btn btn-primary">Verify and Enable MFA</button>
+    </form>
+  {% else %}
+    <p>MFA is not available.</p>
+  {% endif %}
+</div>
+{% endblock %}

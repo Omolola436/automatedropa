@@ -14,6 +14,10 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_wtf import CSRFProtect
+from flask_talisman import Talisman
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import tempfile
 from datetime import datetime, date
 import pandas as pd
@@ -29,6 +33,27 @@ app = Flask(__name__)
 application=app
 app.secret_key = os.environ.get("SESSION_SECRET", "dev-secret-key-change-in-production")
 app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+# Security-related configuration
+from datetime import timedelta
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
+
+# In production, use secure cookies. For local HTTP development, allow non-secure cookies.
+app.config['SESSION_COOKIE_SECURE'] = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true' or os.environ.get('FLASK_ENV', '').lower() == 'production'
+
+# Initialize security extensions
+csrf = CSRFProtect()
+csrf.init_app(app)
+
+# Talisman will add common security headers (CSP disabled here to avoid breaking resources)
+talisman = Talisman()
+talisman.init_app(app, content_security_policy=None)
+
+# Rate limiting
+limiter = Limiter(key_func=get_remote_address)
+limiter.init_app(app)
 
 # Configure the database
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///ropa_system.db"
@@ -167,32 +192,69 @@ def index():
     return render_template('landing.html')
 
 @app.route('/login', methods=['GET', 'POST'])
+@limiter.limit("6 per minute")
 def login():
-    """User login"""
+    """User login with account lockout and email verification check"""
     if request.method == 'POST':
         email = (request.form.get('email') or '').strip()
         password = request.form['password']
 
         # Case-insensitive email lookup so capitalisation differences don't block sign-in
         from sqlalchemy import func
+        from datetime import datetime as _dt, timedelta as _td
         user = models.User.query.filter(func.lower(models.User.email) == email.lower()).first()
 
-        if user and check_password_hash(user.password_hash, password):
-            login_user(user)
-            user.last_login = datetime.utcnow()
-            db.session.commit()
+        if user:
+            # Check lockout
+            if user.locked_until and user.locked_until > _dt.utcnow():
+                log_audit_event('Login Attempt On Locked Account', email, 'Attempted login while account locked')
+                flash('Account locked due to multiple failed login attempts. Please try again later.', 'error')
+                return render_template('login.html')
 
-            # Clear any leftover wizard session data from a previous user
-            session.pop('wizard_data', None)
+            # Verify password
+            if check_password_hash(user.password_hash, password):
+                # Check email confirmation
+                if not getattr(user, 'email_confirmed', False):
+                    flash('Please verify your email address before signing in. Check your inbox or resend verification.', 'error')
+                    return render_template('login.html')
 
-            log_audit_event('Login Success', email, 'User logged in successfully')
-            return redirect(url_for('index'))
-        else:
-            log_audit_event('Login Failed', email, 'Failed login attempt')
-            flash('Invalid email or password', 'error')
+                # If MFA is enabled, require secondary challenge
+                if getattr(user, 'mfa_enabled', False):
+                    session['pre_mfa_user_id'] = user.id
+                    # Do not log in yet; prompt for TOTP
+                    return redirect(url_for('mfa_challenge'))
+
+                # Successful login
+                login_user(user)
+                user.last_login = _dt.utcnow()
+                user.failed_login_attempts = 0
+                user.locked_until = None
+                db.session.commit()
+
+                # Clear any leftover wizard session data from a previous user
+                session.pop('wizard_data', None)
+
+                log_audit_event('Login Success', email, 'User logged in successfully')
+                return redirect(url_for('index'))
+            else:
+                # Increment failed attempts
+                user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
+                if user.failed_login_attempts >= 5:
+                    user.locked_until = _dt.utcnow() + _td(minutes=15)
+                    log_audit_event('Account Locked', email, f'Account locked until {user.locked_until}')
+                else:
+                    log_audit_event('Login Failed', email, f'Failed login attempt #{user.failed_login_attempts}')
+                db.session.commit()
+                flash('Invalid email or password', 'error')
+                return render_template('login.html')
+
+        # Generic response when user not found
+        log_audit_event('Login Failed', email, 'Failed login attempt - user not found')
+        flash('Invalid email or password', 'error')
 
     return render_template('login.html')
 @app.route('/register', methods=['GET', 'POST'])
+@limiter.limit("6 per minute")
 def register():
     """Open registration — each new signup creates a Privacy Officer (org admin) on a free trial"""
     if current_user.is_authenticated:
@@ -204,7 +266,7 @@ def register():
         confirm_password = request.form.get('confirm_password')
         full_name = (request.form.get('full_name') or '').strip()
         organisation = request.form.get('organisation', '')
-        country = request.form.get('country', '')
+        country = (request.form.get('country') or '').strip()
         privacy_accepted = request.form.get('privacy_accepted')
 
         if not all([full_name, email, password, confirm_password, country]):
@@ -229,6 +291,10 @@ def register():
             return render_template('register.html')
 
         try:
+            import secrets, hashlib
+            token = secrets.token_urlsafe(32)
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+
             user = models.User(
                 email=email,
                 password_hash=generate_password_hash(password),
@@ -236,30 +302,174 @@ def register():
                 role='Privacy Officer',
                 department=organisation or 'General',
                 country=country,
+                email_confirm_token=token_hash,
+                email_confirm_expires=datetime.utcnow() + timedelta(hours=24),
                 subscription_tier='trial',
                 trial_start_date=datetime.utcnow(),
             )
             db.session.add(user)
             db.session.commit()
 
-            log_audit_event('New Account Created', email, f'New organisation signed up for free trial from {country}')
-            flash('Account created successfully! Please sign in to continue.', 'success')
-            # Send welcome / confirmation email in background
+            # Send verification email
             try:
-                send_welcome_email(
-                    user_email=email,
-                    full_name=full_name,
-                    organisation=organisation or email.split('@')[0],
-                )
+                verify_url = url_for('verify_email', token=token, _external=True)
+                from email_utils import send_verification_email
+                send_verification_email(user_email=email, verification_link=verify_url, full_name=full_name)
             except Exception as email_err:
-                logging.warning(f"Welcome email failed for {email}: {email_err}")
+                logging.warning(f"Verification email failed for {email}: {email_err}")
+
+            log_audit_event('New Account Created', email, f'New organisation signed up for free trial from {country}')
+            flash('Account created successfully! Please check your email to verify your account.', 'success')
             return redirect(url_for('login'))
 
         except Exception as e:
             db.session.rollback()
             flash(f'Error creating account: {str(e)}', 'error')
 
+
     return render_template('register.html')
+
+
+@app.route('/verify-email/<token>')
+def verify_email(token):
+    import hashlib
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    user = models.User.query.filter_by(email_confirm_token=token_hash).first()
+    if not user:
+        flash('Invalid or expired verification link.', 'error')
+        return redirect(url_for('login'))
+    if not user.email_confirm_expires or user.email_confirm_expires < datetime.utcnow():
+        flash('Verification link expired. Please request a new verification email.', 'error')
+        return redirect(url_for('resend_verification'))
+    user.email_confirmed = True
+    user.email_confirm_token = None
+    user.email_confirm_expires = None
+    db.session.commit()
+    log_audit_event('Email Verified', user.email, 'User verified their email address')
+    flash('Email verified successfully. You can now log in.', 'success')
+    return redirect(url_for('login'))
+
+
+@app.route('/resend-verification', methods=['GET', 'POST'])
+def resend_verification():
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        user = models.User.query.filter_by(email=email).first()
+        if not user:
+            flash('If an account with that email exists, a verification email will be sent.', 'info')
+            return redirect(url_for('login'))
+        if user.email_confirmed:
+            flash('Email already verified. You can sign in.', 'info')
+            return redirect(url_for('login'))
+        import secrets, hashlib
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        user.email_confirm_token = token_hash
+        user.email_confirm_expires = datetime.utcnow() + timedelta(hours=24)
+        db.session.commit()
+        try:
+            verify_url = url_for('verify_email', token=token, _external=True)
+            from email_utils import send_verification_email
+            send_verification_email(user_email=email, verification_link=verify_url, full_name=user.full_name)
+            flash('Verification email sent. Please check your inbox.', 'info')
+        except Exception as e:
+            logging.warning(f"Failed to send verification email to {email}: {e}")
+            flash('Unable to send verification email. Please try again later.', 'error')
+        return redirect(url_for('login'))
+    return render_template('resend_verification.html')
+
+
+@app.route('/mfa/challenge', methods=['GET', 'POST'])
+def mfa_challenge():
+    if request.method == 'POST':
+        code = (request.form.get('code') or '').strip()
+        user_id = session.get('pre_mfa_user_id')
+        if not user_id:
+            flash('MFA session expired. Please log in again.', 'error')
+            return redirect(url_for('login'))
+        user = models.User.query.get(user_id)
+        if not user or not user.mfa_secret:
+            flash('MFA not configured for this account.', 'error')
+            return redirect(url_for('login'))
+        try:
+            import pyotp
+            if pyotp.TOTP(user.mfa_secret).verify(code, valid_window=1):
+                login_user(user)
+                user.last_login = datetime.utcnow()
+                user.failed_login_attempts = 0
+                user.locked_until = None
+                db.session.commit()
+                session.pop('pre_mfa_user_id', None)
+                log_audit_event('MFA Verified', user.email, 'User passed MFA challenge')
+                return redirect(url_for('index'))
+            else:
+                log_audit_event('MFA Failed', user.email, 'Failed MFA code verification')
+                flash('Invalid MFA code', 'error')
+        except Exception:
+            flash('Error verifying MFA code', 'error')
+        return render_template('mfa_challenge.html')
+    return render_template('mfa_challenge.html')
+
+
+@app.route('/mfa/setup')
+@login_required
+def mfa_setup():
+    import pyotp, qrcode, io, base64
+    user = current_user
+    if not user.mfa_secret:
+        secret = pyotp.random_base32()
+        user.mfa_secret = secret
+        db.session.commit()
+    else:
+        secret = user.mfa_secret
+    totp = pyotp.TOTP(secret)
+    provisioning_uri = totp.provisioning_uri(current_user.email, issuer_name='DataProcess Flow')
+
+    # Generate QR code image as data URI
+    qr = qrcode.make(provisioning_uri)
+    buf = io.BytesIO()
+    qr.save(buf, format='PNG')
+    buf.seek(0)
+    img_b64 = base64.b64encode(buf.read()).decode('ascii')
+    qr_data_uri = f'data:image/png;base64,{img_b64}'
+
+    return render_template('mfa_setup.html', provisioning_uri=provisioning_uri, qr_data_uri=qr_data_uri, secret=secret)
+
+
+@app.route('/mfa/verify', methods=['POST'])
+@login_required
+def mfa_verify():
+    code = (request.form.get('code') or '').strip()
+    user = current_user
+    if not user.mfa_secret:
+        flash('MFA secret not configured.', 'error')
+        return redirect(url_for('mfa_setup'))
+    try:
+        import pyotp
+        if pyotp.TOTP(user.mfa_secret).verify(code, valid_window=1):
+            user.mfa_enabled = True
+            db.session.commit()
+            log_audit_event('MFA Enabled', user.email, 'User enabled MFA')
+            flash('MFA enabled successfully.', 'success')
+            return redirect(url_for('privacy_officer_dashboard'))
+        else:
+            flash('Invalid code. Please try again.', 'error')
+            return redirect(url_for('mfa_setup'))
+    except Exception:
+        flash('Error verifying MFA code.', 'error')
+        return redirect(url_for('mfa_setup'))
+
+
+@app.route('/mfa/disable', methods=['POST'])
+@login_required
+def mfa_disable():
+    user = current_user
+    user.mfa_enabled = False
+    user.mfa_secret = None
+    db.session.commit()
+    log_audit_event('MFA Disabled', user.email, 'User disabled MFA')
+    flash('MFA disabled.', 'info')
+    return redirect(url_for('privacy_officer_dashboard'))
 
 
 @app.route('/admin-portal', methods=['GET'])
@@ -271,6 +481,7 @@ def admin_portal():
 
 
 @app.route('/admin-portal/login', methods=['GET', 'POST'])
+@limiter.limit("6 per minute")
 def admin_portal_login():
     """Separate admin login page — not linked from the main site"""
     if current_user.is_authenticated:
@@ -300,6 +511,7 @@ def admin_portal_login():
     return render_template('admin_portal_login.html')
 
 @app.route('/forgot-password', methods=['GET', 'POST'])
+@limiter.limit("6 per minute")
 def forgot_password():
     """Handle forgot password requests"""
     if request.method == 'POST':
@@ -1721,6 +1933,7 @@ def user_management():
 
 @app.route('/add-user', methods=['POST'])
 @login_required
+@limiter.limit("10 per minute")
 def add_user():
     """Add new user (Privacy Officer + Growth/Enterprise only)"""
     if current_user.role != 'Privacy Officer':

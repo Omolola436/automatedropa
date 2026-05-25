@@ -22,6 +22,15 @@ class User(UserMixin, db.Model):
 
     country = db.Column(String(100), nullable=True)
 
+    # Security / Auth fields
+    failed_login_attempts = db.Column(Integer, default=0)
+    locked_until = db.Column(DateTime, nullable=True)
+    email_confirmed = db.Column(Boolean, default=False)
+    email_confirm_token = db.Column(String(256), nullable=True)
+    email_confirm_expires = db.Column(DateTime, nullable=True)
+    mfa_enabled = db.Column(Boolean, default=False)
+    mfa_secret = db.Column(String(128), nullable=True)
+
     # Subscription fields
     subscription_tier = db.Column(String(50), nullable=False, default='trial')
     trial_start_date = db.Column(DateTime, default=datetime.utcnow)

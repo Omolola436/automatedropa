@@ -41,6 +41,44 @@ def init_database():
     if 'full_name' not in existing_cols:
         cursor.execute("ALTER TABLE users ADD COLUMN full_name TEXT")
 
+    # Migrate: add security/auth columns if not exists
+    existing_cols = [row[1] for row in cursor.execute("PRAGMA table_info(users)").fetchall()]
+    if 'failed_login_attempts' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN failed_login_attempts INTEGER DEFAULT 0")
+        except Exception:
+            pass
+    if 'locked_until' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN locked_until DATETIME")
+        except Exception:
+            pass
+    if 'email_confirmed' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN email_confirmed BOOLEAN DEFAULT 0")
+        except Exception:
+            pass
+    if 'email_confirm_token' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN email_confirm_token TEXT")
+        except Exception:
+            pass
+    if 'email_confirm_expires' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN email_confirm_expires DATETIME")
+        except Exception:
+            pass
+    if 'mfa_enabled' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN DEFAULT 0")
+        except Exception:
+            pass
+    if 'mfa_secret' not in existing_cols:
+        try:
+            cursor.execute("ALTER TABLE users ADD COLUMN mfa_secret TEXT")
+        except Exception:
+            pass
+
     # ROPA records table
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS ropa_records (

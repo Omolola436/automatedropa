@@ -8,11 +8,11 @@ from email.message import EmailMessage
 def _get_smtp_config():
     """Load SMTP configuration from environment variables."""
     host = os.environ.get('SMTP_HOST')
-    port = int(os.environ.get('SMTP_PORT', '587'))
+    port = int(os.environ.get('SMTP_PORT', '465'))
     username = os.environ.get('SMTP_USERNAME', 'support@3consult-ng.com')
     password = os.environ.get('SMTP_PASSWORD')
-    use_tls = os.environ.get('SMTP_USE_TLS', 'true').lower() == 'true'
-    use_ssl = os.environ.get('SMTP_USE_SSL', 'false').lower() == 'true'
+    use_tls = os.environ.get('SMTP_USE_TLS', 'false').lower() == 'true'
+    use_ssl = os.environ.get('SMTP_USE_SSL', 'true').lower() == 'true'
 
     from_email = os.environ.get('FROM_EMAIL', 'support@3consult-ng.com')
     from_name = os.environ.get('FROM_NAME', 'DataProcess Flow')
@@ -74,7 +74,9 @@ def send_email(to_email, to_name, subject, message, reply_to=None):
         logging.info("Email '%s' sent to %s (BCC: %s)", subject, to_email, cfg['bcc_email'])
         return True
     except Exception as e:
+        import traceback
         logging.error("Error sending email to %s: %s", to_email, str(e))
+        traceback.print_exc()
         return False
 
 
@@ -140,6 +142,21 @@ def send_password_reset_email(user_email, reset_link):
         f"Click the link below to reset your password:\n{reset_link}\n\n"
         "This link will expire in 1 hour. If you did not request a password reset, "
         "please ignore this email — your account is safe.\n\n"
+        "Best regards,\n"
+        "The DataProcess Flow Team\n"
+        "3Consulting"
+    )
+    return send_email(to_email=user_email, to_name=name, subject=subject, message=message)
+
+
+def send_verification_email(user_email, verification_link, full_name=None):
+    name = full_name if full_name else user_email.split('@')[0]
+    subject = "Verify your email for DataProcess Flow"
+    message = (
+        f"Dear {name},\n\n"
+        "Thanks for signing up for DataProcess Flow. To complete your registration, please verify your email address by clicking the link below:\n\n"
+        f"{verification_link}\n\n"
+        "This link will expire in 24 hours. If you did not sign up for an account, you can ignore this email.\n\n"
         "Best regards,\n"
         "The DataProcess Flow Team\n"
         "3Consulting"

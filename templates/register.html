@@ -47,6 +47,7 @@
                 <p class="text-muted mb-4 small">Set up your organisation's ROPA workspace</p>
 
                 <form method="POST" id="registerForm">
+                    {{ csrf_token() }}
                     <div class="mb-3">
                         <label for="full_name" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
                         <div class="input-group">
